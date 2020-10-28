@@ -22,7 +22,8 @@ type Plugin struct {
 	Name string
 	Type string
 
-	Input []string
+	Input   []string
+	Require []int
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -97,7 +98,7 @@ func (p *Plugin) GetInclude() bool {
 }
 
 func (p *Plugin) GetRequire() []int {
-	return []int{0}
+	return p.Require
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
@@ -122,7 +123,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"input": 1,
+		"input":   1,
+		"require": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -150,6 +152,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInput((*pluginConfig.Params)["input"])
 	showParam("input", plugin.Input)
+
+	// require.
+	setRequire := func(p interface{}) {
+		if v, b := core.IsSliceOfInt(p); b {
+			availableParams["require"] = 0
+			plugin.Require = v
+
+		}
+	}
+	setRequire((*pluginConfig.Params)["require"])
+	showParam("require", plugin.Require)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
