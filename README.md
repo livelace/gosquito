@@ -14,7 +14,7 @@
 | [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)             |  input  | Telegram chats (text, image, video) data source. | 
 | [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)               |  input  | Twitter tweets (media, tags, text, urls) data source. |
 | | | |
-| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | process |
+| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | process | Deduplicate enriched data items. |
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | process | Echoing processing data. |
 | [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)         | process | Expand short urls. |
 | [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                 | process | Fetch remote data. | 
