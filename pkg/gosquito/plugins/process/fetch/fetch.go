@@ -3,6 +3,7 @@ package fetch
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/hashicorp/go-getter"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
@@ -77,7 +78,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 		fetched := false
 
 		for index, input := range p.Input {
-			outputDir := filepath.Join(p.TempDir, p.Flow, p.Type, p.Name, item.UUID.String())
+			outputDir := filepath.Join(p.TempDir, p.Flow, p.Type, p.Name)
 			_ = core.CreateDirIfNotExist(outputDir)
 
 			// Reflect "input" plugin data fields.
@@ -85,9 +86,12 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.Output[index])
 
+			// Every downloaded item is placed into individual directory.
+			// Items with similar names don't overwrite each other.
 			fetch := func(url string) {
-				fileName := fmt.Sprintf("fetch_%s", path.Base(url))
-				savePath := filepath.Join(outputDir, fileName)
+				u, _ := uuid.NewRandom()
+				fileName := path.Base(url)
+				savePath := filepath.Join(outputDir, u.String(), fileName)
 
 				if err := fetchData(url, savePath, p.Timeout); err == nil {
 					fetched = true

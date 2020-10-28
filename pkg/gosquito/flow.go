@@ -160,7 +160,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		if (len(flowsEnabled) > 0 && !core.IsValueInSlice(flowRaw.Flow.Name, &flowsEnabled)) ||
 			(len(flowsDisabled) > 0 && core.IsValueInSlice(flowRaw.Flow.Name, &flowsDisabled)) {
 			log.WithFields(log.Fields{
-				"flow":  flowName,
+				"flow":  flowRaw.Flow.Name,
 				"error": core.ERROR_FLOW_DISABLED,
 			}).Warn(core.LOG_FLOW_IGNORE)
 			continue

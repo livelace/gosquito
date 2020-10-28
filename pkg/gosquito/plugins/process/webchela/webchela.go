@@ -17,17 +17,20 @@ import (
 const (
 	DEFAULT_BATCH_RETRY            = 0 // no retries.
 	DEFAULT_BATCH_SIZE             = 100
-	DEFAULT_BUFFER_LENGHT          = 1000
-	DEFAULT_BROWSER_TYPE           = "chrome"
 	DEFAULT_BROWSER_GEOMETRY       = "1024x768"
 	DEFAULT_BROWSER_INSTANCE       = 1
 	DEFAULT_BROWSER_INSTANCE_TAB   = 5
 	DEFAULT_BROWSER_PAGE_SIZE      = "10M"
 	DEFAULT_BROWSER_PAGE_TIMEOUT   = 20
 	DEFAULT_BROWSER_SCRIPT_TIMEOUT = 20
+	DEFAULT_BROWSER_TYPE           = "chrome"
+	DEFAULT_BUFFER_LENGHT          = 1000
 	DEFAULT_CHUNK_SIZE             = "3M"
 	DEFAULT_CPU_LOAD               = 30
 	DEFAULT_MEM_FREE               = "1G"
+	DEFAULT_PAGE_BODY_FILENAME     = "page_body.html"
+	DEFAULT_PAGE_TITLE_FILENAME    = "page_title.txt"
+	DEFAULT_PAGE_URL_FILENAME      = "page_url.txt"
 	DEFAULT_SERVER_CONNECT_TIMEOUT = 3
 	DEFAULT_SERVER_REQUEST_TIMEOUT = 10
 )
@@ -252,19 +255,19 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 		}
 
 		// Write page url.
-		err = core.WriteStringToFile(outputDir, "webchela_page_url.txt", result.PageUrl)
+		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_URL_FILENAME, result.PageUrl)
 		if err != nil {
 			return err
 		}
 
 		// Write page title.
-		err = core.WriteStringToFile(outputDir, "webchela_page_title.txt", result.PageTitle)
+		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_TITLE_FILENAME, result.PageTitle)
 		if err != nil {
 			return err
 		}
 
 		// Write page body.
-		err = core.WriteStringToFile(outputDir, "webchela_page_body.html", result.PageBody)
+		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_BODY_FILENAME, result.PageBody)
 		if err != nil {
 			return err
 		}

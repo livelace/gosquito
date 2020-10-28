@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -122,10 +123,10 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			ro, _ := core.ReflectDataField(item, p.Output[index])
 
 			for i := 0; i < ri.Len(); i++ {
-				// Upload all found files inside provided path into one dir.
-				// 1. /local/path/to/file
-				// 2. /local/path/to/dir/{file1, file2 ... fileN}
-				// -> <bucket>/<item_uuid>/{file1, file2 ... fileN}
+				// Upload all found files:
+				// 1. /local/path/to/file -> <bucket>/<item_uuid>/local/path/to/file
+				// 2. /gosquito/temp/dir/<flow_name>/<plugin_type>/<plugin_name>/uuid/file ->
+				// <bucket>/<item_uuid>/<plugin_name>/uuid/file
 				if p.Action == "put" {
 					files, err := getLocalFiles(ri.Index(i).String())
 
@@ -134,7 +135,9 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 					}
 
 					for _, file := range files {
-						object := fmt.Sprintf("%s/%s", item.UUID, filepath.Base(file))
+						pluginTemp := filepath.Join(p.TempDir, p.Flow, p.Type)
+						object := fmt.Sprintf("%s%s", item.UUID, strings.ReplaceAll(file, pluginTemp, ""))
+
 						if err := minioPut(p, file, object, p.Timeout); err != nil {
 							return temp, err
 						} else {
