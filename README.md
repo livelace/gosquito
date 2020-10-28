@@ -12,7 +12,7 @@
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
 
-### Config sample:
+### Flow sample:
 
 ```yaml
 # short example, usually it's longer ;)
