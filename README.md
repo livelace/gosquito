@@ -10,9 +10,9 @@
 
 | Plugin        | Type    | Description |
 | :-------------| :-------:| ----------- |
-| [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)                       |  input  |
-| [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)             |  input  |
-| [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)               |  input  |
+| [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)                       |  input  | RSS/Atom (text, urls) data source |
+| [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)             |  input  | Telegram chats (text, image, video) data source | 
+| [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)               |  input  | Twitter (media, tags, text, urls) data source |
 | | | |
 | [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | process |
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | process |
