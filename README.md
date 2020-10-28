@@ -54,7 +54,7 @@ flow:
 | [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)               | process | Remove duplicates from data. | 
 | [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)           | process | Interact with web pages, fetch data. | 
 | | | |
-| [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)                  | output | Send data to Kafka topics. |
-| [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)        | output | Send data to Mattermost channels/users. |
-| [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)                    | output | Send data as emails with custom attachments/headers. |
+| [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)                  | output  | Send data to Kafka topics. |
+| [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)        | output  | Send data to Mattermost channels/users. |
+| [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)                    | output  | Send data as emails with custom attachments/headers. |
 
