@@ -3,6 +3,15 @@
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data gathering from different sources (RSS, Twitter, Telegram etc.), data processing (fetch, minio, regexp, webchela etc.) and data transmitting to various destinations (SMTP, Mattermost, Kafka etc.).
 
+
+### Features:
+
+* Pluggable architecture. Data processing organized as chains of plugins.
+* Flow approach. Flow consists of: input plugin, process plugins, output plugin.
+* Plugins dependencies. Plugin "B" will process data only if plugin "A" derived some data. 
+* Include/exclude data from all or specific plugins.
+* Declarative YAML configurations with templates support.
+
 ### Config sample:
 
 
@@ -28,3 +37,6 @@
 | [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)                  | output | Send data to Kafka topics. |
 | [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)        | output | Send data to Mattermost channels/users. |
 | [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)                    | output | Send data as emails with custom attachments/headers. |
+
+### Data model: 
+
