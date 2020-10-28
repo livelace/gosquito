@@ -28,11 +28,11 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	LOG_CONFIG_INIT       = "config generated"
-	LOG_FLOW_FILE_DISABLE = "flow not enabled"
-	LOG_FLOW_FILE_IGNORE  = "flow ignore"
+	LOG_FLOW_IGNORE       = "flow ignore"
 	LOG_FLOW_LOCK_WARNING = "--- flow lock warning"
 	LOG_FLOW_PROCESS      = "process data ..."
 	LOG_FLOW_RECEIVE      = "receive data ..."
+	LOG_FLOW_READ         = "flow read"
 	LOG_FLOW_SEND         = "send data ..."
 	LOG_FLOW_SKIP         = "--- flow skip"
 	LOG_FLOW_START        = "--- flow start"

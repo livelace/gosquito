@@ -30,7 +30,7 @@ func GetConfig() *viper.Viper {
 		log.WithFields(log.Fields{
 			"path":  dir,
 			"error": err,
-		}).Error(ERROR_CONFIG_INIT_ERROR)
+		}).Error(ERROR_CONFIG_INIT)
 		os.Exit(1)
 	}
 
@@ -51,7 +51,7 @@ func GetConfig() *viper.Viper {
 	if err := v.ReadInConfig(); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error(ERROR_CONFIG_READ_ERROR)
+		}).Error(ERROR_CONFIG_READ)
 		os.Exit(1)
 	}
 
@@ -87,7 +87,7 @@ func GetConfig() *viper.Viper {
 		if err := CreateDirIfNotExist(dir); err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-			}).Error(ERROR_CONFIG_INIT_ERROR)
+			}).Error(ERROR_CONFIG_INIT)
 			os.Exit(1)
 		}
 	}

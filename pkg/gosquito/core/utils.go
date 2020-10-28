@@ -608,18 +608,18 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 		// read file.
 		f, err := os.OpenFile(filepath.Join(path, file), os.O_RDONLY, 0644)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ_ERROR.Error(), err)
+			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		fs, err := f.Stat()
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ_ERROR.Error(), err)
+			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		data := make([]byte, fs.Size())
 		_, err = f.Read(data)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ_ERROR.Error(), err)
+			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		// decode data.
@@ -627,7 +627,7 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 		decoder := gob.NewDecoder(bytes.NewReader(data))
 		err = decoder.Decode(&temp)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ_ERROR.Error(), err)
+			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		err = f.Close()
@@ -654,17 +654,17 @@ func PluginSaveData(path string, file string, data map[string]interface{}) error
 
 	err := encoder.Encode(data)
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE_ERROR.Error(), err)
+		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
 	}
 
 	f, err := os.OpenFile(filepath.Join(path, file), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE_ERROR.Error(), err)
+		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
 	}
 
 	_, err = f.Write(buffer.Bytes())
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE_ERROR.Error(), err)
+		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
 	}
 
 	return nil
@@ -676,7 +676,7 @@ func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {
 	// Data field key must be string.
 	field, ok := i.(string)
 	if !ok {
-		return temp, fmt.Errorf(ERROR_DATA_FIELD_KEY_ERROR.Error(), i)
+		return temp, fmt.Errorf(ERROR_DATA_FIELD_KEY.Error(), i)
 	}
 
 	// Data fields might be:

@@ -94,7 +94,7 @@ func RunApp() {
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-			}).Error(core.ERROR_EXPORTER_LISTEN_ERROR)
+			}).Error(core.ERROR_EXPORTER_LISTEN)
 
 			os.Exit(1)
 		}

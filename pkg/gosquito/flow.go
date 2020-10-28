@@ -45,8 +45,9 @@ func readFlow(dir string) ([]string, error) {
 
 		} else if core.IsFile(item, "") {
 			log.WithFields(log.Fields{
-				"file": item,
-			}).Warn(core.LOG_FLOW_FILE_IGNORE)
+				"file":  item,
+				"error": core.ERROR_FILE_YAML,
+			}).Warn(core.LOG_FLOW_IGNORE)
 		}
 
 		return nil
@@ -58,14 +59,17 @@ func readFlow(dir string) ([]string, error) {
 func getFlow(config *viper.Viper) []*core.Flow {
 	var flows []*core.Flow
 
+	// -----------------------------------------------------------------------------------------------------------------
+	// Early checks.
+
 	// Enable/disable selected flows (mutual exclusive).
 	flowsDisabled := config.GetStringSlice(core.VIPER_DEFAULT_FLOW_DISABLE)
 	flowsEnabled := config.GetStringSlice(core.VIPER_DEFAULT_FLOW_ENABLE)
 
 	if len(flowsDisabled) > 0 && len(flowsEnabled) > 0 {
 		log.WithFields(log.Fields{
-			"error": "default.flow_disable and default.flow_enable are mutual exclusive!",
-		}).Error(core.ERROR_FLOW_READ_ERROR)
+			"error": core.ERROR_FLOW_ENABLE_DISABLE_CONFLICT,
+		}).Error(core.LOG_FLOW_READ)
 		os.Exit(1)
 	}
 
@@ -77,17 +81,20 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error(core.ERROR_FLOW_READ_ERROR)
+		}).Error(core.LOG_FLOW_READ)
 		os.Exit(1)
 	}
 
 	// Exit if there are no flows.
 	if len(files) == 0 {
 		log.WithFields(log.Fields{
-			"path": config.GetString(core.VIPER_DEFAULT_FLOW_DIR),
-		}).Error(core.ERROR_NO_VALID_FLOW)
+			"path":  config.GetString(core.VIPER_DEFAULT_FLOW_DIR),
+			"error": core.ERROR_NO_VALID_FLOW,
+		}).Error(core.LOG_FLOW_READ)
 		os.Exit(1)
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
@@ -100,11 +107,11 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		fileName := filepath.Base(file)
 
 		// Logging.
-		showFlowError := func(s string, err error) {
+		logFlowError := func(msg string, err error) {
 			log.WithFields(log.Fields{
 				"file":  fileName,
 				"error": err,
-			}).Error(core.ERROR_FLOW_READ_ERROR)
+			}).Error(msg)
 		}
 
 		var flowHash = core.GenFlowHash()
@@ -124,33 +131,43 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		// Skip flow if we cannot read flow.
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
-			showFlowError(core.ERROR_FLOW_READ_ERROR.Error(), err)
+			logFlowError(core.LOG_FLOW_READ, err)
 			continue
 		}
 
 		// Skip flow if we cannot unmarshal flow yaml.
 		err = yaml.Unmarshal(data, &flowRaw)
 		if err != nil {
-			showFlowError(core.ERROR_FLOW_PARSE_ERROR.Error(), err)
+			logFlowError(core.ERROR_FLOW_PARSE.Error(), err)
 			continue
 		}
 
 		// Flow name must be compatible.
 		if !core.IsFlowName(flowRaw.Flow.Name) {
-			showFlowError(core.ERROR_FLOW_PARSE_ERROR.Error(),
-				fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT_ERROR.Error(), flowRaw.Flow.Name))
+			logFlowError(core.LOG_FLOW_READ,
+				fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowRaw.Flow.Name))
 			continue
 		}
 
 		// Flow name must be unique.
 		if v, ok := flowsNames[flowRaw.Flow.Name]; ok {
-			showFlowError(core.ERROR_FLOW_PARSE_ERROR.Error(),
-				fmt.Errorf(core.ERROR_FLOW_NAME_UNIQUE_ERROR.Error(), v))
+			logFlowError(core.LOG_FLOW_READ,
+				fmt.Errorf(core.ERROR_FLOW_NAME_UNIQUE.Error(), v))
 			continue
 		}
 
 		flowName = flowRaw.Flow.Name
 		flowsNames[flowName] = fileName
+
+		// Exclude disabled flows.
+		if (len(flowsEnabled) > 0 && !core.IsValueInSlice(flowName, &flowsEnabled)) ||
+			(len(flowsDisabled) > 0 && core.IsValueInSlice(flowName, &flowsDisabled)) {
+			log.WithFields(log.Fields{
+				"flow":  flowName,
+				"error": core.ERROR_FLOW_DISABLED,
+			}).Warn(core.LOG_FLOW_IGNORE)
+			continue
+		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Logging.
@@ -165,15 +182,15 @@ func getFlow(config *viper.Viper) []*core.Flow {
 			}).Debug(core.LOG_SET_VALUE)
 		}
 
-		LogPluginError := func(p string, t string, m string, err error) {
+		LogPluginError := func(plugin string, pluginType string, msg string, err error) {
 			log.WithFields(log.Fields{
 				"hash":   flowHash,
 				"flow":   flowName,
 				"file":   fileName,
-				"plugin": p,
-				"type":   t,
+				"plugin": plugin,
+				"type":   pluginType,
 				"error":  err,
-			}).Error(m)
+			}).Error(msg)
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
@@ -191,13 +208,10 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		// Check required and unknown parameters.
 		if err := core.CheckPluginParams(&flowParamsAvailable, &flowParams); err != nil {
 			log.WithFields(log.Fields{
-				"hash":  flowHash,
 				"flow":  flowName,
 				"file":  fileName,
-				"type":  "flow",
 				"error": err,
 			}).Error(core.ERROR_PARAM_ERROR)
-
 			continue
 		}
 
@@ -252,7 +266,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 
 		// Skip flow if we cannot initialize "input" plugin.
 		if err != nil {
-			LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.ERROR_PLUGIN_INIT_ERROR.Error(), err)
+			LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT, err)
 			continue
 		}
 
@@ -276,28 +290,24 @@ func getFlow(config *viper.Viper) []*core.Flow {
 			// Every plugin must have: id, plugin, params.
 			if !a || !b || !c {
 				log.WithFields(log.Fields{
-					"hash":  flowHash,
-					"flow":  flowName,
-					"file":  fileName,
-					"type":  "process",
-					"error": core.ERROR_PLUGIN_PROCESS_PARAMS_ERROR,
-				}).Error(core.ERROR_PLUGIN_INIT_ERROR)
-
+					"flow":   flowName,
+					"file":   fileName,
+					"plugin": pluginName,
+					"id":     pluginId,
+					"error":  core.ERROR_PLUGIN_PROCESS_PARAMS,
+				}).Error(core.LOG_PLUGIN_INIT)
 				break
 			}
 
 			// All "process" plugins ids must be ordered.
 			if pluginId != index {
 				log.WithFields(log.Fields{
-					"hash":   flowHash,
 					"flow":   flowName,
 					"file":   fileName,
 					"plugin": pluginName,
-					"type":   "process",
 					"id":     pluginId,
 					"error":  core.ERROR_PLUGIN_PROCESS_ORDER,
-				}).Error(core.ERROR_PLUGIN_INIT_ERROR)
-
+				}).Error(core.LOG_PLUGIN_INIT)
 				break
 			}
 
@@ -342,14 +352,12 @@ func getFlow(config *viper.Viper) []*core.Flow {
 
 			if err != nil {
 				log.WithFields(log.Fields{
-					"hash":   flowHash,
 					"flow":   flowName,
 					"file":   fileName,
 					"plugin": pluginName,
-					"type":   "process",
 					"id":     pluginId,
 					"error":  err,
-				}).Error(core.ERROR_PLUGIN_INIT_ERROR)
+				}).Error(core.LOG_PLUGIN_INIT)
 
 			} else {
 				processPlugins[pluginId] = plugin
@@ -395,46 +403,22 @@ func getFlow(config *viper.Viper) []*core.Flow {
 
 		// Skip flow if we cannot initialize "output" plugin.
 		if err != nil {
-			LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.ERROR_PLUGIN_INIT_ERROR.Error(), err)
+			LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
 			continue
 		}
 
-		// ---------------------------------------------------------------------------------------------------------
-		// Enable/disable selected flows (mutual exclusive).
+		flows = append(flows, &core.Flow{
+			Hash: flowHash,
+			UUID: flowUUID,
 
-		addFlow := false
-
-		if len(flowsDisabled) > 0 {
-			if !core.IsValueInSlice(flowName, &flowsDisabled) {
-				addFlow = true
-			}
-		} else if len(flowsEnabled) > 0 {
-			if core.IsValueInSlice(flowName, &flowsEnabled) {
-				addFlow = true
-			}
-		} else {
-			addFlow = true
-		}
-
-		if addFlow {
-			flows = append(flows, &core.Flow{
-				Hash: flowHash,
-				UUID: flowUUID,
-
-				Name:                flowName,
-				Interval:            flowInterval,
-				Number:              flowNumber,
-				InputPlugin:         inputPlugin,
-				ProcessPlugins:      processPlugins,
-				ProcessPluginsNames: processPluginsNames,
-				OutputPlugin:        outputPlugin,
-			})
-		} else {
-			log.WithFields(log.Fields{
-				"file":    fileName,
-				"message": core.LOG_FLOW_FILE_DISABLE,
-			}).Warn(core.LOG_FLOW_FILE_IGNORE)
-		}
+			Name:                flowName,
+			Interval:            flowInterval,
+			Number:              flowNumber,
+			InputPlugin:         inputPlugin,
+			ProcessPlugins:      processPlugins,
+			ProcessPluginsNames: processPluginsNames,
+			OutputPlugin:        outputPlugin,
+		})
 	}
 
 	return flows
