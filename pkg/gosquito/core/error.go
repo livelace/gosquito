@@ -1,0 +1,33 @@
+package core
+
+import "errors"
+
+var (
+	ERROR_CONFIG_INIT_ERROR           = errors.New("config init error")
+	ERROR_CONFIG_READ_ERROR           = errors.New("config read error")
+	ERROR_DATA_FIELD_KEY_ERROR        = errors.New("data field key must be string: %v")
+	ERROR_DATA_FIELD_NOT_SLICE        = errors.New("data field not slice: %s")
+	ERROR_DATA_FIELD_TYPE_MISMATCH    = errors.New("data field type mismatch: %s")
+	ERROR_DATA_FIELD_UNKNOWN          = errors.New("data field unknown: %s")
+	ERROR_EXPORTER_LISTEN_ERROR       = errors.New("exporter error")
+	ERROR_FLOW_EXPIRE                 = errors.New("flow expire")
+	ERROR_FLOW_NAME_COMPAT_ERROR      = errors.New("flow name must be compatible: %s")
+	ERROR_FLOW_NAME_UNIQUE_ERROR      = errors.New("flow name must be unique: %s")
+	ERROR_FLOW_PARSE_ERROR            = errors.New("flow parse error")
+	ERROR_FLOW_READ_ERROR             = errors.New("flow read error")
+	ERROR_INTERVAL_FORMAT_UNKNOWN     = errors.New("interval format unknown")
+	ERROR_NO_NEW_DATA                 = errors.New("no new data")
+	ERROR_NO_VALID_FLOW               = errors.New("no valid flow")
+	ERROR_PARAM_ERROR                 = errors.New("parameter error")
+	ERROR_PARAM_KEY_MUST_STRING       = errors.New("parameter key must be string")
+	ERROR_PARAM_UNKNOWN               = errors.New("unknown parameter: %s")
+	ERROR_PLUGIN_DATA_READ_ERROR      = errors.New("plugin data read error: %s")
+	ERROR_PLUGIN_DATA_WRITE_ERROR     = errors.New("plugin data write error: %s")
+	ERROR_PLUGIN_INIT_ERROR           = errors.New("plugin init error")
+	ERROR_PLUGIN_PROCESS_ORDER        = errors.New("process plugin id must be ordered")
+	ERROR_PLUGIN_PROCESS_PARAMS_ERROR = errors.New("process plugin item must have: [id, plugin, params]")
+	ERROR_PLUGIN_REQUIRED_PARAM       = errors.New("required parameter wrong or not set: %s")
+	ERROR_PLUGIN_UNKNOWN              = errors.New("plugin unknown")
+	ERROR_SIZE_MISMATCH               = errors.New("size mismatch: %s, %s")
+	ERROR_SIZE_FORMAT_UNKNOWN         = errors.New("size format unknown")
+)

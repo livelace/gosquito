@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package webchela;
+option go_package = ".;webchela";
+
+service Server {
+  rpc GetLoad(Empty) returns (Load) {}
+  rpc RunTask(Task) returns (stream Chunk) {}
+}
+
+message Chunk {
+  bytes chunk = 1;
+  bool  end = 2;
+}
+
+message Empty {}
+
+message Load {
+  int32 cpu_load = 1;
+  int64 mem_free = 2;
+  int32 score = 3;
+}
+
+message Result {
+  string UUID = 1;
+  string page_url = 2;
+  string page_title = 3;
+  string page_body = 4;
+  repeated string script_output = 5;
+}
+
+message Task {
+  message Browser {
+    string type = 1;
+    repeated string argument = 2;
+    repeated string extension = 3;
+    string geometry = 4;
+    int32 instance = 5;
+    int32 instance_tab = 6;
+    int64 page_size = 7;
+    int32 page_timeout = 8;
+    int32 script_timeout = 9;
+  }
+
+  string client_id = 1;
+
+  Browser browser = 2;
+
+  repeated string urls = 3;
+  repeated string scripts = 4;
+  int64 chunk_size = 5;
+  int32 cpu_load = 6;
+  int64 mem_free = 7;
+  int32 timeout = 8;
+}
+
