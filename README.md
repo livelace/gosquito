@@ -9,13 +9,22 @@
 ### Plugins:
 
 | Plugin        | Type    | Description |
-| :-------------|---------| ----------- |
-| rss           | input   |
-| telegram      | input   |
-| twitter       | input   |
-| dedup         | process |
-| [regexpreplace](https://github.com/livelace/gosquito/plugins/process/regexpreplace.md) | process 
-| webchela      | process |
-| kafka         | output  |
-| mattermost    | output  |
-| smtp          | output  |
+| :-------------| :-------:| ----------- |
+| [rss](https://github.com/livelace/gosquito/docs/plugins/input/rss.md)                       |  input  |
+| [telegram](https://github.com/livelace/gosquito/docs/plugins/input/telegram.md)             |  input  |
+| [twitter](https://github.com/livelace/gosquito/docs/plugins/input/twitter.md)               |  input  |
+| | | |
+| [dedup](https://github.com/livelace/gosquito/docs/plugins/process/dedup.md)                 | process |
+| [echo](https://github.com/livelace/gosquito/docs/plugins/process/echo.md)                   | process |
+| [expandurl](https://github.com/livelace/gosquito/docs/plugins/process/expandurl.md)         | process |
+| [fetch](https://github.com/livelace/gosquito/docs/plugins/process/fetch.md)                 | process |
+| [minio](https://github.com/livelace/gosquito/docs/plugins/process/minio.md)                 | process |
+| [regexpfind](https://github.com/livelace/gosquito/docs/plugins/process/regexpfind.md)       | process |
+| [regexpmatch](https://github.com/livelace/gosquito/docs/plugins/process/regexpmatch.md)     | process |
+| [regexpreplace](https://github.com/livelace/gosquito/docs/plugins/process/regexpreplace.md) | process |
+| [unique](https://github.com/livelace/gosquito/docs/plugins/process/unique.md)               | process |
+| [webchela](https://github.com/livelace/gosquito/docs/plugins/process/webchela.md)           | process |
+| | | |
+| [kafka](https://github.com/livelace/gosquito/docs/plugins/output/kafka.md)                  | output |
+| [mattermost](https://github.com/livelace/gosquito/docs/plugins/output/mattermost.md)        | output |
+| [smtp](https://github.com/livelace/gosquito/docs/plugins/output/smtp.md)                    | output |
