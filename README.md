@@ -14,6 +14,26 @@
 
 ### Config sample:
 
+```yaml
+# short example, usually it's longer ;)
+flow:
+  name: "telegram-smtp"
+
+  input:
+    plugin: "telegram"
+    params:
+      cred: "credentials.telegram.default"
+      input: ["breakingmash"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.smtp.telegram.default"
+      attachments: ["telegram.media"]
+      headers:
+        x-gosquito-tag1: "world"
+        x-gosquito-tag2: "common"
+```
 
 ### Plugins:
 
@@ -37,6 +57,4 @@
 | [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)                  | output | Send data to Kafka topics. |
 | [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)        | output | Send data to Mattermost channels/users. |
 | [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)                    | output | Send data as emails with custom attachments/headers. |
-
-### Data model: 
 
