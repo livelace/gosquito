@@ -19,7 +19,7 @@ var (
 			Name: "gosquito_flow_error",
 			Help: "",
 		},
-		[]string{"flow", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
 	flowExpire = prometheus.NewCounterVec(
@@ -27,7 +27,7 @@ var (
 			Name: "gosquito_flow_expire",
 			Help: "",
 		},
-		[]string{"flow", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
 	flowNoData = prometheus.NewCounterVec(
@@ -35,7 +35,7 @@ var (
 			Name: "gosquito_flow_nodata",
 			Help: "",
 		},
-		[]string{"flow", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
 	flowReceive = prometheus.NewCounterVec(
@@ -43,7 +43,7 @@ var (
 			Name: "gosquito_flow_receive",
 			Help: "",
 		},
-		[]string{"flow", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
 	flowSend = prometheus.NewCounterVec(
@@ -51,7 +51,7 @@ var (
 			Name: "gosquito_flow_send",
 			Help: "",
 		},
-		[]string{"flow", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 )
 
@@ -133,6 +133,7 @@ func RunApp() {
 
 					labels := prometheus.Labels{
 						"flow":            flow.Name,
+						"hash":            flow.Hash,
 						"input_plugin":    flow.InputPlugin.GetName(),
 						"input_values":    fmt.Sprintf("%v", flow.InputPlugin.GetInput()),
 						"process_plugins": fmt.Sprintf("%v", processPlugins),
