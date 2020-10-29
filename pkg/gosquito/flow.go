@@ -374,37 +374,33 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		// Map "output" plugin.
 
 		outputParams, b := core.IsMapWithStringAsKey(flowRaw.Flow.Output.Params)
-		if !b {
-			LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.ERROR_PARAM_ERROR.Error(),
-				core.ERROR_PARAM_KEY_MUST_STRING)
-			continue
-		}
+		if b {
+			// Assemble plugin configuration.
+			outputPluginConfig := core.PluginConfig{
+				Config: config,
+				File:   fileName,
+				Flow:   flowName,
+				Hash:   flowHash,
+				Params: &outputParams,
+			}
 
-		// Assemble plugin configuration.
-		outputPluginConfig := core.PluginConfig{
-			Config: config,
-			File:   fileName,
-			Flow:   flowName,
-			Hash:   flowHash,
-			Params: &outputParams,
-		}
+			// Available "output" plugins.
+			switch flowRaw.Flow.Output.Plugin {
+			case "kafka":
+				outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
+			case "mattermost":
+				outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
+			case "smtp":
+				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
+			default:
+				err = core.ERROR_PLUGIN_UNKNOWN
+			}
 
-		// Available "output" plugins.
-		switch flowRaw.Flow.Output.Plugin {
-		case "kafka":
-			outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
-		case "mattermost":
-			outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
-		case "smtp":
-			outputPlugin, err = smtpOut.Init(&outputPluginConfig)
-		default:
-			err = core.ERROR_PLUGIN_UNKNOWN
-		}
-
-		// Skip flow if we cannot initialize "output" plugin.
-		if err != nil {
-			LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
-			continue
+			// Skip flow if we cannot initialize "output" plugin.
+			if err != nil {
+				LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
+				continue
+			}
 		}
 
 		flows = append(flows, &core.Flow{
@@ -519,144 +515,150 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// -------------------------------------------------------------------------------------------------------------
 	// Process received data with "process" plugins.
 
-	log.WithFields(log.Fields{
-		"hash":   flow.Hash,
-		"flow":   flow.Name,
-		"plugin": flow.ProcessPluginsNames,
-		"type":   "process",
-	}).Info(core.LOG_FLOW_PROCESS)
+	if len(flow.ProcessPlugins) > 0 {
 
-	// Every "process" plugin generates its own dataset.
-	// Any dataset could be excluded from sending through "output" plugin.
-	for index := 0; index < len(flow.ProcessPlugins); index++ {
-		result := make([]*core.DataItem, 0)
+		log.WithFields(log.Fields{
+			"hash":   flow.Hash,
+			"flow":   flow.Name,
+			"plugin": flow.ProcessPluginsNames,
+			"type":   "process",
+		}).Info(core.LOG_FLOW_PROCESS)
 
-		plugin := flow.ProcessPlugins[index]
-		require := flow.ProcessPlugins[index].GetRequire()
+		// Every "process" plugin generates its own dataset.
+		// Any dataset could be excluded from sending through "output" plugin.
+		for index := 0; index < len(flow.ProcessPlugins); index++ {
+			result := make([]*core.DataItem, 0)
 
-		// Work with data from inputPlugin if:
-		// 1. It's the first "process" plugin on the list.
-		// 2 "require" is not set for plugin.
-		if index == 0 || len(require) == 0 {
-			result, err = plugin.Do(inputData)
-		} else {
-			// Combine datasets from required process plugins.
-			var combined = make([]*core.DataItem, 0)
+			plugin := flow.ProcessPlugins[index]
+			require := flow.ProcessPlugins[index].GetRequire()
 
-			// 1. Plugin cannot require itself.
-			// 2. Plugin cannot require higher id (ordered processing).
-			for i := 0; i < len(require); i++ {
-				id := require[i]
+			// Work with data from inputPlugin if:
+			// 1. It's the first "process" plugin on the list.
+			// 2 "require" is not set for plugin.
+			if index == 0 || len(require) == 0 {
+				result, err = plugin.Do(inputData)
+			} else {
+				// Combine datasets from required process plugins.
+				var combined = make([]*core.DataItem, 0)
 
-				if id < index {
-					combined = append(combined, results[id]...)
+				// 1. Plugin cannot require itself.
+				// 2. Plugin cannot require higher id (ordered processing).
+				for i := 0; i < len(require); i++ {
+					id := require[i]
+
+					if id < index {
+						combined = append(combined, results[id]...)
+					}
 				}
+
+				result, err = plugin.Do(combined)
 			}
 
-			result, err = plugin.Do(combined)
-		}
+			// Skip flow if we have problems with data processing.
+			if err != nil {
+				log.WithFields(log.Fields{
+					"hash":   flow.Hash,
+					"flow":   flow.Name,
+					"file":   plugin.GetFile(),
+					"plugin": plugin.GetName(),
+					"type":   plugin.GetType(),
+					"id":     plugin.GetId(),
+					"alias":  plugin.GetAlias(),
+					"error":  err,
+				}).Warn(core.LOG_FLOW_SKIP)
 
-		// Skip flow if we have problems with data processing.
-		if err != nil {
-			log.WithFields(log.Fields{
-				"hash":   flow.Hash,
-				"flow":   flow.Name,
-				"file":   plugin.GetFile(),
-				"plugin": plugin.GetName(),
-				"type":   plugin.GetType(),
-				"id":     plugin.GetId(),
-				"alias":  plugin.GetAlias(),
-				"error":  err,
-			}).Warn(core.LOG_FLOW_SKIP)
+				atomic.AddInt32(&flow.MetricError, 1)
+				cleanFlowTemp()
+				return
 
-			atomic.AddInt32(&flow.MetricError, 1)
-			cleanFlowTemp()
-			return
+			} else {
+				log.WithFields(log.Fields{
+					"hash":   flow.Hash,
+					"flow":   flow.Name,
+					"file":   plugin.GetFile(),
+					"plugin": plugin.GetName(),
+					"type":   plugin.GetType(),
+					"id":     plugin.GetId(),
+					"alias":  plugin.GetAlias(),
+					"data":   len(result),
+				}).Debug(core.LOG_FLOW_STAT)
 
-		} else {
-			log.WithFields(log.Fields{
-				"hash":   flow.Hash,
-				"flow":   flow.Name,
-				"file":   plugin.GetFile(),
-				"plugin": plugin.GetName(),
-				"type":   plugin.GetType(),
-				"id":     plugin.GetId(),
-				"alias":  plugin.GetAlias(),
-				"data":   len(result),
-			}).Debug(core.LOG_FLOW_STAT)
-
-			results[index] = result
+				results[index] = result
+			}
 		}
 	}
 
 	// -------------------------------------------------------------------------------------------------------------
 	// Send data through "output" plugin.
 
-	logFlowSkip = func(err error) {
-		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
-			"plugin": flow.OutputPlugin.GetName(),
-			"type":   flow.OutputPlugin.GetType(),
-			"error":  err,
-		}).Warn(core.LOG_FLOW_SKIP)
-	}
+	if flow.OutputPlugin != nil {
 
-	logFlowStat = func(msg interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
-			"file":   flow.OutputPlugin.GetFile(),
-			"plugin": flow.OutputPlugin.GetName(),
-			"type":   flow.OutputPlugin.GetType(),
-			"data":   fmt.Sprintf("%v", msg),
-		}).Debug(core.LOG_FLOW_STAT)
-	}
-
-	log.WithFields(log.Fields{
-		"hash":   flow.Hash,
-		"flow":   flow.Name,
-		"plugin": flow.OutputPlugin.GetName(),
-		"type":   flow.OutputPlugin.GetType(),
-	}).Info(core.LOG_FLOW_SEND)
-
-	// 1. Pass data from "process" plugins to "output" plugin.
-	// 2. Pass data from "input" plugin to "output" plugin directly.
-	if len(flow.ProcessPlugins) > 0 && len(results) > 0 {
-		for index := 0; index < len(results); index++ {
-			data := results[index]
-
-			// Send only needed data (param "include" is "true").
-			// Send only not empty data (some plugins can produce zero data).
-			if flow.ProcessPlugins[index].GetInclude() && len(data) > 0 {
-				err = flow.OutputPlugin.Send(data)
-
-				if err != nil {
-					atomic.AddInt32(&flow.MetricError, 1)
-					logFlowSkip(err)
-					cleanFlowTemp()
-					return
-
-				} else {
-					atomic.AddInt32(&flow.MetricSend, int32(len(data)))
-					logFlowStat(fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
-				}
-			}
+		logFlowSkip = func(err error) {
+			log.WithFields(log.Fields{
+				"hash":   flow.Hash,
+				"flow":   flow.Name,
+				"plugin": flow.OutputPlugin.GetName(),
+				"type":   flow.OutputPlugin.GetType(),
+				"error":  err,
+			}).Warn(core.LOG_FLOW_SKIP)
 		}
 
-	} else if len(flow.ProcessPlugins) == 0 && len(inputData) > 0 {
-		err = flow.OutputPlugin.Send(inputData)
+		logFlowStat = func(msg interface{}) {
+			log.WithFields(log.Fields{
+				"hash":   flow.Hash,
+				"flow":   flow.Name,
+				"file":   flow.OutputPlugin.GetFile(),
+				"plugin": flow.OutputPlugin.GetName(),
+				"type":   flow.OutputPlugin.GetType(),
+				"data":   fmt.Sprintf("%v", msg),
+			}).Debug(core.LOG_FLOW_STAT)
+		}
 
-		if err != nil {
-			atomic.AddInt32(&flow.MetricError, 1)
-			logFlowSkip(err)
-			cleanFlowTemp()
-			return
+		log.WithFields(log.Fields{
+			"hash":   flow.Hash,
+			"flow":   flow.Name,
+			"plugin": flow.OutputPlugin.GetName(),
+			"type":   flow.OutputPlugin.GetType(),
+		}).Info(core.LOG_FLOW_SEND)
 
-		} else {
-			atomic.AddInt32(&flow.MetricSend, int32(len(inputData)))
-			logFlowStat(fmt.Sprintf("input plugin: %s, send data: %d",
-				flow.InputPlugin.GetName(), len(inputData)))
+		// 1. Pass data from "process" plugins to "output" plugin.
+		// 2. Pass data from "input" plugin to "output" plugin directly.
+		if len(flow.ProcessPlugins) > 0 && len(results) > 0 {
+			for index := 0; index < len(results); index++ {
+				data := results[index]
+
+				// Send only needed data (param "include" is "true").
+				// Send only not empty data (some plugins can produce zero data).
+				if flow.ProcessPlugins[index].GetInclude() && len(data) > 0 {
+					err = flow.OutputPlugin.Send(data)
+
+					if err != nil {
+						atomic.AddInt32(&flow.MetricError, 1)
+						logFlowSkip(err)
+						cleanFlowTemp()
+						return
+
+					} else {
+						atomic.AddInt32(&flow.MetricSend, int32(len(data)))
+						logFlowStat(fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
+					}
+				}
+			}
+
+		} else if len(flow.ProcessPlugins) == 0 && len(inputData) > 0 {
+			err = flow.OutputPlugin.Send(inputData)
+
+			if err != nil {
+				atomic.AddInt32(&flow.MetricError, 1)
+				logFlowSkip(err)
+				cleanFlowTemp()
+				return
+
+			} else {
+				atomic.AddInt32(&flow.MetricSend, int32(len(inputData)))
+				logFlowStat(fmt.Sprintf("input plugin: %s, send data: %d",
+					flow.InputPlugin.GetName(), len(inputData)))
+			}
 		}
 	}
 
