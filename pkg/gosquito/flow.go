@@ -492,9 +492,10 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// Update metrics.
 	if err == core.ERROR_FLOW_EXPIRE {
 		atomic.AddInt32(&flow.MetricExpire, 1)
-	}
+		logFlowSkip(err)
+		cleanFlowTemp()
 
-	if err != nil {
+	} else if err != nil {
 		atomic.AddInt32(&flow.MetricError, 1)
 		logFlowSkip(err)
 		cleanFlowTemp()
