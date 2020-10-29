@@ -242,6 +242,10 @@ func (p *Plugin) GetFile() string {
 	return p.File
 }
 
+func (p *Plugin) GetInput() []string {
+	return p.Input
+}
+
 func (p *Plugin) GetName() string {
 	return p.Name
 }

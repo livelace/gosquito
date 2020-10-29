@@ -140,6 +140,10 @@ func (p *Plugin) GetName() string {
 	return p.Name
 }
 
+func (p *Plugin) GetOutput() []string {
+	return p.Output
+}
+
 func (p *Plugin) GetType() string {
 	return p.Type
 }

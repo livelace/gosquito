@@ -11,6 +11,7 @@ import (
 
 type InputPlugin interface {
 	GetFile() string
+	GetInput() []string
 	GetName() string
 	GetType() string
 
@@ -37,6 +38,7 @@ type ProcessPlugin interface {
 type OutputPlugin interface {
 	GetFile() string
 	GetName() string
+	GetOutput() []string
 	GetType() string
 
 	Send(d []*DataItem) error
