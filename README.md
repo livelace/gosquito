@@ -11,28 +11,109 @@
 * Plugins dependencies. Plugin "B" will process data only if plugin "A" derived some data. 
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
+* Export flow statistics to [Prometheus](https://prometheus.io/).
+
+### Config sample:
+
+
+```toml
+[default]
+time_format = "15:04 02.01.2006"
+time_zone = "Europe/Moscow"
+
+[credentials.twitter.default]
+access_token = "<access_token>"
+access_secret = "<access_secret>"
+consumer_key = "<consumer_key>"
+consumer_secret = "<consumer_secret>"
+
+[regexes.urls]
+regexp = [
+    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
+    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+]
+
+[templates.smtp.twitter.default]
+server = "zimbra.livelace.ru"
+port = 25
+ssl = true
+
+from = "gosquito@livelace.ru"
+output = ["mosquito-job@livelace.ru"]
+
+subject = "{{ .DATA.TEXT0 }}"
+subject_length = 150
+
+body_html = true
+body_length = 1000
+body = """
+<br>
+<div align="right"><b>{{ .TIMEFORMAT }}</b></div>
+{{.DATA.TEXT0}}<br><br>
+{{range .TWITTER.URLS}}{{printf "%s<br>" .}}{{end}}
+"""
+
+attachments = ["data.array0"]
+
+[templates.smtp.twitter.default.headers]
+x-gosquito-flow = "flow"
+x-gosquito-plugin = "plugin"
+x-gosquito-source = "source"
+x-gosquito-time = "time"
+x-gosquito-uuid = "uuid"
+```
+
 
 ### Flow sample:
 
 ```yaml
-# short example, usually it's longer ;)
 flow:
-  name: "telegram-smtp"
+  name: "find-russia"
+  params:
+    interval: "1h"
 
   input:
-    plugin: "telegram"
+    plugin: "twitter"
     params:
-      cred: "credentials.telegram.default"
-      input: ["breakingmash"]
+      cred: "credentials.twitter.default"
+      input: [
+          "izvestia_ru", "IA_REGNUM", "rianru", "tass_agency",
+          "AP", "BBCNews", "BBCWorld", "bbcrussian", "business", "independent", "Telegraph"
+      ]
+      force: true
+
+  process:
+    - id: 0
+      alias: "match russia"
+      plugin: "regexpmatch"
+      params:
+        input: ["twitter.text"]
+        regexp: ["Россия", "Russia"]
+
+    - id: 1
+      alias: "clean text"
+      plugin: "regexpreplace"
+      params:
+        require: [0]
+        include: false
+        input:  ["twitter.text"]
+        output: ["data.text0"]
+        regexp: ["regexes.urls", "\n"]
+        replacement: [""]
+
+    - id: 2
+      alias: "fetch media"
+      plugin: "fetch"
+      params:
+        require: [1]
+        include: false
+        input:  ["twitter.media"]
+        output: ["data.array0"]
 
   output:
     plugin: "smtp"
     params:
-      template: "templates.smtp.telegram.default"
-      attachments: ["telegram.media"]
-      headers:
-        x-gosquito-tag1: "world"
-        x-gosquito-tag2: "common"
+      template: "templates.smtp.twitter.default"
 ```
 
 ### Plugins:
