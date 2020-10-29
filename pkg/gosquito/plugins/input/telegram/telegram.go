@@ -329,8 +329,8 @@ type Plugin struct {
 	TgBaseDir string
 
 	ExpireAction        []string
+	ExpireActionDelay   int64
 	ExpireActionTimeout int
-	ExpireDelay         int64
 	ExpireInterval      int64
 	ExpireLast          int64
 	Force               bool
@@ -424,7 +424,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.ExpireLast) > p.ExpireDelay {
+			if (currentTime.Unix() - p.ExpireLast) > p.ExpireActionDelay {
 				p.ExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -598,6 +598,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireAction((*pluginConfig.Params)["expire_action"])
 	showParam("expire_action", plugin.ExpireAction)
 
+	// expire_action_delay.
+	setExpireActionDelay := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["expire_action_delay"] = 0
+			plugin.ExpireActionDelay = v
+		}
+	}
+	setExpireActionDelay(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
+	setExpireActionDelay(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
+	setExpireActionDelay((*pluginConfig.Params)["expire_action_delay"])
+	showParam("expire_action_delay", plugin.ExpireActionDelay)
+
 	// expire_action_timeout.
 	setExpireActionTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -609,18 +621,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireActionTimeout(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
 	setExpireActionTimeout((*pluginConfig.Params)["expire_action_timeout"])
 	showParam("expire_action_timeout", plugin.ExpireActionTimeout)
-
-	// expire_delay.
-	setExpireDelay := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["expire_delay"] = 0
-			plugin.ExpireDelay = v
-		}
-	}
-	setExpireDelay(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_DELAY))
-	setExpireDelay(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_delay", template)))
-	setExpireDelay((*pluginConfig.Params)["expire_delay"])
-	showParam("expire_delay", plugin.ExpireDelay)
 
 	// file_max_size.
 	setFileMaxSize := func(p interface{}) {

@@ -9,8 +9,8 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	DEFAULT_ETC_PATH              = "/etc/gosquito"
+	DEFAULT_EXPIRE_ACTION_DELAY   = "1d"
 	DEFAULT_EXPIRE_ACTION_TIMEOUT = 30
-	DEFAULT_EXPIRE_DELAY          = "1d"
 	DEFAULT_EXPIRE_INTERVAL       = "7d"
 	DEFAULT_EXPORTER_LISTEN       = ":8080"
 	DEFAULT_FLOW_INTERVAL         = "60s"
@@ -45,8 +45,8 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	VIPER_DEFAULT_EXPIRE_ACTION         = "default.expire_action"
+	VIPER_DEFAULT_EXPIRE_ACTION_DELAY   = "default.expire_action_delay"
 	VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT = "default.expire_action_timeout"
-	VIPER_DEFAULT_EXPIRE_DELAY          = "default.expire_delay"
 	VIPER_DEFAULT_EXPIRE_INTERVAL       = "default.expire_interval"
 	VIPER_DEFAULT_EXPORTER_LISTEN       = "default.exporter_listen"
 	VIPER_DEFAULT_FLOW_DIR              = "default.flow_dir"
