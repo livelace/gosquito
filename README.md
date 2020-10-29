@@ -34,12 +34,12 @@ regexp = [
 ]
 
 [templates.smtp.twitter.default]
-server = "zimbra.livelace.ru"
+server = "mail.example.com"
 port = 25
 ssl = true
 
-from = "gosquito@livelace.ru"
-output = ["mosquito-job@livelace.ru"]
+from = "gosquito@example.com"
+output = ["user@example.com"]
 
 subject = "{{ .DATA.TEXT0 }}"
 subject_length = 150
