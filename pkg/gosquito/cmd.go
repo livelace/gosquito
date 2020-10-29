@@ -89,6 +89,7 @@ func RunApp() {
 
 	// Metrics.
 	go func() {
+		http.Handle("/", promhttp.Handler())
 		http.Handle("/metrics", promhttp.Handler())
 		err := http.ListenAndServe(config.GetString(core.VIPER_DEFAULT_EXPORTER_LISTEN), nil)
 		if err != nil {
