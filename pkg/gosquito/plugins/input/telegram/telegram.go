@@ -1,13 +1,11 @@
 package telegramIn
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sync"
@@ -330,11 +328,12 @@ type Plugin struct {
 	TempDir   string
 	TgBaseDir string
 
-	ExpireAction   []string
-	ExpireDelay    int64
-	ExpireInterval int64
-	ExpireLast     int64
-	Force          bool
+	ExpireAction        []string
+	ExpireActionTimeout int
+	ExpireDelay         int64
+	ExpireInterval      int64
+	ExpireLast          int64
+	Force               bool
 
 	ApiId       int
 	ApiHash     string
@@ -416,37 +415,46 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 	}
 
 	// Check every source for expiration.
-	if len(temp) == 0 {
-		sourcesExpired := false
+	sourcesExpired := false
 
-		for _, sourceTime := range flowStates {
-			if (currentTime.Unix() - sourceTime.(time.Time).Unix()) > p.ExpireInterval {
-				sourcesExpired = true
+	// Check if any source is expired.
+	for source, sourceTime := range flowStates {
+		if (currentTime.Unix() - sourceTime.(time.Time).Unix()) > p.ExpireInterval {
+			sourcesExpired = true
+
+			// Execute command if expire delay exceeded.
+			// ExpireLast keeps last execution timestamp.
+			if (currentTime.Unix() - p.ExpireLast) > p.ExpireDelay {
+				p.ExpireLast = currentTime.Unix()
+
+				// Execute command with args.
+				// We don't worry about command return code.
+				if len(p.ExpireAction) > 0 {
+					cmd := p.ExpireAction[0]
+					args := []string{p.Flow, source, fmt.Sprintf("%v", sourceTime.(time.Time).Unix())}
+					args = append(args, p.ExpireAction[1:]...)
+
+					output, err := core.ExecWithTimeout(cmd, args, p.ExpireActionTimeout)
+
+					log.WithFields(log.Fields{
+						"hash":   p.Hash,
+						"flow":   p.Flow,
+						"file":   p.File,
+						"plugin": p.Name,
+						"type":   p.Type,
+						"source": source,
+						"data": fmt.Sprintf(
+							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+							cmd, args, output, err),
+					}).Debug(core.LOG_PLUGIN_STAT)
+				}
 			}
 		}
+	}
 
-		// Execute command if:
-		// 1. Any source is expired.
-		// 2. Execution delay is exceeded.
-		if sourcesExpired && (currentTime.Unix()-p.ExpireLast) > p.ExpireDelay {
-			p.ExpireLast = currentTime.Unix()
-
-			if len(p.ExpireAction) > 0 {
-				ctx, cancel := context.WithTimeout(context.Background(),
-					time.Duration(core.DEFAULT_EXPIRE_ACTION_TIMEOUT)*time.Second)
-				defer cancel()
-
-				// We don't worry about these executions (we just wait for 10 seconds).
-				// Make more checks in your scripts ;)
-				cmd := exec.CommandContext(ctx, p.ExpireAction[0], p.ExpireAction[1:]...)
-				_, _ = cmd.Output()
-			}
-		}
-
-		// Inform about expiration.
-		if sourcesExpired {
-			return temp, core.ERROR_FLOW_EXPIRE
-		}
+	// Inform about expiration.
+	if sourcesExpired {
+		return temp, core.ERROR_FLOW_EXPIRE
 	}
 
 	return temp, nil
@@ -503,14 +511,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"expire_action":   -1,
-		"expire_delay":    -1,
-		"expire_interval": -1,
-		"force":           -1,
-		"template":        -1,
-		"timeout":         -1,
-		"time_format":     -1,
-		"time_zone":       -1,
+		"expire_action":         -1,
+		"expire_action_timeout": -1,
+		"expire_delay":          -1,
+		"expire_interval":       -1,
+		"force":                 -1,
+		"template":              -1,
+		"timeout":               -1,
+		"time_format":           -1,
+		"time_zone":             -1,
 
 		"api_id":        1,
 		"api_hash":      1,
@@ -584,6 +593,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireAction(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
 	setExpireAction((*pluginConfig.Params)["expire_action"])
 	showParam("expire_action", plugin.ExpireAction)
+
+	// expire_action_timeout.
+	setExpireActionTimeout := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["expire_action_timeout"] = 0
+			plugin.ExpireActionTimeout = v
+		}
+	}
+	setExpireActionTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
+	setExpireActionTimeout(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
+	setExpireActionTimeout((*pluginConfig.Params)["expire_action_timeout"])
+	showParam("expire_action_timeout", plugin.ExpireActionTimeout)
 
 	// expire_delay.
 	setExpireDelay := func(p interface{}) {

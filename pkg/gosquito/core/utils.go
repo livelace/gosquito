@@ -2,11 +2,13 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -272,6 +274,15 @@ func ExtractTemplateIntoString(data *DataItem, t *tmpl.Template) (string, error)
 	}
 
 	return b.String(), nil
+}
+
+func ExecWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(timeout)*time.Second)
+	defer cancel()
+
+	c := exec.CommandContext(ctx, cmd, args...)
+	return c.Output()
 }
 
 func GenFlowHash() string {

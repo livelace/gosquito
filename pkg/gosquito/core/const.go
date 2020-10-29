@@ -9,7 +9,7 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	DEFAULT_ETC_PATH              = "/etc/gosquito"
-	DEFAULT_EXPIRE_ACTION_TIMEOUT = 10
+	DEFAULT_EXPIRE_ACTION_TIMEOUT = 30
 	DEFAULT_EXPIRE_DELAY          = "1d"
 	DEFAULT_EXPIRE_INTERVAL       = "7d"
 	DEFAULT_EXPORTER_LISTEN       = ":8080"
@@ -44,25 +44,26 @@ const (
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	VIPER_DEFAULT_EXPIRE_ACTION   = "default.expire_action"
-	VIPER_DEFAULT_EXPIRE_DELAY    = "default.expire_delay"
-	VIPER_DEFAULT_EXPIRE_INTERVAL = "default.expire_interval"
-	VIPER_DEFAULT_EXPORTER_LISTEN = "default.exporter_listen"
-	VIPER_DEFAULT_FLOW_DIR        = "default.flow_dir"
-	VIPER_DEFAULT_FLOW_DISABLE    = "default.flow_disable"
-	VIPER_DEFAULT_FLOW_ENABLE     = "default.flow_enable"
-	VIPER_DEFAULT_FLOW_INTERVAL   = "default.flow_interval"
-	VIPER_DEFAULT_FLOW_NUMBER     = "default.flow_number"
-	VIPER_DEFAULT_LOG_LEVEL       = "default.log_level"
-	VIPER_DEFAULT_PLUGIN_DIR      = "default.plugin_dir"
-	VIPER_DEFAULT_PLUGIN_INCLUDE  = "default.plugin_include"
-	VIPER_DEFAULT_PLUGIN_TIMEOUT  = "default.plugin_timeout"
-	VIPER_DEFAULT_PROC_MAX        = "default.proc_num"
-	VIPER_DEFAULT_STATE_DIR       = "default.state_dir"
-	VIPER_DEFAULT_TEMP_DIR        = "default.temp_dir"
-	VIPER_DEFAULT_TIME_FORMAT     = "default.time_format"
-	VIPER_DEFAULT_TIME_ZONE       = "default.time_zone"
-	VIPER_DEFAULT_USER_AGENT      = "default.user_agent"
+	VIPER_DEFAULT_EXPIRE_ACTION         = "default.expire_action"
+	VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT = "default.expire_action_timeout"
+	VIPER_DEFAULT_EXPIRE_DELAY          = "default.expire_delay"
+	VIPER_DEFAULT_EXPIRE_INTERVAL       = "default.expire_interval"
+	VIPER_DEFAULT_EXPORTER_LISTEN       = "default.exporter_listen"
+	VIPER_DEFAULT_FLOW_DIR              = "default.flow_dir"
+	VIPER_DEFAULT_FLOW_DISABLE          = "default.flow_disable"
+	VIPER_DEFAULT_FLOW_ENABLE           = "default.flow_enable"
+	VIPER_DEFAULT_FLOW_INTERVAL         = "default.flow_interval"
+	VIPER_DEFAULT_FLOW_NUMBER           = "default.flow_number"
+	VIPER_DEFAULT_LOG_LEVEL             = "default.log_level"
+	VIPER_DEFAULT_PLUGIN_DIR            = "default.plugin_dir"
+	VIPER_DEFAULT_PLUGIN_INCLUDE        = "default.plugin_include"
+	VIPER_DEFAULT_PLUGIN_TIMEOUT        = "default.plugin_timeout"
+	VIPER_DEFAULT_PROC_MAX              = "default.proc_num"
+	VIPER_DEFAULT_STATE_DIR             = "default.state_dir"
+	VIPER_DEFAULT_TEMP_DIR              = "default.temp_dir"
+	VIPER_DEFAULT_TIME_FORMAT           = "default.time_format"
+	VIPER_DEFAULT_TIME_ZONE             = "default.time_zone"
+	VIPER_DEFAULT_USER_AGENT            = "default.user_agent"
 
 	// -----------------------------------------------------------------------------------------------------------------
 
