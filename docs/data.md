@@ -30,7 +30,7 @@ type DataItem struct {
 
 Plugin specific data structures: [RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md), [Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md), [Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
 
-DataItem.Data structure:
+Temporary DataItem.Data structure for process plugins results:
 ```go
 type Data struct {
 	ARRAY0  []string
