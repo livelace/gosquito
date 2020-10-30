@@ -157,6 +157,11 @@ type Data struct {
 	TEXT3   string
 	TEXT4   string
 	TEXT5   string
+	TEXT6   string
+	TEXT7   string
+	TEXT8   string
+	TEXT9   string
+	TEXT10  string
 }
 
 type RssData struct {

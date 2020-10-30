@@ -132,6 +132,18 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 						expanded = true
 						ro.Set(reflect.Append(ro, reflect.ValueOf(expandedUrl)))
 					}
+
+					log.WithFields(log.Fields{
+						"hash":   p.Hash,
+						"flow":   p.Flow,
+						"file":   p.File,
+						"plugin": p.Name,
+						"type":   p.Type,
+						"id":     p.ID,
+						"alias":  p.Alias,
+						"data": fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
+							ri.Index(i).String(), depth, expandedUrl),
+					}).Debug(core.LOG_PLUGIN_STAT)
 				}
 			}
 		}
