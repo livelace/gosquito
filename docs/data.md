@@ -8,7 +8,7 @@ Typical flow steps:
 
 
 DataItem is a data structure with specific fields, contains common for all plugins fields and plugin specific fields.  
-Typical flow configuration consists of plugins and DataItem fields as parameters.
+Typical flow configuration consists of plugins with DataItem fields as parameters.
 
 ```go
 type DataItem struct {
