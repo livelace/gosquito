@@ -17,7 +17,7 @@ To replace various in-house automated tasks of data gathering with single tool.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or force send fetched data every time. 
 
-### Config sample:
+### Config sample (all possible options):
 
 
 ```toml
