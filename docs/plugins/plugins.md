@@ -8,7 +8,7 @@
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | process | Echoing processing data. |
 | [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)         | process | Expand short urls. |
 | [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                 | process | Fetch remote data. | 
-| [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                 | process | Get/put data from/to s3 bucket. |
+| [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                 | process | Put data to S3 bucket. |
 | [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)       | process | Find patters in data. |
 | [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)     | process | Match data by patterns. |
 | [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md) | process | Replace patterns in data. |
