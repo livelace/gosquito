@@ -624,7 +624,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 		// 1. Pass data from "process" plugins to "output" plugin.
 		// 2. Pass data from "input" plugin to "output" plugin directly.
-		if len(flow.ProcessPlugins) > 0 && len(results) > 0 {
+		if len(results) > 0 {
 			for index := 0; index < len(results); index++ {
 				data := results[index]
 
@@ -646,7 +646,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 				}
 			}
 
-		} else if len(flow.ProcessPlugins) == 0 && len(inputData) > 0 {
+		} else if len(inputData) > 0 {
 			err = flow.OutputPlugin.Send(inputData)
 
 			if err != nil {
