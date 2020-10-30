@@ -3,6 +3,9 @@
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data gathering from different sources ([RSS](https://en.wikipedia.org/wiki/RSS), [Twitter](https://twitter.com), [Telegram](https://telegram.org/) etc.), data processing (fetch, [minio](https://min.io/), regexp, [webchela](https://github.com/livelace/webchela) etc.) and data transmitting to various destinations ([SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol), [Mattermost](https://mattermost.org/), [Kafka](https://kafka.apache.org/) etc.).
 
+### Main goal:
+
+To replace various in-house automated tasks of data gathering with single tool.
 
 ### Features:
 
@@ -12,6 +15,7 @@
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
+* Send only new data or force send fetched data every time. 
 
 ### Config sample:
 
