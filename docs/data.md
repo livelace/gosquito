@@ -7,7 +7,7 @@ Typical flow steps:
 3. Finally, **Output plugin** constructs messages with selected DataItem fields and send them to destinations. 
 
 
-DataItem is a data structure with specific fields, contains common for all plugins fields and plugin specific fields.
+DataItem is a data structure with specific fields, contains common for all plugins fields and plugin specific fields.  
 Typical flow configuration consists of plugins and DataItem fields as parameters.
 
 ```go
