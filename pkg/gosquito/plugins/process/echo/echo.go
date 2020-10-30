@@ -68,6 +68,8 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 				f(input)
 			}
 		}
+
+		temp = append(temp, item)
 	}
 
 	return temp, nil

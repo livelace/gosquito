@@ -50,6 +50,8 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 		inputsUnique := core.UniqueSliceValues(&inputs)
 		ro.Set(reflect.ValueOf(inputsUnique))
+
+		temp = append(temp, item)
 	}
 
 	return temp, nil

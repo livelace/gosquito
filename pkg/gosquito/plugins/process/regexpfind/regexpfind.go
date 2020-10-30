@@ -46,7 +46,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		matched := false
+		found := false
 
 		// Match search pattern inside different data fields (Title, Content etc.).
 		for index, input := range p.Input {
@@ -61,20 +61,20 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			switch ri.Kind() {
 			case reflect.String:
 				for _, v := range findRegexesAndReturnSlice(p.Regexp, ri.String()) {
-					matched = true
+					found = true
 					ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
 				}
 			case reflect.Slice:
 				for i := 0; i < ri.Len(); i++ {
 					for _, v := range findRegexesAndReturnSlice(p.Regexp, ri.Index(i).String()) {
-						matched = true
+						found = true
 						ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
 					}
 				}
 			}
 		}
 
-		if matched {
+		if found {
 			temp = append(temp, item)
 		}
 	}
