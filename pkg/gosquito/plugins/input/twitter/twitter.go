@@ -422,6 +422,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.ExpireAction = v
 		}
 	}
+	setExpireAction(pluginConfig.Config.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
 	setExpireAction(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
 	setExpireAction((*pluginConfig.Params)["expire_action"])
 	showParam("expire_action", plugin.ExpireAction)
