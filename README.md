@@ -15,7 +15,7 @@ To replace various in-house automated tasks of data gathering with single tool.
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
-* Send only new data or force send fetched data every time. 
+* Send only new data or send fetched data every time. 
 
 ### Config sample ([possible options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
 
