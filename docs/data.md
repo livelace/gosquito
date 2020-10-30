@@ -41,4 +41,4 @@ type Data struct {
 }
 ```
 
-Plugin specific data structures: [RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md), [Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md), [Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
+Plugin specific data structures: [DataItem.RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md), [DataItem.Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md), [DataItem.Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
