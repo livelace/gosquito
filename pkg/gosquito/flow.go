@@ -660,6 +660,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 				logFlowStat(fmt.Sprintf("input plugin: %s, send data: %d",
 					flow.InputPlugin.GetName(), len(inputData)))
 			}
+		} else {
+			logFlowStat(fmt.Sprintf("no data for sending"))
 		}
 	}
 
