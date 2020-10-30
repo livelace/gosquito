@@ -6,7 +6,7 @@
 
 ### Features:
 
-* [Pluggable](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md) architecture. Data processing organized as chains of plugins.
+* [Pluggable](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md) architecture. [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md) organized as chains of plugins.
 * Flow approach. Flow consists of: input plugin, process plugins, output plugin.
 * Plugins dependencies. Plugin "B" will process data only if plugin "A" derived some data. 
 * Include/exclude data from all or specific plugins.

@@ -1,6 +1,3 @@
-### Plugins:
-  
-
 | Plugin        | Type    | Description |
 | :-------------| :-------:| ----------- |
 | [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)                       |  input  | RSS/Atom feeds (text, urls) data source. |
