@@ -29,12 +29,12 @@
 | chunk_size             |    -     | string |    +     |    "3m"     |               "1m"                |             |
 | client_id              |    -     | string |    +     | <flow_name> |          "group1-flow1"           |             |
 | cpu_load               |    -     |  int   |    +     |     25      |                50                 |             |
-| input                  |    +     | array  |    +     |     []      |  ["data.array0", "data.array1"]   |             |
+| **input**              |    +     | array  |    +     |     []      |  ["data.array0", "data.array1"]   |             |
 | mem_free               |    -     | string |    +     |    "1g"     |               "3g"                |             |
 | output                 |    -     | array  |    +     |     []      |  ["data.array2", "data.array3"]   |             |
 | request_timeout        |    -     |  int   |    +     |     10      |                30                 |             |
 | script                 |    -     | array  |    +     |     []      | ["scripts.clicker", "return 42;"] |             |
-| server                 |    +     | array  |    +     |     []      |   ["server1.example.com:8080"]    |             |
+| **server**             |    +     | array  |    +     |     []      |   ["server1.example.com:8080"]    |             |
 | server_timeout         |    -     |  int   |    +     |      3      |                10                 |             |
 | timeout                |    -     |  int   |    +     |     300     |                900                |             |
 
