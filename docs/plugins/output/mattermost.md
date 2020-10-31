@@ -28,8 +28,8 @@
 
 | Param      | Required |  Type  | Template | Text Template |  Default  |          Example          | Description |
 |:-----------|:--------:|:------:|:--------:|:-------------:|:---------:|:-------------------------:|:------------|
-| color      |    -     | array  |    +     |       -       | "#00C100" |         "#E40303"         |             |
-| pretext    |    -     | array  |    +     |       +       |    ""     | "Pretext {{.TIMEFORMAT}}" |             |
+| color      |    -     | string |    +     |       -       | "#00C100" |         "#E40303"         |             |
+| pretext    |    -     | string |    +     |       +       |    ""     | "Pretext {{.TIMEFORMAT}}" |             |
 | text       |    -     | string |    +     |       +       |    ""     |    "Hello, {{.FLOW}}!"    |             |
 | title      |    -     | string |    +     |       +       |    ""     |     "Title {{.UUID}}"     |             |
 | title_link |    -     | string |    +     |       -       |    ""     |   "https://example.com"   |             |
