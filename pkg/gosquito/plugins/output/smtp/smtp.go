@@ -13,7 +13,7 @@ import (
 
 const (
 	DEFAULT_BODY_LENGTH    = 10000
-	DEFAULT_BODY_HTML      = false
+	DEFAULT_BODY_HTML      = true
 	DEFAULT_SMTP_PORT      = 25
 	DEFAULT_SSL_ENABLE     = true
 	DEFAULT_SUBJECT_LENGTH = 100
@@ -167,6 +167,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
+		"cred":     -1,
 		"template": -1,
 		"timeout":  -1,
 
@@ -174,7 +175,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"body":           1,
 		"body_html":      -1,
 		"body_length":    -1,
-		"cred":           -1,
 		"from":           1,
 		"headers":        -1,
 		"output":         1,

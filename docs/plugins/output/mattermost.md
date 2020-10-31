@@ -14,7 +14,7 @@
 
 | Param       | Required |  Type  | Cred | Template | Text Template | Default |             Example              | Description |
 |:------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:--------------------------------:|:------------|
-| attachments |    -     |  map   |  -   |    +     |       -       |   []    |           see example            |             |
+| attachments |    -     |  map   |  -   |    +     |       -       |  map[]  |           see example            |             |
 | files       |    -     | array  |  -   |    +     |       -       |   ""    | ["twitter.media", "data.array0"] |             |
 | message     |    -     | string |  -   |    +     |       +       |   ""    |       "Hello, {{.FLOW}}!"        |             |
 | output      |    +     | array  |  -   |    +     |       -       |   []    |      ["news", "@livelace"]       |             |
