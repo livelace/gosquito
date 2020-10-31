@@ -1,6 +1,6 @@
 ### Description:
 
-**echo** process plugin is echoing processed data into console.
+**echo** process plugin is echoing processing data into console.
 
 
 ### Generic parameters:
