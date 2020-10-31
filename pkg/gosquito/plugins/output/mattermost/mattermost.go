@@ -17,7 +17,7 @@ import (
 
 const (
 	DEFAULT_ATTACHMENTS_COLOR = "#00C100"
-	DEFAULT_TIMEOUT           = 5
+	DEFAULT_TIMEOUT           = 3
 )
 
 var (
@@ -246,12 +246,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
+		"cred":     -1,
 		"template": -1,
 		"timeout":  -1,
 
 		"files":    -1,
 		"message":  -1,
-		"output":   -1,
+		"output":   1,
 		"password": 1,
 		"team":     1,
 		"url":      1,
@@ -259,7 +260,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		"attachments": -1,
 		"color":       -1,
-		"cred":        -1,
 		"pretext":     -1,
 		"text":        -1,
 		"title":       -1,

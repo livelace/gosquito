@@ -5,7 +5,7 @@
 
 ### Main goal:
 
-To replace various in-house automated tasks of data gathering with single tool.
+To replace various in-house automated tasks for data gathering with single tool.
 
 ### Features:
 
@@ -16,57 +16,6 @@ To replace various in-house automated tasks of data gathering with single tool.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or send fetched data every time. 
-
-### Config sample ([available options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
-
-
-```toml
-[default]
-time_format = "15:04 02.01.2006"
-time_zone = "Europe/Moscow"
-
-[credentials.twitter.default]
-access_token = "<access_token>"
-access_secret = "<access_secret>"
-consumer_key = "<consumer_key>"
-consumer_secret = "<consumer_secret>"
-
-[regexes.urls]
-regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
-    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
-]
-
-[templates.smtp.twitter.default]
-server = "mail.example.com"
-port = 25
-ssl = true
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-
-subject = "{{ .DATA.TEXT0 }}"
-subject_length = 150
-
-body_html = true
-body_length = 1000
-body = """
-<br>
-<div align="right"><b>{{ .TIMEFORMAT }}</b></div>
-{{.DATA.TEXT0}}<br><br>
-{{range .TWITTER.URLS}}{{printf "%s<br>" .}}{{end}}
-"""
-
-attachments = ["data.array0"]
-
-[templates.smtp.twitter.default.headers]
-x-gosquito-flow = "flow"
-x-gosquito-plugin = "plugin"
-x-gosquito-source = "source"
-x-gosquito-time = "time"
-x-gosquito-uuid = "uuid"
-```
-
 
 ### Flow sample ([available options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
 
@@ -119,4 +68,56 @@ flow:
     params:
       template: "templates.smtp.twitter.default"
 ```
+
+### Config sample ([available options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
+
+```toml
+[default]
+time_format = "15:04 02.01.2006"
+time_zone = "Europe/Moscow"
+
+[credentials.twitter.default]
+access_token = "<access_token>"
+access_secret = "<access_secret>"
+consumer_key = "<consumer_key>"
+consumer_secret = "<consumer_secret>"
+
+[regexes.urls]
+regexp = [
+    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
+    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+]
+
+[templates.smtp.twitter.default]
+server = "mail.example.com"
+port = 25
+ssl = true
+
+from = "gosquito@example.com"
+output = ["user@example.com"]
+
+subject = "{{ .DATA.TEXT0 }}"
+subject_length = 150
+
+body_html = true
+body_length = 1000
+body = """
+<br>
+<div align="right"><b>{{ .TIMEFORMAT }}</b></div>
+{{.DATA.TEXT0}}<br><br>
+{{range .TWITTER.URLS}}{{printf "%s<br>" .}}{{end}}
+"""
+
+attachments = ["data.array0"]
+
+[templates.smtp.twitter.default.headers]
+x-gosquito-flow = "flow"
+x-gosquito-plugin = "plugin"
+x-gosquito-source = "source"
+x-gosquito-time = "time"
+x-gosquito-uuid = "uuid"
+```
+
+
+
 

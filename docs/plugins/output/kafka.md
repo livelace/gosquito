@@ -1,6 +1,6 @@
 ### Description:
 
-**kafka** output plugin is for data transmitting to Kafka topics.
+**kafka** output plugin is for sending data to Kafka topics.
 
 
 ### Generic parameters:
@@ -16,7 +16,7 @@
 | Param    | Required |  Type  | Template | Default |                Example                 | Description |
 |:---------|:--------:|:------:|:--------:|:-------:|:--------------------------------------:|:------------|
 | brokers  |    +     | string |    +     |   ""    | "127.0.0.1:9092,host.example.com:1111" |             |
-| compress |    +     | string |    +     | "none"  |                 "zstd"                 |             |
+| compress |    -     | string |    +     | "none"  |                 "zstd"                 |             |
 | output   |    +     | array  |    +     |   []    |                ["news"]                |             |
 | schema   |    +     |  map   |    +     |   ""    |              see example               |             |
 
