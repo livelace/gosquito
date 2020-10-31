@@ -1,6 +1,6 @@
 ### Description:
 
-**regexpfind** process plugin is for finding patterns inside data.
+**regexpfind** process plugin is intended for finding patterns inside data.
 
 
 ### Generic parameters:

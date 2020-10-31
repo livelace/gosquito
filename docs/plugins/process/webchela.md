@@ -1,6 +1,6 @@
 ### Description:
 
-**smtp** output plugin is for sending data as emails.
+**webchela** output plugin is intended for interacting with web pages.
 
 
 ### Generic parameters:
@@ -49,3 +49,4 @@
 
 ```yaml
 ```
+

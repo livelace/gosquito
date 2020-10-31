@@ -1,6 +1,7 @@
 ### Description:
 
-**dedup** process plugin is for deduplication DataItem's.
+**dedup** process plugin is intended for deduplication
+[DataItem's.](https://github.com/livelace/gosquito/blob/master/docs/data.md)
 
 
 ### Generic parameters:
@@ -26,3 +27,4 @@
 
 ```yaml
 ```
+

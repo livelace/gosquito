@@ -1,6 +1,6 @@
 ### Description:
 
-**regexpmatch** process plugin is for matching patterns inside data.
+**regexpmatch** process plugin is intended for matching patterns inside data.
 
 
 ### Generic parameters:

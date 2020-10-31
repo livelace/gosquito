@@ -1,6 +1,6 @@
 ### Description:
 
-**regexpreplace** process plugin is for replacing patterns inside data.
+**regexpreplace** process plugin is intended for replacing patterns inside data.
 
 
 ### Generic parameters:

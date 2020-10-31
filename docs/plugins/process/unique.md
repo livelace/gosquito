@@ -1,6 +1,6 @@
 ### Description:
 
-**unique** process plugin is for remove duplicates inside data.
+**unique** process plugin is intended for remove duplicates inside data.
 
 
 ### Generic parameters:

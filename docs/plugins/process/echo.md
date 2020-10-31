@@ -1,6 +1,7 @@
 ### Description:
 
-**echo** process plugin is for echoing processing data into console.
+**echo** process plugin is intended for echoing processing data into
+console.
 
 
 ### Generic parameters:
@@ -26,3 +27,4 @@
 
 ```yaml
 ```
+

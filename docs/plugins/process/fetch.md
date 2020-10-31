@@ -1,6 +1,6 @@
 ### Description:
 
-**fetch** process plugin is for downloading files.
+**fetch** process plugin is intended for downloading files.
 
 
 ### Generic parameters:
@@ -29,3 +29,4 @@
 
 ```yaml
 ```
+

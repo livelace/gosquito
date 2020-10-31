@@ -1,6 +1,7 @@
 ### Description:
 
-**mattermost** output plugin is for sending data to Mattermost users/channels.
+**mattermost** output plugin is intended for sending data to Mattermost
+users/channels.
 
 
 ### Generic parameters:
@@ -45,3 +46,4 @@
 
 ```yaml
 ```
+

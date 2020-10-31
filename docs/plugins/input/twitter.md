@@ -1,6 +1,6 @@
 ### Description:
 
-**twitter** input plugin is for data gathering from Twitter channels.
+**twitter** input plugin is intended for data gathering from Twitter channels.
 
 ### Data structure:
 

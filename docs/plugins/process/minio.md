@@ -1,6 +1,6 @@
 ### Description:
 
-**minio** process plugin is for uploading data into S3 buckets.
+**minio** process plugin is intended for uploading data into S3 buckets.
 
 
 ### Generic parameters:

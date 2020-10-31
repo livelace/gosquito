@@ -1,6 +1,6 @@
 ### Description:
 
-**smtp** output plugin is for sending data as emails.
+**smtp** output plugin is intended for sending data as emails.
 
 
 ### Generic parameters:

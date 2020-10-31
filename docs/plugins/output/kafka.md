@@ -1,6 +1,6 @@
 ### Description:
 
-**kafka** output plugin is for sending data to Kafka topics.
+**kafka** output plugin is intended for sending data to Kafka topics.
 
 
 ### Generic parameters:
