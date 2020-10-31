@@ -77,7 +77,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	flowsNames := make(map[string]string)
 
 	// Read "flow" files.
-	files, err := readFlow(config.GetString(core.VIPER_DEFAULT_FLOW_DIR))
+	files, err := readFlow(config.GetString(core.VIPER_DEFAULT_FLOW_CONF))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -88,7 +88,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	// Exit if there are no flows.
 	if len(files) == 0 {
 		log.WithFields(log.Fields{
-			"path":  config.GetString(core.VIPER_DEFAULT_FLOW_DIR),
+			"path":  config.GetString(core.VIPER_DEFAULT_FLOW_CONF),
 			"error": core.ERROR_NO_VALID_FLOW,
 		}).Error(core.LOG_FLOW_READ)
 		os.Exit(1)
@@ -444,7 +444,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Cleanup flow temp dir.
 
-	flowTempDir := filepath.Join(config.GetString(core.VIPER_DEFAULT_TEMP_DIR), flow.Name)
+	flowTempDir := filepath.Join(config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP), flow.Name)
 	cleanFlowTemp := func() {
 		_ = os.RemoveAll(flowTempDir)
 	}

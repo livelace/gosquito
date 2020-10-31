@@ -553,7 +553,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		File:    pluginConfig.File,
 		Name:    "webchela",
-		TempDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_TEMP_DIR),
+		TempDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP),
 		Type:    "process",
 	}
 

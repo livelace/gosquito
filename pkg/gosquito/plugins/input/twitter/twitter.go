@@ -308,7 +308,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		File:     pluginConfig.File,
 		Name:     "twitter",
-		StateDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_STATE_DIR),
+		StateDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_STATE),
 		Type:     "input",
 
 		ExpireLast: 0,
@@ -403,18 +403,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	template, _ := core.IsString((*pluginConfig.Params)["template"])
 
-	// expire_interval.
-	setExpireInterval := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["expire_interval"] = 0
-			plugin.ExpireInterval = v
-		}
-	}
-	setExpireInterval(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
-	setExpireInterval(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_interval", template)))
-	setExpireInterval((*pluginConfig.Params)["expire_interval"])
-	showParam("expire_interval", plugin.ExpireInterval)
-
 	// expire_action.
 	setExpireAction := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -450,6 +438,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireActionTimeout(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
 	setExpireActionTimeout((*pluginConfig.Params)["expire_action_timeout"])
 	showParam("expire_action_timeout", plugin.ExpireActionTimeout)
+
+	// expire_interval.
+	setExpireInterval := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["expire_interval"] = 0
+			plugin.ExpireInterval = v
+		}
+	}
+	setExpireInterval(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
+	setExpireInterval(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_interval", template)))
+	setExpireInterval((*pluginConfig.Params)["expire_interval"])
+	showParam("expire_interval", plugin.ExpireInterval)
 
 	// count.
 	setCount := func(p interface{}) {

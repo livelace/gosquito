@@ -3,8 +3,6 @@ package core
 import "errors"
 
 var (
-	ERROR_CONFIG_INIT                  = errors.New("config init error")
-	ERROR_CONFIG_READ                  = errors.New("config read error")
 	ERROR_DATA_FIELD_KEY               = errors.New("data field key must be string: %v")
 	ERROR_DATA_FIELD_NOT_SLICE         = errors.New("data field not slice: %s")
 	ERROR_DATA_FIELD_TYPE_MISMATCH     = errors.New("data field type mismatch: %s")

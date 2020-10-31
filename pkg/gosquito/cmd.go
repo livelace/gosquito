@@ -81,7 +81,7 @@ func RunApp() {
 	config := core.GetConfig()
 
 	// Set maximum number of threads.
-	runtime.GOMAXPROCS(config.GetInt(core.VIPER_DEFAULT_PROC_MAX))
+	runtime.GOMAXPROCS(config.GetInt(core.VIPER_DEFAULT_PROC_NUM))
 
 	// Set log level.
 	ll, _ := log.ParseLevel(config.GetString(core.VIPER_DEFAULT_LOG_LEVEL))
@@ -156,7 +156,7 @@ func RunApp() {
 
 	} else {
 		log.WithFields(log.Fields{
-			"path": config.GetString(core.VIPER_DEFAULT_FLOW_DIR),
+			"path": config.GetString(core.VIPER_DEFAULT_FLOW_CONF),
 		}).Error(core.ERROR_NO_VALID_FLOW)
 
 		os.Exit(1)

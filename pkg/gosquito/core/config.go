@@ -9,124 +9,116 @@ import (
 	"runtime"
 )
 
-const (
-	FLOW_DIR   = "flow"
-	PLUGIN_DIR = "plugin"
-	STATE_DIR  = "state"
-	TEMP_DIR   = "temp"
+var (
+	FLOW_CONF_DIR    = filepath.Join("flow", "conf")
+	PLUGIN_DATA_DIR  = filepath.Join("plugin", "data")
+	PLUGIN_STATE_DIR = filepath.Join("plugin", "state")
+	PLUGIN_TEMP_DIR  = filepath.Join("plugin", "temp")
 )
-
-/*
-	Get and load configuration file, set defaults.
-*/
-func GetConfig() *viper.Viper {
-	// 1. Create configuration directory.
-	// 2. Put sample configuration.
-	// 3. Put flow examples.
-	// dir == "", if configuration directories already exist.
-	dir, err := initConfig()
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"path":  dir,
-			"error": err,
-		}).Error(ERROR_CONFIG_INIT)
-		os.Exit(1)
-	}
-
-	if dir != "" {
-		log.WithFields(log.Fields{
-			"path": dir,
-		}).Info(LOG_CONFIG_INIT)
-	}
-
-	// Read generated/existed configuration.
-	v := viper.New()
-	v.SetConfigName("config")
-	v.SetConfigType("toml")
-	v.AddConfigPath(DEFAULT_ETC_PATH)
-	v.AddConfigPath("$HOME/.gosquito")
-	v.AddConfigPath(".")
-
-	if err := v.ReadInConfig(); err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error(ERROR_CONFIG_READ)
-		os.Exit(1)
-	}
-
-	// Set defaults.
-	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION, make([]string, 0))
-	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT, DEFAULT_EXPIRE_ACTION_TIMEOUT)
-	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_DELAY, DEFAULT_EXPIRE_ACTION_DELAY)
-	v.SetDefault(VIPER_DEFAULT_EXPIRE_INTERVAL, DEFAULT_EXPIRE_INTERVAL)
-	v.SetDefault(VIPER_DEFAULT_FLOW_DIR, filepath.Join(filepath.Dir(v.ConfigFileUsed()), FLOW_DIR))
-	v.SetDefault(VIPER_DEFAULT_FLOW_ENABLE, make([]string, 0))
-	v.SetDefault(VIPER_DEFAULT_FLOW_INTERVAL, DEFAULT_FLOW_INTERVAL)
-	v.SetDefault(VIPER_DEFAULT_FLOW_NUMBER, DEFAULT_FLOW_NUMBER)
-	v.SetDefault(VIPER_DEFAULT_LOG_LEVEL, DEFAULT_LOG_LEVEL)
-	v.SetDefault(VIPER_DEFAULT_EXPORTER_LISTEN, DEFAULT_EXPORTER_LISTEN)
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_DIR, filepath.Join(filepath.Dir(v.ConfigFileUsed()), PLUGIN_DIR))
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_INCLUDE, DEFAULT_PLUGIN_INCLUDE)
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_TIMEOUT, DEFAULT_PLUGIN_TIMEOUT)
-	v.SetDefault(VIPER_DEFAULT_PROC_MAX, runtime.GOMAXPROCS(0))
-	v.SetDefault(VIPER_DEFAULT_STATE_DIR, filepath.Join(filepath.Dir(v.ConfigFileUsed()), STATE_DIR))
-	v.SetDefault(VIPER_DEFAULT_TEMP_DIR, filepath.Join(filepath.Dir(v.ConfigFileUsed()), TEMP_DIR))
-	v.SetDefault(VIPER_DEFAULT_TIME_FORMAT, DEFAULT_TIME_FORMAT)
-	v.SetDefault(VIPER_DEFAULT_TIME_ZONE, DEFAULT_TIME_ZONE)
-	v.SetDefault(VIPER_DEFAULT_USER_AGENT, DEFAULT_USER_AGENT)
-
-	// Directories must exist for proper work.
-	configDirs := []string{
-		v.GetString(VIPER_DEFAULT_FLOW_DIR),
-		v.GetString(VIPER_DEFAULT_PLUGIN_DIR),
-		v.GetString(VIPER_DEFAULT_STATE_DIR),
-		v.GetString(VIPER_DEFAULT_TEMP_DIR),
-	}
-
-	for _, dir := range configDirs {
-		if err := CreateDirIfNotExist(dir); err != nil {
-			log.WithFields(log.Fields{
-				"error": err,
-			}).Error(ERROR_CONFIG_INIT)
-			os.Exit(1)
-		}
-	}
-
-	return v
-}
 
 func initConfig() (string, error) {
 	// Get current user info.
-	usr, err := user.Current()
+	userAccount, err := user.Current()
 	if err != nil {
 		return "", err
 	}
 
 	// Possible config paths.
-	userDir := filepath.Join(usr.HomeDir, ".gosquito")
+	userDir := filepath.Join(userAccount.HomeDir, ".gosquito")
 	configFile := "config.toml"
 
-	// Exit, if config exists.
-	if IsFile(userDir, configFile) || IsFile(DEFAULT_ETC_PATH, configFile) {
-		return "", nil
+	// Return existing config path.
+	if IsFile(DEFAULT_ETC_PATH, configFile) {
+		return DEFAULT_ETC_PATH, nil
+
+	} else if IsFile(userDir, configFile) {
+		return userDir, nil
+
+	} else if IsFile(DEFAULT_CURRENT_PATH, configFile) {
+		return DEFAULT_CURRENT_PATH, nil
 	}
 
-	// Initialize basic directories structure.
+	// Write config sample if config not found.
 	if err := CreateDirIfNotExist(userDir); err != nil {
-		return "", err
+		return userDir, err
 	}
 
-	for _, dir := range []string{FLOW_DIR, STATE_DIR, TEMP_DIR} {
-		if err := CreateDirIfNotExist(filepath.Join(userDir, dir)); err != nil {
-			return "", err
-		}
-	}
-
-	// Write config sample.
 	if err := WriteStringToFile(userDir, configFile, CONFIG_SAMPLE); err != nil {
-		return "", err
+		return userDir, err
 	}
 
 	return userDir, nil
+}
+
+func GetConfig() *viper.Viper {
+	configPath, err := initConfig()
+
+	if err != nil {
+		log.WithFields(log.Fields{
+			"path":  configPath,
+			"error": err,
+		}).Error(LOG_CONFIG_ERROR)
+		os.Exit(1)
+	}
+
+	// Show user config path.
+	if configPath != "" {
+		log.WithFields(log.Fields{
+			"path": configPath,
+		}).Info(LOG_CONFIG_INIT)
+	}
+
+	// Read generated/existed configuration.
+	v := viper.New()
+	v.SetConfigName("config.toml")
+	v.SetConfigType("toml")
+	v.AddConfigPath(configPath)
+
+	if err := v.ReadInConfig(); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error(LOG_CONFIG_ERROR)
+		os.Exit(1)
+	}
+
+	// Set defaults.
+	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION, make([]string, 0))
+	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_DELAY, DEFAULT_EXPIRE_ACTION_DELAY)
+	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT, DEFAULT_EXPIRE_ACTION_TIMEOUT)
+	v.SetDefault(VIPER_DEFAULT_EXPIRE_INTERVAL, DEFAULT_EXPIRE_INTERVAL)
+	v.SetDefault(VIPER_DEFAULT_EXPORTER_LISTEN, DEFAULT_EXPORTER_LISTEN)
+	v.SetDefault(VIPER_DEFAULT_FLOW_CONF, filepath.Join(configPath, FLOW_CONF_DIR))
+	v.SetDefault(VIPER_DEFAULT_FLOW_ENABLE, make([]string, 0))
+	v.SetDefault(VIPER_DEFAULT_FLOW_INTERVAL, DEFAULT_FLOW_INTERVAL)
+	v.SetDefault(VIPER_DEFAULT_FLOW_NUMBER, DEFAULT_FLOW_NUMBER)
+	v.SetDefault(VIPER_DEFAULT_LOG_LEVEL, DEFAULT_LOG_LEVEL)
+	v.SetDefault(VIPER_DEFAULT_PLUGIN_DATA, filepath.Join(configPath, PLUGIN_DATA_DIR))
+	v.SetDefault(VIPER_DEFAULT_PLUGIN_INCLUDE, DEFAULT_PLUGIN_INCLUDE)
+	v.SetDefault(VIPER_DEFAULT_PLUGIN_STATE, filepath.Join(configPath, PLUGIN_STATE_DIR))
+	v.SetDefault(VIPER_DEFAULT_PLUGIN_TEMP, filepath.Join(configPath, PLUGIN_TEMP_DIR))
+	v.SetDefault(VIPER_DEFAULT_PLUGIN_TIMEOUT, DEFAULT_PLUGIN_TIMEOUT)
+	v.SetDefault(VIPER_DEFAULT_PROC_NUM, runtime.GOMAXPROCS(0))
+	v.SetDefault(VIPER_DEFAULT_TIME_FORMAT, DEFAULT_TIME_FORMAT)
+	v.SetDefault(VIPER_DEFAULT_TIME_ZONE, DEFAULT_TIME_ZONE)
+	v.SetDefault(VIPER_DEFAULT_USER_AGENT, DEFAULT_USER_AGENT)
+
+	// Directories must exist for proper work.
+	workDirs := []string{
+		v.GetString(VIPER_DEFAULT_FLOW_CONF),
+		v.GetString(VIPER_DEFAULT_PLUGIN_DATA),
+		v.GetString(VIPER_DEFAULT_PLUGIN_STATE),
+		v.GetString(VIPER_DEFAULT_PLUGIN_TEMP),
+	}
+
+	for _, workDir := range workDirs {
+		if err := CreateDirIfNotExist(workDir); err != nil {
+			log.WithFields(log.Fields{
+				"path":  workDir,
+				"error": err,
+			}).Error(LOG_CONFIG_ERROR)
+			os.Exit(1)
+		}
+	}
+
+	return v
 }
