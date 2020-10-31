@@ -188,7 +188,6 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 				temp = append(temp, &core.DataItem{
 					FLOW:       p.Flow,
-					LANG:       item.Lang,
 					PLUGIN:     p.Name,
 					SOURCE:     source,
 					TIME:       itemTime,
@@ -196,6 +195,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 					UUID:       u,
 
 					TWITTER: core.TwitterData{
+						LANG:  item.Lang,
 						MEDIA: core.UniqueSliceValues(&media),
 						TAGS:  core.UniqueSliceValues(&tags),
 						TEXT:  strings.TrimSpace(item.FullText),

@@ -13,7 +13,6 @@ Typical flow configuration consists of plugins with **DataItem** fields as param
 ```go
 type DataItem struct {
 	FLOW       string           // Flow name (common field).
-	LANG       string           // Input or process plugins can fill this field.
 	PLUGIN     string           // Input plugin name (rss, twitter, telegram etc.).
 	SOURCE     string           // Input plugin source (feed, channel, chat etc.).
 	TIME       time.Time        // Time of article, tweet, message.
@@ -33,11 +32,11 @@ Temporary **DataItem.Data** structure for process plugins results:
 type Data struct {
 	ARRAY0  []string
         // ...
-	ARRAY10 []string
+	ARRAY9 []string
 
 	TEXT0   string
         // ...
-	TEXT10  string
+	TEXT9  string
 }
 ```
 

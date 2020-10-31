@@ -1,3 +1,5 @@
+### Available configuration options:
+
 ```toml
 [default]
 # Configuration file might be placed:
