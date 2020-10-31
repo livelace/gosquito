@@ -10,7 +10,7 @@
 # Example: 10s, 120m, 48h, 365d 
 
 # Set command execution for expired input plugin sources.
-# First 3 arguments always added first: <flow_name> <input_source> <source_timestamp>
+# First 3 arguments always added: <flow_name> <input_source> <source_timestamp>
 #expire_action           = ["/path/to/executable", "arg4", "arg5", "arg6"]
 
 # Set delay between command execution (interval). 
