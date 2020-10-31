@@ -17,7 +17,7 @@ To replace various in-house automated tasks for data gathering with single tool.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or send fetched data every time. 
 
-### Flow sample ([available options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
+### Flow sample ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
 
 ```yaml
 flow:
@@ -69,7 +69,7 @@ flow:
       template: "templates.smtp.twitter.default"
 ```
 
-### Config sample ([available options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
+### Config sample ([options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
 
 ```toml
 [default]
