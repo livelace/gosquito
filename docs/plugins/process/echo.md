@@ -1,13 +1,13 @@
 ### Description:
 
-**echo** process plugin is echoing processing data into console.
+**echo** process plugin is for echoing processing data into console.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Description |
-|:--------|:--------:|:-----:|:-------:|:------------|
-| require |    -     | array |   []    |             |
+| Param   | Required | Type  | Default | Example | Description |
+|:--------|:--------:|:-----:|:-------:|:-------:|:------------|
+| require |    -     | array |   []    | [1, 2]  |             |
 
 
 ### Plugin parameters:

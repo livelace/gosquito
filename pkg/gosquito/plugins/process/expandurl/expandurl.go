@@ -13,7 +13,7 @@ import (
 
 const (
 	DEFAULT_DEPTH   = 3
-	DEFAULT_TIMEOUT = 2
+	DEFAULT_TIMEOUT = 3
 )
 
 var (

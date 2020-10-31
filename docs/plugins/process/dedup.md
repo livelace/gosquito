@@ -5,9 +5,9 @@
 
 ### Generic parameters:
 
-| Param   | Required | Type | Default | Description |
-|:--------|:--------:|:----:|:-------:|:------------|
-| include |    -     | bool |  true   |             |
+| Param   | Required | Type | Default | Example | Description |
+|:--------|:--------:|:----:|:-------:|:-------:|:------------|
+| include |    -     | bool |  true   |  false  |             |
 
 
 ### Plugin parameters:
