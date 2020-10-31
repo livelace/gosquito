@@ -23,16 +23,17 @@ const (
 	DEFAULT_BROWSER_PAGE_SIZE      = "10M"
 	DEFAULT_BROWSER_PAGE_TIMEOUT   = 20
 	DEFAULT_BROWSER_SCRIPT_TIMEOUT = 20
-	DEFAULT_BROWSER_TYPE           = "chrome"
+	DEFAULT_BROWSER_TYPE           = "firefox"
 	DEFAULT_BUFFER_LENGHT          = 1000
 	DEFAULT_CHUNK_SIZE             = "3M"
-	DEFAULT_CPU_LOAD               = 30
+	DEFAULT_CPU_LOAD               = 25
 	DEFAULT_MEM_FREE               = "1G"
 	DEFAULT_PAGE_BODY_FILENAME     = "page_body.html"
 	DEFAULT_PAGE_TITLE_FILENAME    = "page_title.txt"
 	DEFAULT_PAGE_URL_FILENAME      = "page_url.txt"
 	DEFAULT_SERVER_CONNECT_TIMEOUT = 3
 	DEFAULT_SERVER_REQUEST_TIMEOUT = 10
+	DEFAULT_TIMEOUT                = 300
 )
 
 func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
@@ -567,7 +568,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include":  -1,
 		"require":  -1,
 		"template": -1,
-		"timeout":  -1,
 
 		"batch_retry":            -1,
 		"batch_size":             -1,
@@ -590,6 +590,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"script":                 -1,
 		"server":                 1,
 		"server_timeout":         -1,
+		"timeout":                -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -889,7 +890,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.Timeout = v
 		}
 	}
-	setTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(DEFAULT_TIMEOUT)
 	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.Params)["timeout"])
 	showParam("timeout", plugin.Timeout)
