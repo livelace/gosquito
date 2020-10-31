@@ -193,10 +193,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	availableParams := map[string]int{
 		"include": -1,
 		"require": -1,
-
-		"input":   1,
-		"output":  1,
 		"timeout": -1,
+
+		"input":  1,
+		"output": 1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

@@ -9,6 +9,7 @@
 |:--------|:--------:|:-----:|:-------:|:-------:|:------------|
 | include |    -     | bool  |  true   |  false  |             |
 | require |    -     | array |   []    | [1, 2]  |             |
+| timeout |    -     |  int  |   60    |   300   |             |
 
 
 ### Plugin parameters:
@@ -17,7 +18,6 @@
 |:-----------|:--------:|:-----:|:-------:|:-----------------:|:------------|
 | **input**  |    +     | array |   []    | ["twitter.media"] |             |
 | **output** |    +     | array |   []    |  ["data.array0"]  |             |
-| timeout    |    -     |  int  |   60    |        300        |             |
 
 ### Config sample:
 

@@ -9,7 +9,7 @@
 |:--------|:--------:|:-----:|:-------:|:-------:|:------------|
 | include |    -     | bool  |  true   |  false  |             |
 | require |    -     | array |   []    | [1, 2]  |             |
-
+| timeout |    -     |  int  |   60    |   300   |             |
 
 ### Plugin parameters:
 
@@ -23,7 +23,6 @@
 | **secret_key** |    +     | string |  +   |    -     |   ""    |         ""          |             |
 | **server**     |    +     | string |  +   |    -     |   ""    | "minio.example.com" |             |
 | ssl            |    -     |  bool  |  -   |    +     |  true   |        false        |             |
-| timeout        |    -     |  int   |  -   |    +     |   60    |         300         |             |
 
 
 ### Config sample:

@@ -10,6 +10,7 @@ full URLs.
 |:--------|:--------:|:-----:|:-------:|:-------:|:------------|
 | include |    -     | bool  |  true   |  false  |             |
 | require |    -     | array |   []    | [1, 2]  |             |
+| timeout |    -     |  int  |    3    |    2    |             |
 
 
 ### Plugin parameters:
@@ -18,7 +19,6 @@ full URLs.
 |:-----------|:--------:|:------:|:-----------------:|:----------------:|:------------|
 | depth      |    -     |  int   |         3         |        10        |             |
 | **input**  |    +     | array  |        []         | ["twitter.urls"] |             |
-| timeout    |    -     |  int   |         3         |        2         |             |
 | **output** |    +     | array  |        []         | ["data.array0"]  |             |
 | user_agent |    -     | string | "gosquito v1.0.0" |  "webchela 1.0"  |             |
 

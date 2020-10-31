@@ -9,7 +9,7 @@
 |:--------|:--------:|:-----:|:-------:|:-------:|:------------|
 | include |    -     | bool  |  true   |  false  |             |
 | require |    -     | array |   []    | [1, 2]  |             |
-
+| timeout |    -     |  int  |   300   |   900   |             |
 
 ### Plugin parameters:
 
@@ -36,7 +36,6 @@
 | script                 |    -     | array  |    +     |     []      | ["scripts.clicker", "return 42;"] |             |
 | **server**             |    +     | array  |    +     |     []      |   ["server1.example.com:8080"]    |             |
 | server_timeout         |    -     |  int   |    +     |      3      |                10                 |             |
-| timeout                |    -     |  int   |    +     |     300     |                900                |             |
 
 
 ### Config sample:
