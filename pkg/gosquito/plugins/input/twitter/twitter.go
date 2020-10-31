@@ -13,10 +13,6 @@ import (
 	"time"
 )
 
-const (
-	DEFAULT_TWITTER_COUNT = 200
-)
-
 func expandMedia(s *[]twitter.MediaEntity) []string {
 	temp := make([]string, 0)
 
@@ -72,7 +68,7 @@ func fetchTweets(p *Plugin, source string) (*[]twitter.Tweet, error) {
 	// background.
 	go func() {
 		temp, _, err = client.Timelines.UserTimeline(&twitter.UserTimelineParams{
-			Count:      p.Count,
+			Count:      200,
 			ScreenName: source,
 			TweetMode:  "extended",
 		})
@@ -116,12 +112,12 @@ type Plugin struct {
 	ExpireInterval      int64
 	ExpireLast          int64
 	Force               bool
+	ForceCount          int
 
 	AccessToken    string
 	AccessSecret   string
 	ConsumerKey    string
 	ConsumerSecret string
-	Count          int
 	Input          []string
 	Timeout        int
 	TimeFormat     string
@@ -157,8 +153,23 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			return temp, err
 		}
 
+		// Grab only specific amount of tweets from
+		// every source, if p.Force = true.
+		var start = len(*tweets) - 1
+		var end int
+
+		if p.Force {
+			if len(*tweets) > p.ForceCount {
+				end = start - p.ForceCount + 1
+			} else {
+				end = 0
+			}
+		} else {
+			end = 0
+		}
+
 		// Process fetched data in reverse order.
-		for i := len(*tweets) - 1; i >= 0; i-- {
+		for i := start; i >= end; i-- {
 			item := (*tweets)[i]
 
 			var itemTime time.Time
@@ -326,6 +337,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"expire_delay":          -1,
 		"expire_interval":       -1,
 		"force":                 -1,
+		"force_count":           -1,
 		"template":              -1,
 		"timeout":               -1,
 		"time_format":           -1,
@@ -335,7 +347,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"access_secret":   1,
 		"consumer_key":    1,
 		"consumer_secret": 1,
-		"count":           -1,
 		"cred":            -1,
 		"input":           1,
 		"user_agent":      -1,
@@ -451,18 +462,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireInterval((*pluginConfig.Params)["expire_interval"])
 	showParam("expire_interval", plugin.ExpireInterval)
 
-	// count.
-	setCount := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["count"] = 0
-			plugin.Count = v
-		}
-	}
-	setCount(DEFAULT_TWITTER_COUNT)
-	setCount(pluginConfig.Config.GetInt(fmt.Sprintf("%s.count", template)))
-	setCount((*pluginConfig.Params)["count"])
-	showParam("count", plugin.Count)
-
 	// force.
 	setForce := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -474,6 +473,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setForce(pluginConfig.Config.GetString(fmt.Sprintf("%s.force", template)))
 	setForce((*pluginConfig.Params)["force"])
 	showParam("force", plugin.Force)
+
+	// force_count.
+	setForceCount := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["force_count"] = 0
+			plugin.ForceCount = v
+		}
+	}
+	setForceCount(core.DEFAULT_FORCE_COUNT)
+	setForceCount(pluginConfig.Config.GetInt(fmt.Sprintf("%s.force_count", template)))
+	setForceCount((*pluginConfig.Params)["force_count"])
+	showParam("force_count", plugin.ForceCount)
 
 	// input.
 	setInput := func(p interface{}) {

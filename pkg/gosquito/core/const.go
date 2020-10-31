@@ -17,6 +17,7 @@ const (
 	DEFAULT_FLOW_INTERVAL         = "60s"
 	DEFAULT_FLOW_NUMBER           = 1
 	DEFAULT_FORCE_INPUT           = false
+	DEFAULT_FORCE_COUNT           = 100
 	DEFAULT_LOG_LEVEL             = "INFO"
 	DEFAULT_LOG_TIME_FORMAT       = "02.01.2006 15:04:05.000"
 	DEFAULT_LOOP_SLEEP            = 300

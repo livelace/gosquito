@@ -92,6 +92,7 @@ type Plugin struct {
 	ExpireInterval      int64
 	ExpireLast          int64
 	Force               bool
+	ForceCount          int
 	Timeout             int
 	TimeFormat          string
 	TimeZone            *time.Location
@@ -128,8 +129,21 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			return temp, err
 		}
 
+		// Grab only specific amount of articles from
+		// every source, if p.Force = true.
+		var start = 0
+		var end = len(feeds.Items) - 1
+
+		if p.Force {
+			if len(feeds.Items) > p.ForceCount {
+				end = start + p.ForceCount - 1
+			}
+		}
+
 		// Process fetched data.
-		for _, item := range feeds.Items {
+		for i := start; i <= end; i++ {
+			item := feeds.Items[i]
+
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
 
@@ -294,12 +308,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"expire_action_delay":   -1,
 		"expire_action_timeout": -1,
 		"expire_interval":       -1,
-
-		"force":       -1,
-		"template":    -1,
-		"timeout":     -1,
-		"time_format": -1,
-		"time_zone":   -1,
+		"force":                 -1,
+		"force_count":           -1,
+		"template":              -1,
+		"timeout":               -1,
+		"time_format":           -1,
+		"time_zone":             -1,
 
 		"input":      1,
 		"user_agent": -1,
@@ -380,6 +394,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setForce(pluginConfig.Config.GetString(fmt.Sprintf("%s.force", template)))
 	setForce((*pluginConfig.Params)["force"])
 	showParam("force", plugin.Force)
+
+	// force_count.
+	setForceCount := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["force_count"] = 0
+			plugin.ForceCount = v
+		}
+	}
+	setForceCount(core.DEFAULT_FORCE_COUNT)
+	setForceCount(pluginConfig.Config.GetInt(fmt.Sprintf("%s.force_count", template)))
+	setForceCount((*pluginConfig.Params)["force_count"])
+	showParam("force_count", plugin.ForceCount)
 
 	// input.
 	setInput := func(p interface{}) {
