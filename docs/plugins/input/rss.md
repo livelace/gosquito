@@ -47,19 +47,4 @@ type RssData struct {
 ### Flow sample:
 
 ```yaml
-flow:
-  name: "tass-rss-smtp"
-
-  input:
-    plugin: "rss"
-    params:
-      input: ["http://tass.ru/rss/v2.xml"]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.rss.smtp.default"
-      headers:
-        x-gosquito-tag1: "world"
-        x-gosquito-tag2: "common"
 ```
