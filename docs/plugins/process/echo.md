@@ -13,9 +13,9 @@ console.
 
 ### Plugin parameters:
 
-| Param | Required | Type  | Default |             Example             | Description |
-|:------|:--------:|:-----:|:-------:|:-------------------------------:|:------------|
-| input |    +     | array |   []    | ["twitter.urls", "data.array0"] |             |
+| Param     | Required | Type  | Default |             Example             | Description |
+|:----------|:--------:|:-----:|:-------:|:-------------------------------:|:------------|
+| **input** |    +     | array |   []    | ["twitter.urls", "data.array0"] |             |
 
 ### Config sample:
 

@@ -17,9 +17,9 @@ full URLs.
 | Param      | Required |  Type  |      Default      |     Example      | Description |
 |:-----------|:--------:|:------:|:-----------------:|:----------------:|:------------|
 | depth      |    -     |  int   |         3         |        10        |             |
-| input      |    +     | array  |        []         | ["twitter.urls"] |             |
+| **input**  |    +     | array  |        []         | ["twitter.urls"] |             |
 | timeout    |    -     |  int   |         3         |        2         |             |
-| output     |    +     | array  |        []         | ["data.array0"]  |             |
+| **output** |    +     | array  |        []         | ["data.array0"]  |             |
 | user_agent |    -     | string | "gosquito v1.0.0" |  "webchela 1.0"  |             |
 
 ### Config sample:

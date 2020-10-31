@@ -13,17 +13,17 @@
 
 ### Plugin parameters:
 
-| Param      | Required |  Type  | Cred | Template | Default |       Example       | Description |
-|:-----------|:--------:|:------:|:----:|:--------:|:-------:|:-------------------:|:------------|
-| access_key |    +     | string |  +   |    -     |   ""    |         ""          |             |
-| action     |    +     | string |  -   |    +     |   ""    |        "put"        |             |
-| bucket     |    +     | string |  -   |    +     |   ""    |       "news"        |             |
-| input      |    +     | array  |  -   |    +     |   []    |         []          |             |
-| output     |    +     | array  |  -   |    +     |   []    |         []          |             |
-| secret_key |    +     | string |  +   |    -     |   ""    |         ""          |             |
-| server     |    +     | string |  +   |    -     |   ""    | "minio.example.com" |             |
-| ssl        |    -     |  bool  |  -   |    +     |  true   |        false        |             |
-| timeout    |    -     |  int   |  -   |    +     |   60    |         300         |             |
+| Param          | Required |  Type  | Cred | Template | Default |       Example       | Description |
+|:---------------|:--------:|:------:|:----:|:--------:|:-------:|:-------------------:|:------------|
+| **access_key** |    +     | string |  +   |    -     |   ""    |         ""          |             |
+| **action**     |    +     | string |  -   |    +     |   ""    |        "put"        |             |
+| **bucket**     |    +     | string |  -   |    +     |   ""    |       "news"        |             |
+| **input**      |    +     | array  |  -   |    +     |   []    |         []          |             |
+| **output**     |    +     | array  |  -   |    +     |   []    |         []          |             |
+| **secret_key** |    +     | string |  +   |    -     |   ""    |         ""          |             |
+| **server**     |    +     | string |  +   |    -     |   ""    | "minio.example.com" |             |
+| ssl            |    -     |  bool  |  -   |    +     |  true   |        false        |             |
+| timeout        |    -     |  int   |  -   |    +     |   60    |         300         |             |
 
 
 ### Config sample:

@@ -13,12 +13,12 @@
 
 ### Plugin parameters:
 
-| Param    | Required |  Type  | Template | Default |                Example                 | Description |
-|:---------|:--------:|:------:|:--------:|:-------:|:--------------------------------------:|:------------|
-| brokers  |    +     | string |    +     |   ""    | "127.0.0.1:9092,host.example.com:1111" |             |
-| compress |    -     | string |    +     | "none"  |                 "zstd"                 |             |
-| output   |    +     | array  |    +     |   []    |                ["news"]                |             |
-| schema   |    +     |  map   |    +     |  map[]  |              see example               |             |
+| Param       | Required |  Type  | Template | Default |                Example                 | Description |
+|:------------|:--------:|:------:|:--------:|:-------:|:--------------------------------------:|:------------|
+| **brokers** |    +     | string |    +     |   ""    | "127.0.0.1:9092,host.example.com:1111" |             |
+| compress    |    -     | string |    +     | "none"  |                 "zstd"                 |             |
+| **output**  |    +     | array  |    +     |   []    |                ["news"]                |             |
+| **schema**  |    +     |  map   |    +     |  map[]  |              see example               |             |
 
 
 ### Config sample:

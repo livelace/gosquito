@@ -13,12 +13,12 @@
 
 ### Plugin parameters:
 
-| Param       | Required | Type  | Default |     Example      | Description |
-|:------------|:--------:|:-----:|:-------:|:----------------:|:------------|
-| input       |    +     | array |   []    | ["twitter.text"] |             |
-| output      |    -     | array |   []    |  ["data.text0"]  |             |
-| regexp      |    +     | array |   []    |     ["war"]      |             |
-| replacement |    +     | array |   []    |    ["peace"]     |             |
+| Param           | Required | Type  | Default |     Example      | Description |
+|:----------------|:--------:|:-----:|:-------:|:----------------:|:------------|
+| **input**       |    +     | array |   []    | ["twitter.text"] |             |
+| output          |    -     | array |   []    |  ["data.text0"]  |             |
+| **regexp**      |    +     | array |   []    |     ["war"]      |             |
+| **replacement** |    +     | array |   []    |    ["peace"]     |             |
 
 ### Config sample:
 

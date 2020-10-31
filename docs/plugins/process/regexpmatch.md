@@ -13,11 +13,11 @@
 
 ### Plugin parameters:
 
-| Param  | Required | Type  | Default |     Example      | Description |
-|:-------|:--------:|:-----:|:-------:|:----------------:|:------------|
-| input  |    +     | array |   []    | ["twitter.text"] |             |
-| output |    -     | array |   []    |  ["data.text0"]  |             |
-| regexp |    +     | array |   []    |    ["Россия"]    |             |
+| Param      | Required | Type  | Default |     Example      | Description |
+|:-----------|:--------:|:-----:|:-------:|:----------------:|:------------|
+| **input**  |    +     | array |   []    | ["twitter.text"] |             |
+| output     |    -     | array |   []    |  ["data.text0"]  |             |
+| **regexp** |    +     | array |   []    |    ["Россия"]    |             |
 
 ### Config sample:
 

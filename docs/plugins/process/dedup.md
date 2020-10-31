@@ -13,9 +13,9 @@
 
 ### Plugin parameters:
 
-| Param   | Required | Type  | Default | Example | Description |
-|:--------|:--------:|:-----:|:-------:|:-------:|:------------|
-| require |    +     | array |   []    | [1, 2]  |             |
+| Param       | Required | Type  | Default | Example | Description |
+|:------------|:--------:|:-----:|:-------:|:-------:|:------------|
+| **require** |    +     | array |   []    | [1, 2]  |             |
 
 ### Config sample:
 

@@ -13,11 +13,11 @@
 
 ### Plugin parameters:
 
-| Param  | Required | Type  | Default |         Example          | Description |
-|:-------|:--------:|:-----:|:-------:|:------------------------:|:------------|
-| input  |    +     | array |   []    |     ["twitter.urls"]     |             |
-| output |    +     | array |   []    |     ["data.array0"]      |             |
-| regexp |    +     | array |   []    | ["http://go.tass.ru/.*"] |             |
+| Param      | Required | Type  | Default |         Example          | Description |
+|:-----------|:--------:|:-----:|:-------:|:------------------------:|:------------|
+| **input**  |    +     | array |   []    |     ["twitter.urls"]     |             |
+| **output** |    +     | array |   []    |     ["data.array0"]      |             |
+| **regexp** |    +     | array |   []    | ["http://go.tass.ru/.*"] |             |
 
 ### Config sample:
 

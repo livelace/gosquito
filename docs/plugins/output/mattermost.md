@@ -13,16 +13,16 @@ users/channels.
 
 ### Plugin parameters:
 
-| Param       | Required |  Type  | Cred | Template | Text Template | Default |             Example              | Description |
-|:------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:--------------------------------:|:------------|
-| attachments |    -     |  map   |  -   |    +     |       -       |  map[]  |           see example            |             |
-| files       |    -     | array  |  -   |    +     |       -       |   ""    | ["twitter.media", "data.array0"] |             |
-| message     |    -     | string |  -   |    +     |       +       |   ""    |       "Hello, {{.FLOW}}!"        |             |
-| output      |    +     | array  |  -   |    +     |       -       |   []    |      ["news", "@livelace"]       |             |
-| password    |    +     | string |  +   |    -     |       -       |   ""    |                ""                |             |
-| team        |    +     | string |  +   |    -     |       -       |   ""    |           "superteam"            |             |
-| url         |    +     | string |  +   |    -     |       -       |   ""    | "https://mattermost.example.com" |             |
-| username    |    +     | string |  +   |    -     |       -       |   ""    |                ""                |             |
+| Param        | Required |  Type  | Cred | Template | Text Template | Default |             Example              | Description |
+|:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:--------------------------------:|:------------|
+| attachments  |    -     |  map   |  -   |    +     |       -       |  map[]  |           see example            |             |
+| files        |    -     | array  |  -   |    +     |       -       |   ""    | ["twitter.media", "data.array0"] |             |
+| message      |    -     | string |  -   |    +     |       +       |   ""    |       "Hello, {{.FLOW}}!"        |             |
+| **output**   |    +     | array  |  -   |    +     |       -       |   []    |      ["news", "@livelace"]       |             |
+| **password** |    +     | string |  +   |    -     |       -       |   ""    |                ""                |             |
+| **team**     |    +     | string |  +   |    -     |       -       |   ""    |           "superteam"            |             |
+| **url**      |    +     | string |  +   |    -     |       -       |   ""    | "https://mattermost.example.com" |             |
+| **username** |    +     | string |  +   |    -     |       -       |   ""    |                ""                |             |
 
 
 ### Attachments parameters:
