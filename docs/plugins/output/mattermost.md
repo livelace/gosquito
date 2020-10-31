@@ -6,9 +6,9 @@ users/channels.
 
 ### Generic parameters:
 
-| Param   | Required |  Type   | Template | Default | Description |
-|:--------|:--------:|:-------:|:--------:|:-------:|:------------|
-| timeout |    -     | seconds |    +     |    3    |             |
+| Param   | Required | Type | Template | Default | Description |
+|:--------|:--------:|:----:|:--------:|:-------:|:------------|
+| timeout |    -     | int  |    +     |    3    |             |
 
 
 ### Plugin parameters:

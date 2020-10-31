@@ -17,17 +17,17 @@ type RssData struct {
 
 ### Generic parameters:
 
-| Param                 | Required |   Type   | Template |        Default        | Description |
-|:----------------------|:--------:|:--------:|:--------:|:---------------------:|:------------|
-| expire_action         |    -     |  array   |    +     |          []           |             |
-| expire_action_delay   |    -     | interval |    +     |         "1d"          |             |
-| expire_action_timeout |    -     | seconds  |    +     |          30           |             |
-| expire_interval       |    -     | interval |    +     |         "7d"          |             |
-| force                 |    -     |   bool   |    +     |         false         |             |
-| force_count           |    -     |   int    |    +     |          100          |             |
-| timeout               |    -     | seconds  |    +     |          60           |             |
-| time_format           |    -     |  string  |    +     | "15:04:05 02.01.2006" |             |
-| time_zone             |    -     |  string  |    +     |         "UTC"         |             |
+| Param                 | Required |  Type  | Template |        Default        | Description |
+|:----------------------|:--------:|:------:|:--------:|:---------------------:|:------------|
+| expire_action         |    -     | array  |    +     |          []           |             |
+| expire_action_delay   |    -     | string |    +     |         "1d"          |             |
+| expire_action_timeout |    -     |  int   |    +     |          30           |             |
+| expire_interval       |    -     | string |    +     |         "7d"          |             |
+| force                 |    -     |  bool  |    +     |         false         |             |
+| force_count           |    -     |  int   |    +     |          100          |             |
+| timeout               |    -     |  int   |    +     |          60           |             |
+| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |             |
+| time_zone             |    -     | string |    +     |         "UTC"         |             |
 
 
 ### Plugin parameters:

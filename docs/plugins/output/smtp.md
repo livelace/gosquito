@@ -5,9 +5,9 @@
 
 ### Generic parameters:
 
-| Param   | Required |  Type   | Template | Default | Description |
-|:--------|:--------:|:-------:|:--------:|:-------:|:------------|
-| timeout |    -     | seconds |    +     |   60    |             |
+| Param   | Required | Type | Template | Default | Description |
+|:--------|:--------:|:----:|:--------:|:-------:|:------------|
+| timeout |    -     | int  |    +     |   60    |             |
 
 
 ### Plugin parameters:
@@ -19,7 +19,7 @@
 | body_html      |    -     |  bool  |  -   |    +     |       -       |  true   |              false               |             |
 | body_length    |    -     |  int   |  -   |    +     |       -       |  10000  |               1000               |             |
 | **from**       |    +     | string |  -   |    +     |       -       |   ""    |      "gosquito@example.com"      |             |
-| headers        |    -     |  map   |  -   |    +     |       -       |  map[]  |           see example            |             |
+| headers        |    -     | map[]  |  -   |    +     |       -       |  map[]  |           see example            |             |
 | **output**     |    +     | array  |  -   |    +     |       -       |   []    |      ["user1@example.com"]       |             |
 | password       |    -     | string |  +   |    -     |       -       |   ""    |                ""                |             |
 | port           |    -     |  int   |  -   |    +     |       -       |   25    |               465                |             |
