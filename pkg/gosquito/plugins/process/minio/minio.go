@@ -52,7 +52,7 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 	defer cancel()
 
 	// client.
-	client, err := minio.New(p.URL, &minio.Options{
+	client, err := minio.New(p.Server, &minio.Options{
 		Creds:  credentials.NewStaticV4(p.AccessKey, p.SecretKey, ""),
 		Secure: p.SSL,
 	})
@@ -103,7 +103,7 @@ type Plugin struct {
 	Output    []string
 	SSL       bool
 	SecretKey string
-	URL       string
+	Server    string
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -149,7 +149,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 								"type":   p.Type,
 								"id":     p.ID,
 								"alias":  p.Alias,
-								"data":   fmt.Sprintf("put: %s/%s/%s", p.URL, p.Bucket, object),
+								"data":   fmt.Sprintf("put: %s/%s/%s", p.Server, p.Bucket, object),
 							}).Debug(core.LOG_PLUGIN_STAT)
 							ro.Set(reflect.Append(ro, reflect.ValueOf(object)))
 						}
@@ -222,7 +222,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include":  -1,
 		"require":  -1,
 		"template": -1,
-		"timeout":  -1,
 
 		"access_key": 1,
 		"action":     1,
@@ -231,8 +230,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"input":      1,
 		"output":     1,
 		"secret_key": 1,
+		"server":     1,
 		"ssl":        -1,
-		"url":        1,
+		"timeout":    -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -273,15 +273,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSecretKey(pluginConfig.Config.GetString(fmt.Sprintf("%s.secret_key", cred)))
 	setSecretKey((*pluginConfig.Params)["secret_key"])
 
-	// url.
-	setURL := func(p interface{}) {
+	// server.
+	setServer := func(p interface{}) {
 		if v, b := core.IsString(p); b {
-			availableParams["url"] = 0
-			plugin.URL = v
+			availableParams["server"] = 0
+			plugin.Server = v
 		}
 	}
-	setURL(pluginConfig.Config.GetString(fmt.Sprintf("%s.url", cred)))
-	setURL((*pluginConfig.Params)["url"])
+	setServer(pluginConfig.Config.GetString(fmt.Sprintf("%s.server", cred)))
+	setServer((*pluginConfig.Params)["server"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
