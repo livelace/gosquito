@@ -31,14 +31,14 @@ type TwitterData struct {
 
 ### Plugin parameters:
 
-| Param           | Required |  Type  | Cred | Template |      Default      |     Example     | Description |
-|:----------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------|
-| access_token    |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| access_secret   |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| consumer_key    |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| consumer_secret |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| input           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] |             |
-| user_agent      |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  |             |
+| Param               | Required |  Type  | Cred | Template |      Default      |     Example     | Description |
+|:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------|
+| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
+| **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        |             |
+| **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
+| **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        |             |
+| **input**           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] |             |
+| user_agent          |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  |             |
 
 
 ### Config sample:

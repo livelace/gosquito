@@ -30,10 +30,10 @@ type TelegramData struct {
 
 | Param         | Required |  Type  | Cred | Template | Default |     Example      | Description |
 |:--------------|:--------:|:------:|:----:|:--------:|:-------:|:----------------:|:------------|
-| api_id        |    +     | string |  +   |    -     |   ""    |        ""        |             |
-| api_hash      |    +     | string |  +   |    -     |   ""    |        ""        |             |
+| **api_id**    |    +     | string |  +   |    -     |   ""    |        ""        |             |
+| **api_hash**  |    +     | string |  +   |    -     |   ""    |        ""        |             |
 | file_max_size |    -     |  size  |  -   |    +     |  "10m"  |       "1g"       |             |
-| input         |    +     | array  |  -   |    +     |   []    | ["breakingmash"] |             |
+| **input**     |    +     | array  |  -   |    +     |   []    | ["breakingmash"] |             |
 | log_level     |    -     |  int   |  -   |    +     |    0    |        90        |             |
 
 
