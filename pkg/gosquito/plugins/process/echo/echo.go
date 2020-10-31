@@ -125,8 +125,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"input":   1,
 		"require": -1,
+
+		"input": 1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

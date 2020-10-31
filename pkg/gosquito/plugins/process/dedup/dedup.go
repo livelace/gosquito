@@ -95,6 +95,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	availableParams := map[string]int{
 		"include": -1,
+
 		"require": 1,
 	}
 

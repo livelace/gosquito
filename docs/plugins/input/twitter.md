@@ -5,10 +5,12 @@
 ### Data structure:
 
 ```go
-type TelegramData struct {
+type TwitterData struct {
+	LANG  string
 	MEDIA []string
+	TAGS  []string
 	TEXT  string
-	URL   string
+	URLS  []string
 }
 ```
 
