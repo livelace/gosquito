@@ -35,7 +35,7 @@ type RssData struct {
 | Param      | Required |  Type  | Template |      Default      |            Example            | Description |
 |:-----------|:--------:|:------:|:--------:|:-----------------:|:-----------------------------:|:------------|
 | input      |    +     | array  |    +     |       "[]"        | ["http://tass.ru/rss/v2.xml"] |             |
-| user_agent |    -     | string |    +     | "gosquito v1.0.0" |          "webchela"           |             |
+| user_agent |    -     | string |    +     | "gosquito v1.0.0" |        "webchela 1.0"         |             |
 
 
 ### Config sample:

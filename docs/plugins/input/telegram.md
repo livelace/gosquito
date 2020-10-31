@@ -28,13 +28,13 @@ type TelegramData struct {
 
 ### Plugin parameters:
 
-| Param         | Required |  Type  | Cred | Template | Default |              Example               | Description |
-|:--------------|:--------:|:------:|:----:|:--------:|:-------:|:----------------------------------:|:------------|
-| api_id        |    +     | string |  +   |    -     |   ""    |              "90004"               |             |
-| api_hash      |    +     | string |  +   |    -     |   ""    | "a0000000000000000000000000000002" |             |
-| file_max_size |    -     |  size  |  -   |    +     |  "10m"  |                "1g"                |             |
-| input         |    +     | array  |  -   |    +     |   []    |          ["breakingmash"]          |             |
-| log_level     |    -     |  int   |  -   |    +     |    0    |                 90                 |             |
+| Param         | Required |  Type  | Cred | Template | Default |     Example      | Description |
+|:--------------|:--------:|:------:|:----:|:--------:|:-------:|:----------------:|:------------|
+| api_id        |    +     | string |  +   |    -     |   ""    |        ""        |             |
+| api_hash      |    +     | string |  +   |    -     |   ""    |        ""        |             |
+| file_max_size |    -     |  size  |  -   |    +     |  "10m"  |       "1g"       |             |
+| input         |    +     | array  |  -   |    +     |   []    | ["breakingmash"] |             |
+| log_level     |    -     |  int   |  -   |    +     |    0    |        90        |             |
 
 
 ### Config sample:
