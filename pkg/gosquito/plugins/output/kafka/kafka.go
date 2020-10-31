@@ -218,9 +218,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"template": -1,
 		"timeout":  -1,
 
-		"brokers": 1,
-		"output":  1,
-		"schema":  1,
+		"brokers":  1,
+		"compress": -1,
+		"output":   1,
+		"schema":   1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

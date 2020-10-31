@@ -1,6 +1,6 @@
 ### Description:
 
-**telegram** plugin is for data gathering from Telegram chats.
+**telegram** input plugin is for data gathering from Telegram chats.
 
 ### Data structure:
 
