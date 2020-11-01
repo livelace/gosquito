@@ -17,14 +17,67 @@
 |:------------|:--------:|:-----:|:-------:|:-------:|:-----------------------------------------------|
 | **require** |    +     | array |   []    | [1, 2]  | List of process plugins ids for deduplication. |
 
-### Config sample:
-
-```toml
-
-```
 
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "dedup-example"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+
+  process:
+    - id: 0
+      alias: "match russia"
+      plugin: "regexpmatch"
+      params:
+        include: false
+        input: ["twitter.text"]
+        regexp: ["Россия", "Russia"]
+
+    - id: 1
+      alias: "match usa"
+      plugin: "regexpmatch"
+      params:
+        include: false
+        input: ["twitter.text"]
+        regexp: ["США", "US"]
+
+    - id: 2
+      alias: "dedup same tweets, this will be sent"
+      plugin: "dedup"
+      params:
+        require: [0, 1]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.twitter.smtp.default"
 ```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
+
+[templates.twitter.smtp.default]
+server = "mail.example.com"
+port = 25
+ssl = true
+
+from = "gosquito@example.com"
+output = ["user@example.com"]
+subject = "{{.TWITTER.TEXT}}"
+body = "{{.TWITTER.TEXT}}"
+```
+
+
 
