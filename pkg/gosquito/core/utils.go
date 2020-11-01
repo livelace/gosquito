@@ -657,6 +657,7 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 // TODO: proc2 may save state time as 22222 first.
 // TODO: proc1 may save state time as 11111 last.
 // TODO: "Last time" 11111 isn't what we expect.
+// TODO: Should be atomic operation.
 func PluginSaveData(path string, file string, data map[string]interface{}) error {
 	buffer := new(bytes.Buffer)
 

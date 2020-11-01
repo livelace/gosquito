@@ -30,14 +30,59 @@
 | username       |    -     |  int   |  +   |    -     |       -       |   ""    |           ""           | SMTP user.                                |
 
 
-### Config sample:
-
-```toml
-
-```
-
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "smtp-example"
+
+  input:
+    plugin: "rss"
+    params:
+      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+
+  output:
+    plugin: "smtp"
+    params:
+      cred: "creds.smtp.default"
+      template: "templates.rss.smtp.default"
+      headers:
+        foo: "bar"
 ```
 
+### Config sample:
+
+```toml
+[creds.smtp.default]
+username = "<USERNAME>"
+password = "<PASSWORD>"
+
+[templates.rss.smtp.default]
+server = "mail.example.com"
+port = 25
+ssl = true
+
+from = "gosquito@example.com"
+output = ["user@example.com"]
+
+subject = "{{ .RSS.TITLE }}"
+subject_length = 150
+
+body = """
+    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+    {{ .RSS.TITLE }}<br>
+    {{ if .RSS.DESCRIPTION }}{{ .RSS.DESCRIPTION }}<br>{{end}}
+    {{ if .RSS.CONTENT }}{{ .RSS.CONTENT }}<br><br>{{else}}<br>{{end}}
+    {{ if .RSS.LINK }}{{ .RSS.LINK }}{{end}}
+    """
+    
+body_html = true
+body_length = 10000
+
+[templates.rss.smtp.default.headers]
+x-gosquito-flow   = "flow"
+x-gosquito-plugin = "plugin"
+x-gosquito-source = "source"
+x-gosquito-time   = "time"
+x-gosquito-uuid   = "uuid"
+```
