@@ -1,23 +1,24 @@
 ### Description:
 
-**regexpmatch** process plugin is intended for matching patterns inside data.
+**regexpmatch** process plugin is intended for matching patterns inside
+data.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example | Description |
-|:--------|:--------:|:-----:|:-------:|:-------:|:------------|
-| include |    -     | bool  |  true   |  false  |             |
-| require |    -     | array |   []    | [1, 2]  |             |
+| Param   | Required | Type  | Default | Example |
+|:--------|:--------:|:-----:|:-------:|:-------:|
+| include |    -     | bool  |  true   |  false  |
+| require |    -     | array |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |     Example      | Description |
-|:-----------|:--------:|:-----:|:-------:|:----------------:|:------------|
-| **input**  |    +     | array |   []    | ["twitter.text"] |             |
-| output     |    -     | array |   []    |  ["data.text0"]  |             |
-| **regexp** |    +     | array |   []    |    ["Россия"]    |             |
+| Param      | Required | Type  | Default |            Example             | Description                                        |
+|:-----------|:--------:|:-----:|:-------:|:------------------------------:|:---------------------------------------------------|
+| **input**  |    +     | array |   []    |        ["twitter.text"]        | List of DataItem fields with data.                 |
+| output     |    -     | array |   []    |         ["data.text0"]         | List of target DataItem fields.                    |
+| **regexp** |    +     | array |   []    | ["regexp.countries", "Россия"] | List of config templates/raw regexps for matching. |
 
 ### Config sample:
 
@@ -29,3 +30,4 @@
 
 ```yaml
 ```
+

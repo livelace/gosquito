@@ -5,20 +5,20 @@
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example | Description |
-|:--------|:--------:|:-----:|:-------:|:-------:|:------------|
-| include |    -     | bool  |  true   |  false  |             |
-| require |    -     | array |   []    | [1, 2]  |             |
+| Param   | Required | Type  | Default | Example |
+|:--------|:--------:|:-----:|:-------:|:-------:|
+| include |    -     | bool  |  true   |  false  |
+| require |    -     | array |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param           | Required | Type  | Default |     Example      | Description |
-|:----------------|:--------:|:-----:|:-------:|:----------------:|:------------|
-| **input**       |    +     | array |   []    | ["twitter.text"] |             |
-| output          |    -     | array |   []    |  ["data.text0"]  |             |
-| **regexp**      |    +     | array |   []    |     ["war"]      |             |
-| **replacement** |    +     | array |   []    |    ["peace"]     |             |
+| Param           | Required | Type  | Default |         Example         | Description                                         |
+|:----------------|:--------:|:-----:|:-------:|:-----------------------:|:----------------------------------------------------|
+| **input**       |    +     | array |   []    |    ["twitter.text"]     | List of DataItem fields with data.                  |
+| **output**      |    +     | array |   []    |     ["data.text0"]      | List of target DataItem fields.                     |
+| **regexp**      |    +     | array |   []    |  ["regexp.bad", "war"]  | List of config templates/raw regexps for replacing. |
+| **replacement** |    +     | array |   []    | ["|vanished|", "peace"] | List of replacements.                               |
 
 ### Config sample:
 
