@@ -40,7 +40,7 @@ flow:
       schema:
         content: "rss.content"
         title: "rss.title"
-        xyz: "42"
+        foo: "bar"
 ```
 
 ### Config sample:
