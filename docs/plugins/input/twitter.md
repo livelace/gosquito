@@ -42,14 +42,88 @@ type TwitterData struct {
 | user_agent          |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  | Custom User-Agent for API access.                                       |
 
 
-### Config sample:
-
-```toml
-
-```
-
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "twitter-example"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+
+  process:
+    - id: 0
+      alias: "clean text"
+      plugin: "regexpreplace"
+      params:
+        input:  ["twitter.text"]
+        output: ["data.text0"]
+        regexp: ["regexps.urls", "\n"]
+        replacement: [ "" ]
+
+    - id: 1
+      alias: "search urls"
+      plugin: "regexpfind"
+      params:
+        include: false
+        input:  ["twitter.urls"]
+        output: ["data.array0"]
+        regexp: ["https://ria.ru/.*", "https://rsport.ria.ru/.*"]
+
+    - id: 2
+      alias: "fetch media"
+      plugin: "fetch"
+      params:
+        include: false
+        input:  ["twitter.media"]
+        output: ["data.array1"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.twitter.smtp.default"
 ```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<access_token>"
+access_secret = "<access_secret>"
+consumer_key = "<consumer_key>"
+consumer_secret = "<consumer_secret>"
+
+[regexps.urls]
+regexp = [
+    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
+    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+]
+
+[templates.twitter.smtp.default]
+server = "mail.example.com"
+port = 25
+ssl = true
+
+from = "gosquito@example.com"
+output = ["user@example.com"]
+
+subject = "{{ .DATA.TEXT0 }}"
+subject_length = 150
+
+body = """
+<div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+{{.DATA.TEXT0}}<br><br>
+{{range .DATA.ARRAY0}}{{printf "%s<br>" .}}{{end}}
+"""
+
+body_html = true
+body_length = 1000
+
+attachments = ["data.array1"]
+```
+
+
 

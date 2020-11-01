@@ -38,6 +38,26 @@ type TelegramData struct {
 | log_level     |    -     |  int   |  -   |    +     |    0    |        90        | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 
+### Flow sample:
+
+```yaml
+flow:
+  name: "telegram-example"
+
+  input:
+    plugin: "telegram"
+    params:
+      cred: "creds.telegram.default"
+      template: "templates.telegram.default"
+      input: ["breakingmash", "izvestia"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.telegram.smtp.default"
+```
+
+
 ### Config sample:
 
 ```toml
@@ -72,22 +92,5 @@ body_length = 5000
 attachments = ["telegram.media"]
 ```
 
-### Flow sample:
 
-```yaml
-flow:
-  name: "telegram-example"
-
-  input:
-    plugin: "telegram"
-    params:
-      cred: "creds.telegram.default"
-      template: "templates.telegram.default"
-      input: ["breakingmash", "izvestia"]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.telegram.smtp.default"
-```
 

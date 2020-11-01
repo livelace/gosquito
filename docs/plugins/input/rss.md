@@ -38,6 +38,23 @@ type RssData struct {
 | user_agent |    -     | string |    +     | "gosquito v1.0.0" |         "webchela 1.0"         | Custom User-Agent for feed access. |
 
 
+### Flow sample:
+
+```yaml
+flow:
+  name: "rss-example"
+
+  input:
+    plugin: "rss"
+    params:
+      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.rss.smtp.default"
+```
+
 ### Config sample:
 
 ```toml
@@ -64,20 +81,4 @@ body_html = true
 body_length = 10000
 ```
 
-### Flow sample:
-
-```yaml
-flow:
-  name: "rss-example"
-
-  input:
-    plugin: "rss"
-    params:
-      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.rss.smtp.default"
-```
 
