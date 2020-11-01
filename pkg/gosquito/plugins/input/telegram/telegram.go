@@ -357,11 +357,6 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 	currentTime := time.Now().UTC()
 
-	// Exit if there is no data in data channel.
-	if len(p.DataChannel) == 0 {
-		return temp, nil
-	}
-
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
 	if err != nil {
@@ -412,7 +407,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.Name,
 			"type":   p.Type,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", flowStates[source], sourceStat[source]),
+			"data":   fmt.Sprintf("last update: %v, fetched data: %d", flowStates[source], sourceStat[source]),
 		}).Debug(core.LOG_PLUGIN_STAT)
 	}
 
