@@ -111,11 +111,11 @@ body = """
 attachments = ["data.array0"]
 
 [templates.twitter.smtp.default.headers]
-x-gosquito-flow = "flow"
+x-gosquito-flow   = "flow"
 x-gosquito-plugin = "plugin"
 x-gosquito-source = "source"
-x-gosquito-time = "time"
-x-gosquito-uuid = "uuid"
+x-gosquito-time   = "time"
+x-gosquito-uuid   = "uuid"
 ```
 
 
