@@ -21,14 +21,14 @@ To replace various in-house automated tasks for data gathering with single tool.
 
 ```yaml
 flow:
-  name: "find-russia"
+  name: "russia"
   params:
-    interval: "1h"
+    interval: "10m"
 
   input:
     plugin: "twitter"
     params:
-      cred: "credentials.twitter.default"
+      cred: "creds.twitter.default"
       input: [
           "izvestia_ru", "IA_REGNUM", "rianru", "tass_agency",
           "AP", "BBCNews", "BBCWorld", "bbcrussian", "business", "independent", "Telegraph"
@@ -51,7 +51,7 @@ flow:
         include: false
         input:  ["twitter.text"]
         output: ["data.text0"]
-        regexp: ["regexes.urls", "\n"]
+        regexp: ["regexps.urls", "\n"]
         replacement: [""]
 
     - id: 2
@@ -66,7 +66,7 @@ flow:
   output:
     plugin: "smtp"
     params:
-      template: "templates.smtp.twitter.default"
+      template: "templates.twitter.smtp.default"
 ```
 
 ### Config sample ([options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
@@ -76,19 +76,19 @@ flow:
 time_format = "15:04 02.01.2006"
 time_zone = "Europe/Moscow"
 
-[credentials.twitter.default]
+[creds.twitter.default]
 access_token = "<access_token>"
 access_secret = "<access_secret>"
 consumer_key = "<consumer_key>"
 consumer_secret = "<consumer_secret>"
 
-[regexes.urls]
+[regexps.urls]
 regexp = [
     'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
     'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
 ]
 
-[templates.smtp.twitter.default]
+[templates.twitter.smtp.default]
 server = "mail.example.com"
 port = 25
 ssl = true
@@ -110,7 +110,7 @@ body = """
 
 attachments = ["data.array0"]
 
-[templates.smtp.twitter.default.headers]
+[templates.twitter.smtp.default.headers]
 x-gosquito-flow = "flow"
 x-gosquito-plugin = "plugin"
 x-gosquito-source = "source"
