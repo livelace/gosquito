@@ -10,8 +10,8 @@ Typical flow steps:
 
 
 *DataItem* is a data structure with specific fields, it contains common
-for all plugins fields and plugin specific fields. Typical flow
-consists of plugins with *DataItem* fields as parameters.
+fields for all plugins and plugin specific fields. Typical flow consists
+of plugins with *DataItem* fields as parameters.
 
 ```go
 type DataItem struct {
