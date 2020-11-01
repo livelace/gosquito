@@ -41,11 +41,53 @@ type TelegramData struct {
 ### Config sample:
 
 ```toml
+[creds.telegram.default]
+api_id = 90004
+api_hash = "axxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2"
 
+[templates.telegram.default]
+file_max_size = "1g"
+log_level = 90
+
+[templates.telegram.smtp.default]
+server = "mail.example.com"
+port = 25
+ssl = true
+
+from = "gosquito@example.com"
+output = ["user@example.com"]
+
+subject = "{{ .TELEGRAM.TEXT }}"
+subject_length = 150
+
+body = """
+    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+    {{ .TELEGRAM.TEXT }}<br><br>
+    {{ .TELEGRAM.URL }}
+    """
+
+body_html = true
+body_length = 5000
+
+attachments = ["telegram.media"]
 ```
 
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "telegram-example"
+
+  input:
+    plugin: "telegram"
+    params:
+      cred: "creds.telegram.default"
+      template: "templates.telegram.default"
+      input: ["breakingmash", "izvestia"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.telegram.smtp.default"
 ```
 
