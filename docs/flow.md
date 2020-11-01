@@ -2,16 +2,16 @@
 
 ```yaml
 flow:
-  name: "flow1"
-  params:
-    interval: "5m"
+  name: "flow1"                              # DNS compatible flow name.
+  params:                                    # Flow parameters.
+    interval: "5m"                           # How often flow runs.
 
   input:
-    plugin: "plugin"
-    params:
-      cred: "creds.input.plugin.example"
-      template: "templates.input.plugin.example"
-      expire_action: ["/path/to/executable", "arg4", "arg5", "arg6"]
+    plugin: "plugin"                         # Input plugin name.
+    params:                                  # Input plugin parameters.
+      cred: "creds.input.example"            # Credentials from config file.
+      template: "templates.input.example"    # Parameters might be set in flow and/or inside config file template.
+      expire_action: ["/bin/script", "arg"]
       expire_action_delay: "1d"
       expire_action_timeout: 30
       expire_interval: "7d"
@@ -39,15 +39,15 @@ flow:
       plugin: "plugin"
       params:
         require: [1, 0]
-        cred: "creds.process.plugin.example"
-        template: "templates.process.plugin.example"
+        cred: "creds.process.example"
+        template: "templates.process.example"
         ...
 
   output:
     plugin: "plugin"
     params:
-      cred: "creds.output.plugin.example"
-      template: "templates.output.plugin.example"
+      cred: "creds.output.example"
+      template: "templates.output.example"
       ...
 ```
 
