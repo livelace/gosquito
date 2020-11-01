@@ -69,5 +69,7 @@ flow:
       cred: "creds.output.example"
       template: "templates.output.example"
       ...
+      
+# After all steps, all temporary data (fetched/generated) will be cleaned.
 ```
 
