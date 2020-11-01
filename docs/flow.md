@@ -49,7 +49,7 @@ flow:
       params:
       
         # Plugin requires data results from Plugin 0 and 1. 
-        # Different plugins may require any combinations of data.
+        # Different plugins could require any combinations of plugin results.
         require: [1, 0]
         cred: "creds.process.example"
         template: "templates.process.example"
