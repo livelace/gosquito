@@ -44,7 +44,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			"id":     p.ID,
 			"alias":  p.Alias,
 			"data":   msg,
-		}).Debug(LOG_PLUGIN_ECHO_DATA)
+		}).Warn(LOG_PLUGIN_ECHO_DATA)
 	}
 
 	// Iterate over data items (articles, tweets etc.).
