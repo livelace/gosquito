@@ -50,7 +50,7 @@ flow:
         regexp: ["США", "US"]
 
     - id: 2
-      alias: "dedup same tweets"
+      alias: "dedup tweets"
       plugin: "dedup"
       params:
         require: [0, 1]
