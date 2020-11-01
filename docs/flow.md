@@ -24,6 +24,12 @@ flow:
       
       force: true                           # Force fetch data despite new data availability.
       force_count: 10                       # How many data must be fetched from every plugin source.
+      
+      input: [                              # Every input plugin can work with multiple sources.
+        "izvestia_ru",                      # Every source has its own update/expiration timestamps.
+        "rianru", 
+        "tass_agency"
+      ]
       ...
       
   # Process steps might be not set.    
