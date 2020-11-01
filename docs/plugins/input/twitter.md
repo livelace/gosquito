@@ -1,6 +1,7 @@
 ### Description:
 
-**twitter** input plugin is intended for data gathering from Twitter channels.
+**twitter** input plugin is intended for data gathering from Twitter
+channels.
 
 ### Data structure:
 
@@ -16,29 +17,29 @@ type TwitterData struct {
 
 ### Generic parameters:
 
-| Param                 | Required |  Type  | Template |        Default        | Description |
-|:----------------------|:--------:|:------:|:--------:|:---------------------:|:------------|
-| expire_action         |    -     | array  |    +     |          []           |             |
-| expire_action_delay   |    -     | string |    +     |         "1d"          |             |
-| expire_action_timeout |    -     |  int   |    +     |          30           |             |
-| expire_interval       |    -     | string |    +     |         "7d"          |             |
-| force                 |    -     |  bool  |    +     |         false         |             |
-| force_count           |    -     |  int   |    +     |          100          |             |
-| timeout               |    -     |  int   |    +     |          60           |             |
-| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |             |
-| time_zone             |    -     | string |    +     |         "UTC"         |             |
+| Param                 | Required |  Type  | Template |        Default        |
+|:----------------------|:--------:|:------:|:--------:|:---------------------:|
+| expire_action         |    -     | array  |    +     |          []           |
+| expire_action_delay   |    -     | string |    +     |         "1d"          |
+| expire_action_timeout |    -     |  int   |    +     |          30           |
+| expire_interval       |    -     | string |    +     |         "7d"          |
+| force                 |    -     |  bool  |    +     |         false         |
+| force_count           |    -     |  int   |    +     |          100          |
+| timeout               |    -     |  int   |    +     |          60           |
+| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_zone             |    -     | string |    +     |         "UTC"         |
 
 
 ### Plugin parameters:
 
-| Param               | Required |  Type  | Cred | Template |      Default      |     Example     | Description |
-|:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------|
-| **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        |             |
-| **input**           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] |             |
-| user_agent          |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  |             |
+| Param               | Required |  Type  | Cred | Template |      Default      |     Example     | Description                                                             |
+|:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------------------------------------------------------------------|
+| **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
+| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
+| **input**           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] | List of Twitter channels.                                               |
+| user_agent          |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  | Custom User-Agent for API access.                                       |
 
 
 ### Config sample:
@@ -51,3 +52,4 @@ type TwitterData struct {
 
 ```yaml
 ```
+

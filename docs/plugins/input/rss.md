@@ -32,10 +32,10 @@ type RssData struct {
 
 ### Plugin parameters:
 
-| Param      | Required |  Type  | Template |      Default      |            Example             | Description                          |
-|:-----------|:--------:|:------:|:--------:|:-----------------:|:------------------------------:|:-------------------------------------|
-| **input**  |    +     | array  |    +     |       "[]"        | ["https://tass.ru/rss/v2.xml"] | List of RSS/Atom feeds.              |
-| user_agent |    -     | string |    +     | "gosquito v1.0.0" |         "webchela 1.0"         | Custom User-Agent for HTTP requests. |
+| Param      | Required |  Type  | Template |      Default      |            Example             | Description                         |
+|:-----------|:--------:|:------:|:--------:|:-----------------:|:------------------------------:|:------------------------------------|
+| **input**  |    +     | array  |    +     |       "[]"        | ["https://tass.ru/rss/v2.xml"] | List of RSS/Atom feeds.             |
+| user_agent |    -     | string |    +     | "gosquito v1.0.0" |         "webchela 1.0"         | Custom User-Agent for feeds access. |
 
 
 ### Config sample:
