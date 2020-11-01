@@ -135,6 +135,13 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
+	// Delete irrelevant/obsolete sources.
+	for source := range flowStates {
+		if !core.IsValueInSlice(source, &p.Input) {
+			delete(flowStates, source)
+		}
+	}
+
 	// Fetch data from sources.
 	for _, source := range p.Input {
 		var lastTime time.Time

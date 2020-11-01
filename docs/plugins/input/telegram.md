@@ -62,8 +62,8 @@ flow:
 
 ```toml
 [creds.telegram.default]
-api_id = 90004
-api_hash = "axxxxxxxxxxxxxxxxxxxxxxxxxxxxxx2"
+api_id = "<API_ID>"
+api_hash = "<API_HASH>"
 
 [templates.telegram.default]
 file_max_size = "1g"
