@@ -2,13 +2,13 @@
 
 Typical flow steps:
 
-1. **Input plugin** gathers data and produces set of **DataItem**.
-2. **Process plugins** handle that **DataItem** set and fill chosen fields with produced data.
-3. Finally, **Output plugin** constructs messages with selected **DataItem** fields and send them to destinations. 
+1. *Input plugin* gathers data and produces set of *DataItem*.
+2. *Process plugins* handle *DataItem* set and fill chosen fields with produced data.
+3. Finally, *Output plugin* constructs messages with selected *DataItem* fields and send them to destinations.
 
 
 **DataItem** is a data structure with specific fields, contains common for all plugins fields and plugin specific fields.  
-Typical flow configuration consists of plugins with **DataItem** fields as parameters.
+Typical flow configuration consists of plugins with *DataItem* fields as parameters.
 
 ```go
 type DataItem struct {
