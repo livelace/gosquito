@@ -21,7 +21,7 @@ users/channels.
 | **output**   |    +     | array  |  -   |    +     |       -       |   []    |      ["news", "@livelace"]       | List of channels/users.                                                                                    |
 | **password** |    +     | string |  +   |    -     |       -       |   ""    |                ""                | Mattermost password.                                                                                       |
 | **team**     |    +     | string |  +   |    -     |       -       |   ""    |           "superteam"            | Mattermost team.                                                                                           |
-| **url**      |    +     | string |  +   |    -     |       -       |   ""    | "https://mattermost.example.com" | Mattermost URL.                                                                                            |
+| **url**      |    +     | string |  +   |    -     |       -       |   ""    | "https://host.example.com" | Mattermost URL.                                                                                            |
 | **username** |    +     | string |  +   |    -     |       -       |   ""    |                ""                | Mattermost user.                                                                                           |
 
 
@@ -78,7 +78,7 @@ flow:
 
 ```toml
 [creds.mattermost.default]
-url = "https://mattermost.example.com"
+url = "https://host.example.com"
 username = "<USERNAME>"
 password = "<PASSWORD>"
 team = "<TEAM>"
