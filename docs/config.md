@@ -11,6 +11,10 @@
 # s - seconds, m - minutes, h - hours, d - days.
 # Example: 10s, 120m, 48h, 365d 
 
+# Size units suffixes:
+# b - bytes, k - kilobytes, m - megabytes, g - gigabytes.
+# Example: 512b, 1024k, 10m, 3g
+
 # Set command execution for expired input plugin sources.
 # First 3 arguments always added: <flow_name> <input_source> <source_timestamp>
 #expire_action           = ["/path/to/executable", "arg4", "arg5", "arg6"]
