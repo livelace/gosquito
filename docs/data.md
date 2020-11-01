@@ -9,7 +9,7 @@ Typical flow steps:
    fields and send messages to destinations.
 
 
-*DataItem* is a data structure with specific fields, contains common
+*DataItem* is a data structure with specific fields, it contains common
 for all plugins fields and plugin specific fields. Typical flow
 consists of plugins with *DataItem* fields as parameters.
 
