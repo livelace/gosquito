@@ -5,7 +5,6 @@
 | [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)                       |  input  | RSS/Atom feeds (text, urls) data source.              |
 | [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)             |  input  | Telegram chats (text, image, video) data source.      |
 | [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)               |  input  | Twitter tweets (media, tags, text, urls) data source. |
-|                                                                                                         |         |                                                       |
 
 ### Process plugins:
 
