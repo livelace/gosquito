@@ -41,6 +41,7 @@
 # How often flows run.
 #flow_interval           = "60s"
 
+# Set to DEBUG in any unclear situation.
 #log_level               = "INFO"
 
 # Process plugins results will be send by default.
