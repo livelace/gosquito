@@ -17,10 +17,10 @@ flow:
       # Flow parameters have higher priority over config template parameters.
       template: "templates.input.example"    
                                               
-      expire_action: ["/bin/script", "arg"] # Execute command if plugin source is expired.
+      expire_action: ["/bin/script", "arg"] # Execute command if any plugin source is expired.
       expire_action_delay: "1d"             # Delay between command executions. 
       expire_action_timeout: 30             # Command execution timeout. 
-      expire_interval: "7d"                 # When flow is considered as expired.
+      expire_interval: "7d"                 # When flow is considered expired.
       
       force: true                           # Force fetch data despite new data availability.
       force_count: 10                       # How many data must be fetched from every plugin source.
@@ -49,6 +49,7 @@ flow:
       params:
       
         # Plugin requires data results from Plugin 0 and 1. 
+        # Different plugins may require any combinations of data.
         require: [1, 0]
         cred: "creds.process.example"
         template: "templates.process.example"
