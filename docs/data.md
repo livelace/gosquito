@@ -3,12 +3,15 @@
 Typical flow steps:
 
 1. *Input plugin* gathers data and produces set of *DataItem*.
-2. *Process plugins* handle *DataItem* set and fill chosen fields with produced data.
-3. Finally, *Output plugin* constructs messages with selected *DataItem* fields and send them to destinations.
+2. *Process plugins* handle *DataItem* set and fill chosen fields with
+   produced data.
+3. Finally, *Output plugin* constructs messages with selected *DataItem*
+   fields and send messages to destinations.
 
 
-**DataItem** is a data structure with specific fields, contains common for all plugins fields and plugin specific fields.  
-Typical flow configuration consists of plugins with *DataItem* fields as parameters.
+*DataItem* is a data structure with specific fields, contains common
+for all plugins fields and plugin specific fields (typical flow
+consists of plugins with *DataItem* fields as parameters.
 
 ```go
 type DataItem struct {
@@ -28,6 +31,7 @@ type DataItem struct {
 ```
 
 Temporary **DataItem.Data** structure for process plugins results:
+
 ```go
 type Data struct {
 	ARRAY0  []string
@@ -40,4 +44,7 @@ type Data struct {
 }
 ```
 
-Plugin specific data structures: [RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md), [Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md), [Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
+Plugin specific data structures:
+[RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md),
+[Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md),
+[Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
