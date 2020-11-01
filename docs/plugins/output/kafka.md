@@ -21,13 +21,39 @@
 | **schema**  |    +     |  map   |    +     |  map[]  |              see example               | Dynamic schema for Kafka messages. |
 
 
-### Config sample:
-
-```toml
-
-```
-
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "kafka-example"
+
+  input:
+    plugin: "rss"
+    params:
+      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+
+  output:
+    plugin: "kafka"
+    params:
+      template: "templates.rss.kafka.default"
+      output: ["kafka-example"]
+      schema:
+        content: "rss.content"
+        title: "rss.title"
+        xyz: "42"
 ```
+
+### Config sample:
+
+```toml
+[templates.rss.kafka.default]
+brokers = "127.0.0.1:9092"
+
+[templates.rss.kafka.default.schema]
+flow     = "flow"
+plugin   = "plugin"
+source   = "source"
+time     = "time"
+uuid     = "uuid"
+```
+
