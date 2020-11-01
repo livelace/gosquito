@@ -16,7 +16,7 @@
 
 | Param      | Required | Type  | Default |      Example      | Description                        |
 |:-----------|:--------:|:-----:|:-------:|:-----------------:|:-----------------------------------|
-| **input**  |    +     | array |   []    | ["twitter.media"] | List of DataItem fields with URLs. |
+| **input**  |    +     | array |   []    | ["twitter.media"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs. |
 | **output** |    +     | array |   []    |  ["data.array0"]  | List of target DataItem fields.    |
 
 ### Config sample:

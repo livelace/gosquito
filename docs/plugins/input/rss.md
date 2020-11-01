@@ -41,11 +41,43 @@ type RssData struct {
 ### Config sample:
 
 ```toml
+[templates.rss.smtp.default]
+server = "mail.example.com"
+port = 25
+ssl = true
 
+from = "gosquito@example.com"
+output = ["user@example.com"]
+
+subject = "{{ .RSS.TITLE }}"
+subject_length = 150
+
+body = """
+    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+    {{ .RSS.TITLE }}<br>
+    {{ if .RSS.DESCRIPTION }}{{ .RSS.DESCRIPTION }}<br>{{end}}
+    {{ if .RSS.CONTENT }}{{ .RSS.CONTENT }}<br><br>{{else}}<br>{{end}}
+    {{ if .RSS.LINK }}{{ .RSS.LINK }}{{end}}
+    """
+    
+body_html = true
+body_length = 10000
 ```
 
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "rss-example"
+
+  input:
+    plugin: "rss"
+    params:
+      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+
+  output:
+    plugin: "smtp"
+    params:
+      template: "templates.rss.smtp.default"
 ```
 
