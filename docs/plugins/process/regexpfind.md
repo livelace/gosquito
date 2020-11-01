@@ -13,11 +13,11 @@
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |                 Example                  | Description                                         |
-|:-----------|:--------:|:-----:|:-------:|:----------------------------------------:|:----------------------------------------------------|
-| **input**  |    +     | array |   []    |             ["twitter.urls"]             | List of DataItem fields with data.                  |
-| **output** |    +     | array |   []    |             ["data.array0"]              | List of target DataItem fields.                     |
-| **regexp** |    +     | array |   []    | ["regexp.video", "http://go.tass.ru/.*"] | List of config templates/raw regexps for searching. |
+| Param      | Required | Type  | Default |                  Example                  | Description                                         |
+|:-----------|:--------:|:-----:|:-------:|:-----------------------------------------:|:----------------------------------------------------|
+| **input**  |    +     | array |   []    |             ["twitter.urls"]              | List of DataItem fields with data.                  |
+| **output** |    +     | array |   []    |              ["data.array0"]              | List of target DataItem fields.                     |
+| **regexp** |    +     | array |   []    | ["regexps.video", "http://go.tass.ru/.*"] | List of config templates/raw regexps for searching. |
 
 ### Config sample:
 
