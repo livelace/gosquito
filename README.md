@@ -31,7 +31,7 @@ flow:
       cred: "creds.twitter.default"
       input: [
           "izvestia_ru", "IA_REGNUM", "rianru", "tass_agency",
-          "AP", "BBCNews", "BBCWorld", "bbcrussian", "business", "independent", "Telegraph"
+          "AP", "BBCNews", "BBCWorld", "business", "independent"
       ]
       force: true
 
