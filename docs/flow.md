@@ -4,7 +4,7 @@
 flow:
   name: "flow1"                             # DNS compatible flow name.
   params:                                   # Flow parameters.
-    interval: "5m"                          # How often flow runs.
+    interval: "5m"                          # How often flow runs (1 second minimum).
 
   input:
     plugin: "plugin"                        # Input plugin name.
