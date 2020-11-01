@@ -34,7 +34,7 @@ flow:
           "AP", "BBCNews", "BBCWorld", "business", "independent"
       ]
       force: true
-      force_count: 3
+      force_count: 10
 
   process:
     - id: 0
