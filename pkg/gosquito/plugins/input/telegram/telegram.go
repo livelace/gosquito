@@ -368,6 +368,13 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
+	// Delete irrelevant sources.
+	for source := range flowStates {
+		if !core.IsValueInSlice(source, &p.Input) {
+			delete(flowStates, source)
+		}
+	}
+
 	// Count fetched data from source.
 	sourceStat := make(map[string]int32)
 
