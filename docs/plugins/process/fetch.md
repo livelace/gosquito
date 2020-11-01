@@ -19,14 +19,42 @@
 | **input**  |    +     | array |   []    | ["twitter.media"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs. |
 | **output** |    +     | array |   []    |  ["data.array0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
 
-### Config sample:
-
-```toml
-
-```
-
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "fetch-example"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+      force: true
+      force_count: 10
+
+  process:
+    - id: 0
+      plugin: "fetch"
+      params:
+        input:  ["twitter.media"]
+        output: ["data.array0"]
+
+    - id: 1
+      plugin: "echo"
+      params:
+        input:  ["data.array0"]
 ```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
+```
+
+
 
