@@ -71,7 +71,7 @@ consumer_key = "<CONSUMER_KEY>"
 consumer_secret = "<CONSUMER_SECRET>"
 
 [creds.minio.default]
-server = "host.example.com"
+server = "<SERVER>"
 access_key = "<ACCESS_KEY>"
 secret_key = "<SECRET_KEY>"
 
