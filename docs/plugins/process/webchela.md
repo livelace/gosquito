@@ -1,6 +1,6 @@
 ### Description:
 
-**webchela** output plugin is intended for interacting with web pages.
+**webchela** process plugin is intended for interacting with web pages.
 
 
 ### Generic parameters:
