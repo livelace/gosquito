@@ -10,11 +10,11 @@ flow:
     plugin: "plugin"                        # Input plugin name.
     params:                                 # Input plugin parameters.
     
-      # Credentials are very similar to templates, but dedicated for secret data.
+      # Credentials are very similar to templates, but dedicated for secret parameters.
       cred: "creds.input.example"            
     
       # Parameters might be set inside flow and/or inside config file template.
-      # Flow parameters have higher priority over template parameters.
+      # Flow parameters have higher priority over config template parameters.
       template: "templates.input.example"    
                                               
       expire_action: ["/bin/script", "arg"] # Execute command if plugin source is expired.
