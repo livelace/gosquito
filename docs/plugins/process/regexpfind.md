@@ -5,19 +5,19 @@
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example | Description |
-|:--------|:--------:|:-----:|:-------:|:-------:|:------------|
-| include |    -     | bool  |  true   |  false  |             |
-| require |    -     | array |   []    | [1, 2]  |             |
+| Param   | Required | Type  | Default | Example |
+|:--------|:--------:|:-----:|:-------:|:-------:|
+| include |    -     | bool  |  true   |  false  |
+| require |    -     | array |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |         Example          | Description |
-|:-----------|:--------:|:-----:|:-------:|:------------------------:|:------------|
-| **input**  |    +     | array |   []    |     ["twitter.urls"]     |             |
-| **output** |    +     | array |   []    |     ["data.array0"]      |             |
-| **regexp** |    +     | array |   []    | ["http://go.tass.ru/.*"] |             |
+| Param      | Required | Type  | Default |                 Example                  | Description                                      |
+|:-----------|:--------:|:-----:|:-------:|:----------------------------------------:|:-------------------------------------------------|
+| **input**  |    +     | array |   []    |             ["twitter.urls"]             | List of DataItem fields with data.               |
+| **output** |    +     | array |   []    |             ["data.array0"]              | List of target DataItem fields.                  |
+| **regexp** |    +     | array |   []    | ["regexp.video", "http://go.tass.ru/.*"] | List of config templates/raw text for searching. |
 
 ### Config sample:
 
