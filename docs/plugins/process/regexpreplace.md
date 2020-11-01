@@ -18,7 +18,7 @@
 | **input**       |    +     | array |   []    |    ["twitter.text"]     | List of DataItem fields with data.                  |
 | **output**      |    +     | array |   []    |     ["data.text0"]      | List of target DataItem fields.                     |
 | **regexp**      |    +     | array |   []    |  ["regexp.bad", "war"]  | List of config templates/raw regexps for replacing. |
-| **replacement** |    +     | array |   []    | ["|vanished|", "peace"] | List of replacements.                               |
+| **replacement** |    +     | array |   []    | ["vanished", "peace"] | List of replacements.                               |
 
 ### Config sample:
 
