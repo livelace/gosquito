@@ -21,17 +21,62 @@
 | **input**      |    +     | array  |  -   |    +     |   []    |   ["data.array0"]   | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths.                                     |
 | **output**     |    +     | array  |  -   |    +     |   []    |         []          | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                                               |
 | **secret_key** |    +     | string |  +   |    -     |   ""    |         ""          | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html) |
-| **server**     |    +     | string |  +   |    -     |   ""    | "minio.example.com" | Minio server.                                                                 |
+| **server**     |    +     | string |  +   |    -     |   ""    | "host.example.com" | Minio server.                                                                 |
 | ssl            |    -     |  bool  |  -   |    +     |  true   |        false        | Use SSL for connection.                                                       |
-
-
-### Config sample:
-
-```toml
-
-```
 
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "minio-sample"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+      force: true
+      force_count: 10
+
+  process:
+    - id: 0
+      alias: "fetch media"
+      plugin: "fetch"
+      params:
+        input:  ["twitter.media"]
+        output: ["data.array0"]
+
+    - id: 1
+      alias: "save media"
+      plugin: "minio"
+      params:
+        cred:   "creds.minio.default"
+        template: "templates.minio.default"
+        input:   ["data.array0"]
+        output:  ["data.array1"]
+        
+    - id: 2
+      plugin: "echo"
+      params:
+        input:  ["data.array1"]
 ```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
+
+[creds.minio.default]
+server = "host.example.com"
+access_key = "<ACCESS_KEY>"
+secret_key = "<SECRET_KEY>"
+
+[templates.minio.default]
+action = "put"
+bucket = "media"
+```
+
