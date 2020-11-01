@@ -29,6 +29,8 @@ flow:
     params:
       cred: "creds.twitter.default"
       input: ["rianru"]
+      force: true
+      force_count: 10
 
   process:
     - id: 0
@@ -48,15 +50,10 @@ flow:
         regexp: ["США", "US"]
 
     - id: 2
-      alias: "dedup same tweets, this will be sent"
+      alias: "dedup same tweets"
       plugin: "dedup"
       params:
         require: [0, 1]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.twitter.smtp.default"
 ```
 
 ### Config sample:
@@ -67,16 +64,6 @@ access_token = "<ACCESS_TOKEN>"
 access_secret = "<ACCESS_SECRET>"
 consumer_key = "<CONSUMER_KEY>"
 consumer_secret = "<CONSUMER_SECRET>"
-
-[templates.twitter.smtp.default]
-server = "mail.example.com"
-port = 25
-ssl = true
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-subject = "{{.TWITTER.TEXT}}"
-body = "{{.TWITTER.TEXT}}"
 ```
 
 
