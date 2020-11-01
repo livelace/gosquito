@@ -37,15 +37,65 @@
 | **server**             |    +     | array  |    +     |     []      |   ["server1.example.com:8080"]    | List of Webchela servers.                      |
 | server_timeout         |    -     |  int   |    +     |      3      |                10                 | Server connection timeout.                     |
 
+### Flow sample:
+
+```yaml
+flow:
+  name: "webchela-example"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+      force: true
+      force_count: 10
+
+  process:
+    - id: 0
+      alias: "search urls"
+      plugin: "regexpfind"
+      params:
+        include: false
+        input:  ["twitter.urls"]
+        output: ["data.array0"]
+        regexp: ["https://ria.ru/.*", "https://rsport.ria.ru/.*"]
+
+    - id: 1
+      alias: "grab pages"
+      plugin: "webchela"
+      params:
+        require: [0]
+        include: false
+        template: "templates.webchela.default"
+        input:  ["data.array0"]
+        output: ["data.array1"]
+
+    - id: 2
+      plugin: "echo"
+      params:
+        require: [1]
+        input: ["data.array1"]
+```
 
 ### Config sample:
 
 ```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
 
+[templates.webchela.default]
+batch_size = 3
+browser_type = "firefox"
+browser_instance = 1
+browser_instance_tab = 3
+browser_extension = ["bypass-paywalls-1.7.6.xpi", "ublock-origin-1.30.6.xpi"]
+cpu_load = 25
+server = ["host.example.com:50051"]
+timeout = 900
 ```
 
-### Flow sample:
-
-```yaml
-```
 
