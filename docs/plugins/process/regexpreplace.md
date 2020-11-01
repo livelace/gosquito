@@ -21,14 +21,49 @@ inside data.
 | **regexp**      |    +     | array |   []    | ["regexps.bad", "war"] | List of config templates/raw regexps for replacing. |
 | **replacement** |    +     | array |   []    | ["vanished", "peace"]  | List of replacements.                               |
 
-### Config sample:
-
-```toml
-
-```
-
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "regexpreplace-sample"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["AP", "BBCNews", "BBCWorld", "business", "independent"]
+      force: true
+      force_count: 10
+
+  process:
+    - id: 0
+      plugin: "regexpreplace"
+      params:
+        input:  ["twitter.text"]
+        output: ["data.text0"]
+        regexp: ["regexps.words.bad", "regexps.words.good"]
+        replacement: ["GOOD", "BAD"]
+        
+    - id: 1
+      plugin: "echo"
+      params:
+        require: [0]
+        input: ["data.text0"]
+```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
+
+[regexps.words.bad]
+regexp = ["war", "violence"]
+
+[regexps.words.good]
+regexp = ["peace", "humanism"]
 ```
 

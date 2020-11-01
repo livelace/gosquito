@@ -20,14 +20,46 @@ data.
 | output     |    -     | array |   []    |         ["data.text0"]          | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                    |
 | **regexp** |    +     | array |   []    | ["regexps.countries", "Россия"] | List of config templates/raw regexps for matching. |
 
-### Config sample:
-
-```toml
-
-```
 
 ### Flow sample:
 
 ```yaml
+flow:
+  name: "regexpmatch-sample"
+
+  input:
+    plugin: "twitter"
+    params:
+      cred: "creds.twitter.default"
+      input: ["rianru"]
+      force: true
+      force_count: 10
+
+  process:
+    - id: 0
+      plugin: "regexpmatch"
+      params:
+        input:  ["twitter.text"]
+        output: ["data.text0"]
+        regexp: ["regexps.words", "Россия"]
+        
+    - id: 1
+      plugin: "echo"
+      params:
+        require: [0]
+        input: ["data.text0"]
+```
+
+### Config sample:
+
+```toml
+[creds.twitter.default]
+access_token = "<ACCESS_TOKEN>"
+access_secret = "<ACCESS_SECRET>"
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<CONSUMER_SECRET>"
+
+[regexps.words]
+regexp = ["матрёшка", "балалайка"]
 ```
 
