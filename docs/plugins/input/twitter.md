@@ -33,8 +33,8 @@ type TwitterData struct {
 
 | Param               | Required |  Type  | Cred | Template |      Default      |     Example     | Description |
 |:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------|
-| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
 | **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        |             |
+| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
 | **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        |             |
 | **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        |             |
 | **input**           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] |             |
