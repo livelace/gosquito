@@ -16,8 +16,8 @@ inside data.
 
 | Param           | Required | Type  | Default |        Example         | Description                                         |
 |:----------------|:--------:|:-----:|:-------:|:----------------------:|:----------------------------------------------------|
-| **input**       |    +     | array |   []    |    ["twitter.text"]    | List of DataItem fields with data.                  |
-| **output**      |    +     | array |   []    |     ["data.text0"]     | List of target DataItem fields.                     |
+| **input**       |    +     | array |   []    |    ["twitter.text"]    | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                  |
+| **output**      |    +     | array |   []    |     ["data.text0"]     | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                     |
 | **regexp**      |    +     | array |   []    | ["regexps.bad", "war"] | List of config templates/raw regexps for replacing. |
 | **replacement** |    +     | array |   []    | ["vanished", "peace"]  | List of replacements.                               |
 

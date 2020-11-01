@@ -18,8 +18,8 @@
 | **access_key** |    +     | string |  +   |    -     |   ""    |         ""          | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html) |
 | **action**     |    +     | string |  -   |    +     |   ""    |        "put"        | Perform action ("put" - implemented, "get" - TODO).                           |
 | **bucket**     |    +     | string |  -   |    +     |   ""    |       "news"        | Bucket name.                                                                  |
-| **input**      |    +     | array  |  -   |    +     |   []    |   ["data.array0"]   | List of DataItem fields with files paths.                                     |
-| **output**     |    +     | array  |  -   |    +     |   []    |         []          | List of target DataItem fields.                                               |
+| **input**      |    +     | array  |  -   |    +     |   []    |   ["data.array0"]   | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths.                                     |
+| **output**     |    +     | array  |  -   |    +     |   []    |         []          | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                                               |
 | **secret_key** |    +     | string |  +   |    -     |   ""    |         ""          | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html) |
 | **server**     |    +     | string |  +   |    -     |   ""    | "minio.example.com" | Minio server.                                                                 |
 | ssl            |    -     |  bool  |  -   |    +     |  true   |        false        | Use SSL for connection.                                                       |

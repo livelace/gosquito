@@ -15,8 +15,8 @@
 
 | Param      | Required | Type  | Default |             Example             | Description |
 |:-----------|:--------:|:-----:|:-------:|:-------------------------------:|:------------|
-| **input**  |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of DataItem fields with data.            |
-| **output** |    +     | array |   []    |         ["data.array1"]         | List of target DataItem fields.            |
+| **input**  |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.            |
+| **output** |    +     | array |   []    |         ["data.array1"]         | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.            |
 
 ### Config sample:
 

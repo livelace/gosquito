@@ -1,7 +1,7 @@
 ### Description:
 
 **dedup** process plugin is intended for deduplication
-[DataItem's.](https://github.com/livelace/gosquito/blob/master/docs/data.md)
+[[DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md)](https://github.com/livelace/gosquito/blob/master/docs/data.md) sets.
 
 
 ### Generic parameters:

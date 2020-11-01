@@ -14,7 +14,7 @@
 
 | Param          | Required |  Type  | Cred | Template | Text Template | Default |        Example         | Description                               |
 |:---------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:----------------------:|:------------------------------------------|
-| attachments    |    -     | array  |  -   |    +     |       -       |   []    |    ["data.array0"]     | List of DataItem fields with files paths. |
+| attachments    |    -     | array  |  -   |    +     |       -       |   []    |    ["data.array0"]     | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths. |
 | **body**       |    +     | string |  -   |    +     |       +       |   ""    |   "{{.RSS.CONTENT}}"   | Email body.                               |
 | body_html      |    -     |  bool  |  -   |    +     |       -       |  true   |         false          | Send body as HTML.                        |
 | body_length    |    -     |  int   |  -   |    +     |       -       |  10000  |          1000          | Maximum body length in letters.           |
