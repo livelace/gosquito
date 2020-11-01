@@ -34,10 +34,10 @@ type TwitterData struct {
 
 | Param               | Required |  Type  | Cred | Template |      Default      |     Example     | Description                                                             |
 |:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:---------------:|:------------------------------------------------------------------------|
-| **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
-| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
-| **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
-| **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter Api Access](https://developer.twitter.com/en/apply-for-access) |
+| **access_secret**   |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **access_token**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_key**    |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_secret** |    +     | string |  +   |    -     |        ""         |       ""        | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
 | **input**           |    +     | array  |  -   |    +     |        []         | ["tass_agency"] | List of Twitter channels.                                               |
 | user_agent          |    -     | string |  -   |    +     | "gosquito v1.0.0" | "webchela 1.0"  | Custom User-Agent for API access.                                       |
 
