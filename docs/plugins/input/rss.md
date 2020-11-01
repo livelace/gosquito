@@ -34,7 +34,7 @@ type RssData struct {
 
 | Param      | Required |  Type  | Template |      Default      |            Example             | Description                          |
 |:-----------|:--------:|:------:|:--------:|:-----------------:|:------------------------------:|:-------------------------------------|
-| **input**  |    +     | array  |    +     |       "[]"        | ["https://tass.ru/rss/v2.xml"] | Array of RSS/Atom feeds.             |
+| **input**  |    +     | array  |    +     |       "[]"        | ["https://tass.ru/rss/v2.xml"] | List of RSS/Atom feeds.              |
 | user_agent |    -     | string |    +     | "gosquito v1.0.0" |         "webchela 1.0"         | Custom User-Agent for HTTP requests. |
 
 
