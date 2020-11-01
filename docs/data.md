@@ -14,7 +14,7 @@ Typical flow configuration consists of plugins with **DataItem** fields as param
 type DataItem struct {
 	FLOW       string           // Flow name (common field).
 	PLUGIN     string           // Input plugin name (rss, twitter, telegram etc.).
-	SOURCE     string           // Input plugin source (feed, channel, chat etc.).
+	SOURCE     string           // Input plugin source (feed url, channel, chat etc.).
 	TIME       time.Time        // Time of article, tweet, message.
 	TIMEFORMAT string           // User defined time format (common field).
 	TIMEZONE   *time.Location   // User defined timezone (common field).
