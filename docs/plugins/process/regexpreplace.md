@@ -1,6 +1,7 @@
 ### Description:
 
-**regexpreplace** process plugin is intended for replacing patterns inside data.
+**regexpreplace** process plugin is intended for replacing patterns
+inside data.
 
 
 ### Generic parameters:
@@ -13,11 +14,11 @@
 
 ### Plugin parameters:
 
-| Param           | Required | Type  | Default |         Example         | Description                                         |
-|:----------------|:--------:|:-----:|:-------:|:-----------------------:|:----------------------------------------------------|
-| **input**       |    +     | array |   []    |    ["twitter.text"]     | List of DataItem fields with data.                  |
-| **output**      |    +     | array |   []    |     ["data.text0"]      | List of target DataItem fields.                     |
-| **regexp**      |    +     | array |   []    |  ["regexp.bad", "war"]  | List of config templates/raw regexps for replacing. |
+| Param           | Required | Type  | Default |        Example        | Description                                         |
+|:----------------|:--------:|:-----:|:-------:|:---------------------:|:----------------------------------------------------|
+| **input**       |    +     | array |   []    |   ["twitter.text"]    | List of DataItem fields with data.                  |
+| **output**      |    +     | array |   []    |    ["data.text0"]     | List of target DataItem fields.                     |
+| **regexp**      |    +     | array |   []    | ["regexp.bad", "war"] | List of config templates/raw regexps for replacing. |
 | **replacement** |    +     | array |   []    | ["vanished", "peace"] | List of replacements.                               |
 
 ### Config sample:
@@ -30,3 +31,4 @@
 
 ```yaml
 ```
+
