@@ -37,6 +37,7 @@ flow:
 
   process:
     - id: 0
+      alias: "swap words"
       plugin: "regexpreplace"
       params:
         input:  ["twitter.text"]
