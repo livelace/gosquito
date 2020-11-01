@@ -2,30 +2,39 @@
 
 ```yaml
 flow:
-  name: "flow1"                              # DNS compatible flow name.
-  params:                                    # Flow parameters.
-    interval: "5m"                           # How often flow runs.
+  name: "flow1"                             # DNS compatible flow name.
+  params:                                   # Flow parameters.
+    interval: "5m"                          # How often flow runs.
 
   input:
-    plugin: "plugin"                         # Input plugin name.
-    params:                                  # Input plugin parameters.
-      cred: "creds.input.example"            # Credentials from config file.
-      template: "templates.input.example"    # Parameters might be set in flow and/or inside config file template.
-      expire_action: ["/bin/script", "arg"]
-      expire_action_delay: "1d"
-      expire_action_timeout: 30
-      expire_interval: "7d"
-      force: true
-      force_count: 10
+    plugin: "plugin"                        # Input plugin name.
+    params:                                 # Input plugin parameters.
+    
+      # Credentials are very similar to templates, but dedicated for secret data.
+      cred: "creds.input.example"            
+    
+      # Parameters might be set inside flow and/or inside config file template.
+      # Flow parameters have higher priority over template parameters.
+      template: "templates.input.example"    
+                                              
+      expire_action: ["/bin/script", "arg"] # Execute command if plugin source is expired.
+      expire_action_delay: "1d"             # Delay between command executions. 
+      expire_action_timeout: 30             # Command execution timeout. 
+      expire_interval: "7d"                 # When flow is considered as expired.
+      
+      force: true                           # Force fetch data despite new data availability.
+      force_count: 10                       # How many data must be fetched from every plugin source.
       ...
       
   process:
-    - id: 0
-      alias: "first step"
-      plugin: "plugin"
-      params:
-        include: false
-        ...
+    - id: 0                                 # Process plugins must be ordered.
+      alias: "first step"                   # Info about current step.
+      plugin: "plugin"                      # Process plugin name.
+      
+      # Process plugin parameters, might or might not contain config template.
+      params:                                
+        include: false                      # Include plugin produced results to output plugin. 
+        ...                                 # Not included results can be used inside other plugins. 
 
     - id: 1
       alias: "second step"
@@ -38,6 +47,8 @@ flow:
       alias: "third step"
       plugin: "plugin"
       params:
+      
+        # Plugin requires data results from Plugin 0 and 1. 
         require: [1, 0]
         cred: "creds.process.example"
         template: "templates.process.example"
