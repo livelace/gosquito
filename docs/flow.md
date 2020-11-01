@@ -26,6 +26,7 @@ flow:
       force_count: 10                       # How many data must be fetched from every plugin source.
       ...
       
+  # Process steps might be not set.    
   process:
     - id: 0                                 # Process plugins must be ordered.
       alias: "first step"                   # Info about current step.
@@ -55,6 +56,7 @@ flow:
         template: "templates.process.example"
         ...
 
+  # Output step might be not set.
   output:
     plugin: "plugin"
     params:
