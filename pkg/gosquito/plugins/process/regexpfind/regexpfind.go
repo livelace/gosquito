@@ -180,8 +180,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			availableParams["output"] = 0
-			plugin.Output = v
+			if err := core.IsDataFieldsSlice(&v); err == nil {
+				availableParams["output"] = 0
+				plugin.Output = v
+			}
 		}
 	}
 	setOutput((*pluginConfig.Params)["output"])
@@ -222,10 +224,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// 2. input and output values must have equal types.
 	if len(plugin.Input) != len(plugin.Output) {
 		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
-
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
-		return &Plugin{}, err
-
 	} else {
 		core.SliceStringToUpper(&plugin.Input)
 		core.SliceStringToUpper(&plugin.Output)

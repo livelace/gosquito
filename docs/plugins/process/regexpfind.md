@@ -23,7 +23,7 @@
 
 ```yaml
 flow:
-  name: "regexpfind-sample"
+  name: "regexpfind-example"
 
   input:
     plugin: "twitter"
@@ -37,15 +37,15 @@ flow:
     - id: 0
       plugin: "regexpfind"
       params:
-        input:  ["twitter.text"]
-        output: ["data.array0"]
+        input:  ["twitter.text", "twitter.urls"]
+        output: ["data.array0", "data.array1"]
         regexp: ["regexps.urls"]
-        
+
     - id: 1
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.array0"]
+        input: ["data.array0", "data.array1"]
 ```
 
 ### Config sample:
