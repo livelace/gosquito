@@ -28,7 +28,7 @@
 
 ```yaml
 flow:
-  name: "minio-sample"
+  name: "minio-example"
 
   input:
     plugin: "twitter"
@@ -77,6 +77,6 @@ secret_key = "<SECRET_KEY>"
 
 [templates.minio.default]
 action = "put"
-bucket = "media"
+bucket = "<BUCKET>"
 ```
 
