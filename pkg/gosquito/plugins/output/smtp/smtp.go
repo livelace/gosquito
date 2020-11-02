@@ -360,13 +360,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSSLVerify := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["ssl_verify"] = 0
-			plugin.SSL = v
+			plugin.SSLVerify = v
 		}
 	}
 	setSSLVerify(DEFAULT_SSL_VERIFY)
 	setSSLVerify(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl_verify", template)))
 	setSSLVerify((*pluginConfig.Params)["ssl_verify"])
-	showParam("ssl_verify", plugin.SSL)
+	showParam("ssl_verify", plugin.SSLVerify)
 
 	// subject.
 	setSubject := func(p interface{}) {
