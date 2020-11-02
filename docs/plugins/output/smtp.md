@@ -64,6 +64,7 @@ password = "<PASSWORD>"
 server = "mail.example.com"
 port = 25
 ssl = true
+ssl_verify = false
 
 from = "gosquito@example.com"
 output = ["user@example.com"]
