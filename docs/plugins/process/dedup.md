@@ -34,7 +34,6 @@ flow:
 
   process:
     - id: 0
-      alias: "match russia"
       plugin: "regexpmatch"
       params:
         include: false
@@ -42,7 +41,6 @@ flow:
         regexp: ["а", "a"]
 
     - id: 1
-      alias: "match usa"
       plugin: "regexpmatch"
       params:
         include: false
