@@ -32,25 +32,26 @@ flow:
     plugin: "twitter"
     params:
       cred: "creds.twitter.default"
-      input: ["AP", "BBCNews", "BBCWorld", "business", "independent"]
+      input: ["AP"]
       force: true
       force_count: 10
 
   process:
     - id: 0
-      alias: "swap words"
       plugin: "regexpreplace"
       params:
-        input:  ["twitter.text"]
-        output: ["data.text0"]
-        regexp: [" for ", "regexps.words"]
-        replacement: ["_FOR_", "_TO_"]
-        
+        input:  ["twitter.text", "twitter.urls"]
+        output: ["data.text0", "data.array0"]
+        regexp:  ["for", "regexps.urls"]
+        replace: ["FOR", "<URL>"]
+        replace_all: true
+
     - id: 1
+      alias: "echo text"
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.text0"]
+        input: ["data.text0", "data.array0"]
 ```
 
 ### Config sample:

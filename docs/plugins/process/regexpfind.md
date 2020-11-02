@@ -32,7 +32,7 @@ flow:
       cred: "creds.twitter.default"
       input: ["rianru"]
       force: true
-      force_count: 10
+      force_count: 100
 
   process:
     - id: 0
@@ -40,7 +40,8 @@ flow:
       params:
         input:  ["twitter.text", "twitter.urls"]
         output: ["data.array0", "data.array1"]
-        regexp: ["regexps.urls"]
+        regexp: [".*Россия.*", "regexps.urls"]
+        find_all: true
 
     - id: 1
       plugin: "echo"

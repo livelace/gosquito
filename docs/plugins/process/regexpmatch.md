@@ -34,21 +34,22 @@ flow:
       cred: "creds.twitter.default"
       input: ["rianru"]
       force: true
-      force_count: 100
+      force_count: 10
 
   process:
     - id: 0
       plugin: "regexpmatch"
       params:
-        input:  ["twitter.text"]
-        output: ["data.text0"]
-        regexp: ["regexps.words", "Россия"]
-        
+        input:  ["twitter.text", "twitter.urls"]
+        output: ["data.text0", "data.array0"]
+        regexp: ["Россия", "regexps.urls"]
+        match_all: true
+
     - id: 1
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.text0"]
+        input: ["data.text0", "data.array0"]
 ```
 
 ### Config sample:
