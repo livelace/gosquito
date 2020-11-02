@@ -25,7 +25,7 @@ data.
 
 ```yaml
 flow:
-  name: "regexpmatch-sample"
+  name: "regexpmatch-example"
 
   input:
     plugin: "twitter"
@@ -33,7 +33,7 @@ flow:
       cred: "creds.twitter.default"
       input: ["rianru"]
       force: true
-      force_count: 10
+      force_count: 100
 
   process:
     - id: 0
