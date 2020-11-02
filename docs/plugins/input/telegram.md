@@ -1,7 +1,10 @@
 ### Description:
 
 **telegram** input plugin is intended for data gathering from Telegram
-chats.
+chats. This plugin uses [TDLib client API](https://core.telegram.org/tdlib), not [Telegram Bot API](https://core.telegram.org/bots/api).  
+Right now plugin supports only
+[public chats](https://core.telegram.org/tdlib/getting-started) (find,
+join, receive messages).
 
 ### Data structure:
 
@@ -41,6 +44,11 @@ type TelegramData struct {
 ### Flow sample:
 
 ```yaml
+# Due to Telegram API limits we just wait new messages events in background.
+# Right after we received new message event we compare event timestamp with
+# last received message timestamp and if event contains new data - 
+# we process new data.
+# We cannot use "force" here and have to wait new messages explicitly.
 flow:
   name: "telegram-example"
 
@@ -49,7 +57,7 @@ flow:
     params:
       cred: "creds.telegram.default"
       template: "templates.telegram.default"
-      input: ["breakingmash", "izvestia"]
+      input: ["breakingmash", "interfax_ru", "izvestia"]
 
   output:
     plugin: "smtp"
@@ -67,30 +75,23 @@ api_hash = "<API_HASH>"
 
 [templates.telegram.default]
 file_max_size = "1g"
-log_level = 90
+# be careful with logs :)
+#log_level = 90
 
 [templates.telegram.smtp.default]
 server = "mail.example.com"
-port = 25
-ssl = true
 
 from = "gosquito@example.com"
 output = ["user@example.com"]
 
 subject = "{{ .TELEGRAM.TEXT }}"
-subject_length = 150
 
 body = """
     <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
     {{ .TELEGRAM.TEXT }}<br><br>
     {{ .TELEGRAM.URL }}
     """
-
-body_html = true
-body_length = 5000
-
 attachments = ["telegram.media"]
 ```
-
 
 

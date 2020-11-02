@@ -39,7 +39,7 @@
 #flow_enable             = ["flow1", "flow2", "flow3"]
 
 # How often flows run.
-#flow_interval           = "60s"
+#flow_interval           = "5m"
 
 # Set to DEBUG in any unclear situation.
 #log_level               = "INFO"

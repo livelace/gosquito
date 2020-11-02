@@ -24,7 +24,7 @@
 | password       |    -     | string |  +   |    -     |       -       |   ""    |           ""           | SMTP password.                            |
 | port           |    -     |  int   |  -   |    +     |       -       |   25    |          465           | SMTP port.                                |
 | **server**     |    +     | string |  -   |    +     |       -       |   ""    |   "mail.example.com"   | SMTP server.                              |
-| ssl            |    -     |  bool  |  -   |    +     |       -       |  true   |         false          | Use SSL for connection.                   |
+| ssl            |    -     |  bool  |  -   |    +     |       -       |  false   |         true          | Use SSL for connection.                   |
 | **subject**    |    +     | string |  -   |    +     |       +       |   ""    |  "{{.TWITTER.TEXT}}"   | Email subject.                            |
 | subject_length |    -     |  int   |  -   |    +     |       -       |   100   |          300           | Maximum subject length in letters.        |
 | username       |    -     |  int   |  +   |    -     |       -       |   ""    |           ""           | SMTP user.                                |

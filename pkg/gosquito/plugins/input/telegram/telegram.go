@@ -333,7 +333,6 @@ type Plugin struct {
 	ExpireActionTimeout int
 	ExpireInterval      int64
 	ExpireLast          int64
-	Force               bool
 
 	ApiId       int
 	ApiHash     string
@@ -390,7 +389,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		newLastTime := lastTime
 
 		// Append to results if data is new.
-		if item.TIME.Unix() > newLastTime.Unix() || p.Force {
+		if item.TIME.Unix() > newLastTime.Unix() {
 			newLastTime = item.TIME
 			temp = append(temp, item)
 		}
@@ -521,7 +520,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"expire_action_timeout": -1,
 		"expire_delay":          -1,
 		"expire_interval":       -1,
-		"force":                 -1,
 		"template":              -1,
 		"timeout":               -1,
 		"time_format":           -1,
@@ -636,18 +634,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFileMaxSize(pluginConfig.Config.GetString(fmt.Sprintf("%s.file_max_size", template)))
 	setFileMaxSize((*pluginConfig.Params)["file_max_size"])
 	showParam("file_max_size", plugin.FileMaxSize)
-
-	// force.
-	setForce := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["force"] = 0
-			plugin.Force = v
-		}
-	}
-	setForce(core.DEFAULT_FORCE_INPUT)
-	setForce(pluginConfig.Config.GetString(fmt.Sprintf("%s.force", template)))
-	setForce((*pluginConfig.Params)["force"])
-	showParam("force", plugin.Force)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -764,7 +750,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				(*chatsByName)[chatName] = chatId
 				chatsById[chatId] = chatName
 
-				// Join to chat for updates receiving.
+				// Force join to chat for updates receiving.
 				err = joinToChat(&plugin, chatName, chatId)
 				if err != nil {
 					return &Plugin{}, err
@@ -776,6 +762,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		} else {
 			chatsById[id] = chatName
+
+			// Force join to chat for updates receiving.
+			err = joinToChat(&plugin, chatName, id)
+			if err != nil {
+				return &Plugin{}, err
+			}
 		}
 	}
 
