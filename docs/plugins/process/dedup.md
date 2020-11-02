@@ -36,14 +36,12 @@ flow:
     - id: 0
       plugin: "regexpmatch"
       params:
-        include: false
         input: ["twitter.text"]
         regexp: ["а", "a"]
 
     - id: 1
       plugin: "regexpmatch"
       params:
-        include: false
         input: ["twitter.text"]
         regexp: ["с", "s"]
 
