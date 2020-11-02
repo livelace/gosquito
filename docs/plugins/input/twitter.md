@@ -53,6 +53,8 @@ flow:
     params:
       cred: "creds.twitter.default"
       input: ["rianru"]
+      force: true
+      force_count: 10
 
   process:
     - id: 0
@@ -104,23 +106,17 @@ regexp = [
 
 [templates.twitter.smtp.default]
 server = "mail.example.com"
-port = 25
-ssl = true
 
 from = "gosquito@example.com"
 output = ["user@example.com"]
 
 subject = "{{ .DATA.TEXT0 }}"
-subject_length = 150
 
 body = """
 <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
 {{.DATA.TEXT0}}<br><br>
 {{range .DATA.ARRAY0}}{{printf "%s<br>" .}}{{end}}
 """
-
-body_html = true
-body_length = 1000
 
 attachments = ["data.array1"]
 ```
