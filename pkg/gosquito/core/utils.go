@@ -225,16 +225,17 @@ func ExtractDataFieldIntoString(data *DataItem, field interface{}) string {
 	return temp
 }
 
-func ExtractRegexesIntoArray(config *viper.Viper, regexes []string) []*regexp.Regexp {
-	temp := make([]*regexp.Regexp, 0)
+func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string) [][]*regexp.Regexp {
+	temp := make([][]*regexp.Regexp, 0)
 
-	for _, s := range regexes {
-		arr := config.GetStringSlice(fmt.Sprintf("%s.regexp", s))
+	for _, s := range regexps {
+		currentRegexps := make([]*regexp.Regexp, 0)
+		templateRegexps := config.GetStringSlice(fmt.Sprintf("%s.regexp", s))
 
-		if len(arr) > 0 {
-			for _, r := range arr {
+		if len(templateRegexps) > 0 {
+			for _, r := range templateRegexps {
 				if re, err := regexp.Compile(r); err == nil {
-					temp = append(temp, re)
+					currentRegexps = append(currentRegexps, re)
 				} else {
 					fmt.Println(err)
 				}
@@ -242,9 +243,11 @@ func ExtractRegexesIntoArray(config *viper.Viper, regexes []string) []*regexp.Re
 			}
 		} else {
 			if re, err := regexp.Compile(s); err == nil {
-				temp = append(temp, re)
+				currentRegexps = append(currentRegexps, re)
 			}
 		}
+
+		temp = append(temp, currentRegexps)
 	}
 
 	return temp

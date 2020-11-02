@@ -8,8 +8,12 @@ import (
 	"regexp"
 )
 
-func matchRegexes(regexes []*regexp.Regexp, text string) bool {
-	for _, re := range regexes {
+const (
+	DEFAULT_MATCH_ALL = false
+)
+
+func matchRegexes(regexps []*regexp.Regexp, text string) bool {
+	for _, re := range regexps {
 		if re.MatchString(text) {
 			return true
 		}
@@ -32,9 +36,10 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	Input  []string
-	Output []string
-	Regexp []*regexp.Regexp
+	Input    []string
+	Output   []string
+	MatchAll bool
+	Regexp   [][]*regexp.Regexp
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -46,7 +51,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		matched := false
+		matched := make([]bool, len(p.Input))
 
 		// Match pattern inside different data fields (Title, Content etc.).
 		for index, input := range p.Input {
@@ -63,28 +68,41 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if matchRegexes(p.Regexp, ri.String()) {
-					matched = true
-
+				if matchRegexes(p.Regexp[index], ri.String()) {
+					matched[index] = true
 					if len(p.Output) > 0 {
 						ro.SetString(ri.String())
 					}
 				}
 			case reflect.Slice:
-				for i := 0; i < ri.Len(); i++ {
-					if matchRegexes(p.Regexp, ri.Index(i).String()) {
-						matched = true
+				somethingWasMatched := false
 
+				for i := 0; i < ri.Len(); i++ {
+					if matchRegexes(p.Regexp[index], ri.Index(i).String()) {
+						somethingWasMatched = true
 						if len(p.Output) > 0 {
 							ro.Set(reflect.Append(ro, ri.Index(i)))
 						}
 					}
 				}
+
+				matched[index] = somethingWasMatched
 			}
 		}
 
-		// Append matched item to results.
-		if matched {
+		// Append replaced item to results.
+		matchedInSomeInputs := false
+		matchedInAllInputs := true
+
+		for _, b := range matched {
+			if b {
+				matchedInSomeInputs = true
+			} else {
+				matchedInAllInputs = false
+			}
+		}
+
+		if (p.MatchAll && matchedInAllInputs) || (!p.MatchAll && matchedInSomeInputs) {
 			temp = append(temp, item)
 		}
 	}
@@ -187,6 +205,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput((*pluginConfig.Params)["input"])
 	showParam("input", plugin.Input)
 
+	// match_all.
+	setMatchAll := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_all"] = 0
+			plugin.MatchAll = v
+		}
+	}
+	setMatchAll(DEFAULT_MATCH_ALL)
+	setMatchAll((*pluginConfig.Params)["match_all"])
+	showParam("match_all", plugin.MatchAll)
+
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -201,7 +230,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexesIntoArray(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])
@@ -229,16 +258,39 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// If output is set:
-	// 1. input and output must have equal size.
-	// 2. input and output values must have equal types.
+	// 1. "input, output, regexp" must have equal size.
+	// 2. "input, output" values must have equal types.
+	minLength := 10000
+	maxLength := 0
+	var lengths []int
+
 	if availableParams["output"] == 0 {
-		if len(plugin.Input) != len(plugin.Output) {
-			return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+		lengths = []int{len(plugin.Input), len(plugin.Output), len(plugin.Regexp)}
+	} else {
+		lengths = []int{len(plugin.Input), len(plugin.Regexp)}
+	}
+
+	for _, length := range lengths {
+		if length > maxLength {
+			maxLength = length
+		}
+		if length < minLength {
+			minLength = length
+		}
+	}
+
+	if availableParams["output"] == 0 {
+		if minLength != maxLength {
+			return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Regexp)
 		}
 
 		if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
 			return &Plugin{}, err
 		}
+
+	} else if minLength != maxLength {
+		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Regexp)
+
 	} else {
 		core.SliceStringToUpper(&plugin.Input)
 		core.SliceStringToUpper(&plugin.Output)

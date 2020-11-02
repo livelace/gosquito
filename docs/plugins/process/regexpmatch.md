@@ -14,11 +14,12 @@ data.
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |             Example             | Description                                        |
-|:-----------|:--------:|:-----:|:-------:|:-------------------------------:|:---------------------------------------------------|
-| **input**  |    +     | array |   []    |        ["twitter.text"]         | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                 |
-| output     |    -     | array |   []    |         ["data.text0"]          | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                    |
-| **regexp** |    +     | array |   []    | ["regexps.countries", "Россия"] | List of config templates/raw regexps for matching. |
+| Param      | Required | Type  | Default |             Example             | Description                                                                                                                |
+|:-----------|:--------:|:-----:|:-------:|:-------------------------------:|:---------------------------------------------------------------------------------------------------------------------------|
+| **input**  |    +     | array |   []    |        ["twitter.text"]         | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                        |
+| match_all  |    -     | bool  |  false  |              true               | Patterns must be matched in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
+| output     |    -     | array |   []    |         ["data.text0"]          | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                           |
+| **regexp** |    +     | array |   []    | ["regexps.countries", "Россия"] | List of config templates/raw regexps for matching.                                                                         |
 
 
 ### Flow sample:

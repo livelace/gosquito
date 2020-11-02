@@ -9,16 +9,22 @@ import (
 	"strings"
 )
 
-func findAndReplace(regexes []*regexp.Regexp, text string, replace string) string {
+const (
+	DEFAULT_REPLACE_ALL = false
+)
+
+func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) string {
 	temp := text
 
-	for _, re := range regexes {
-		if s := re.ReplaceAllString(temp, replace); len(s) > 0 {
-			temp = s
-		}
+	for _, re := range regexps {
+		temp = re.ReplaceAllString(temp, replacement)
 	}
 
-	return strings.TrimSpace(temp)
+	if temp != text {
+		return strings.TrimSpace(temp)
+	} else {
+		return ""
+	}
 }
 
 type Plugin struct {
@@ -35,10 +41,11 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	Input       []string
-	Output      []string
-	Regexp      []*regexp.Regexp
-	Replacement []string
+	Input      []string
+	Output     []string
+	Regexp     [][]*regexp.Regexp
+	Replace    []string
+	ReplaceAll bool
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -50,7 +57,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		replaced := false
+		replaced := make([]bool, len(p.Input))
 
 		// Match pattern inside different data fields (Title, Content etc.).
 		for index, input := range p.Input {
@@ -60,27 +67,41 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ = core.ReflectDataField(item, p.Output[index])
-			replacement := core.ExtractDataFieldIntoString(item, p.Replacement)
 
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if s := findAndReplace(p.Regexp, ri.String(), replacement); len(s) > 0 {
-					replaced = true
+				if s := findAndReplace(p.Regexp[index], ri.String(), p.Replace[index]); len(s) > 0 {
+					replaced[index] = true
 					ro.SetString(s)
 				}
 			case reflect.Slice:
+				somethingWasReplaced := false
+
 				for i := 0; i < ri.Len(); i++ {
-					if s := findAndReplace(p.Regexp, ri.Index(i).String(), replacement); len(s) > 0 {
-						replaced = true
+					if s := findAndReplace(p.Regexp[index], ri.Index(i).String(), p.Replace[index]); len(s) > 0 {
+						somethingWasReplaced = true
 						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
 					}
 				}
+
+				replaced[index] = somethingWasReplaced
 			}
 		}
 
 		// Append replaced item to results.
-		if replaced {
+		replacedInSomeInputs := false
+		replacedInAllInputs := true
+
+		for _, b := range replaced {
+			if b {
+				replacedInSomeInputs = true
+			} else {
+				replacedInAllInputs = false
+			}
+		}
+
+		if (p.ReplaceAll && replacedInAllInputs) || (!p.ReplaceAll && replacedInSomeInputs) {
 			temp = append(temp, item)
 		}
 	}
@@ -141,10 +162,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include": -1,
 		"require": -1,
 
-		"input":       1,
-		"output":      1,
-		"regexp":      1,
-		"replacement": 1,
+		"input":   1,
+		"output":  1,
+		"regexp":  1,
+		"replace": 1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -198,21 +219,32 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexesIntoArray(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])
 	showParam("regexp", plugin.Regexp)
 
-	// replacement.
-	setReplacement := func(p interface{}) {
+	// replace.
+	setReplace := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			availableParams["replacement"] = 0
-			plugin.Replacement = v
+			availableParams["replace"] = 0
+			plugin.Replace = v
 		}
 	}
-	setReplacement((*pluginConfig.Params)["replacement"])
-	showParam("replacement", plugin.Replacement)
+	setReplace((*pluginConfig.Params)["replace"])
+	showParam("replace", plugin.Replace)
+
+	// replace_all.
+	setReplaceAll := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["replace_all"] = 0
+			plugin.ReplaceAll = v
+		}
+	}
+	setReplaceAll(DEFAULT_REPLACE_ALL)
+	setReplaceAll((*pluginConfig.Params)["replace_all"])
+	showParam("replace_all", plugin.ReplaceAll)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -235,10 +267,24 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// 1. input and output must have equal size.
-	// 2. input and output values must have equal types.
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	// 1. "input, output, regexp, replace" must have equal size.
+	// 2. "input, output" values must have equal types.
+	minLength := 10000
+	maxLength := 0
+	lengths := []int{len(plugin.Input), len(plugin.Output), len(plugin.Regexp), len(plugin.Replace)}
+
+	for _, length := range lengths {
+		if length > maxLength {
+			maxLength = length
+		}
+		if length < minLength {
+			minLength = length
+		}
+	}
+
+	if minLength != maxLength {
+		return &Plugin{}, fmt.Errorf(
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Regexp, plugin.Replace)
 
 	} else if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
 		return &Plugin{}, err

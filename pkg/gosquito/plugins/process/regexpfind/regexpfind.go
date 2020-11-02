@@ -8,10 +8,14 @@ import (
 	"regexp"
 )
 
-func findRegexesAndReturnSlice(regexes []*regexp.Regexp, text string) []string {
+const (
+	DEFAULT_FIND_ALL = true
+)
+
+func findPatternsAndReturnSlice(regexps []*regexp.Regexp, text string) []string {
 	temp := make([]string, 0)
 
-	for _, re := range regexes {
+	for _, re := range regexps {
 		temp = append(temp, re.FindAllString(text, -1)...)
 	}
 
@@ -32,9 +36,10 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	Input  []string
-	Output []string
-	Regexp []*regexp.Regexp
+	Input   []string
+	FindAll bool
+	Output  []string
+	Regexp  [][]*regexp.Regexp
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -46,35 +51,49 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		found := false
+		found := make([]bool, len(p.Input))
 
-		// Match search pattern inside different data fields (Title, Content etc.).
 		for index, input := range p.Input {
-			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.Output[index])
 
-			// Config fields types might be:
-			// 1. String.
-			// 2. Array of string.
 			switch ri.Kind() {
 			case reflect.String:
-				for _, v := range findRegexesAndReturnSlice(p.Regexp, ri.String()) {
-					found = true
-					ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
-				}
-			case reflect.Slice:
-				for i := 0; i < ri.Len(); i++ {
-					for _, v := range findRegexesAndReturnSlice(p.Regexp, ri.Index(i).String()) {
-						found = true
+				if s := findPatternsAndReturnSlice(p.Regexp[index], ri.String()); len(s) > 0 {
+					found[index] = true
+					for _, v := range s {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
 					}
 				}
+			case reflect.Slice:
+				somethingWasFound := false
+
+				for i := 0; i < ri.Len(); i++ {
+					if s := findPatternsAndReturnSlice(p.Regexp[index], ri.Index(i).String()); len(s) > 0 {
+						somethingWasFound = true
+						for _, v := range s {
+							ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
+						}
+					}
+				}
+
+				found[index] = somethingWasFound
 			}
 		}
 
-		if found {
+		// Append replaced item to results.
+		foundInSomeInputs := false
+		foundInAllInputs := true
+
+		for _, b := range found {
+			if b {
+				foundInSomeInputs = true
+			} else {
+				foundInAllInputs = false
+			}
+		}
+
+		if (p.FindAll && foundInAllInputs) || (!p.FindAll && foundInSomeInputs) {
 			temp = append(temp, item)
 		}
 	}
@@ -156,6 +175,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 
+	// find_all.
+	setFindAll := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["find_all"] = 0
+			plugin.FindAll = v
+		}
+	}
+	setFindAll(DEFAULT_FIND_ALL)
+	setFindAll((*pluginConfig.Params)["find_all"])
+	showParam("find_all", plugin.FindAll)
+
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -193,7 +223,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexesIntoArray(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])
@@ -220,10 +250,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// 1. input and output must have equal size.
-	// 2. input and output values must have equal types.
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	// 1. "input, output, regexp" must have equal size.
+	// 2. "input, output" values must have equal types.
+	minLength := 10000
+	maxLength := 0
+	lengths := []int{len(plugin.Input), len(plugin.Output), len(plugin.Regexp)}
+
+	for _, length := range lengths {
+		if length > maxLength {
+			maxLength = length
+		}
+		if length < minLength {
+			minLength = length
+		}
+	}
+
+	if minLength != maxLength {
+		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, len(plugin.Regexp))
 	} else {
 		core.SliceStringToUpper(&plugin.Input)
 		core.SliceStringToUpper(&plugin.Output)

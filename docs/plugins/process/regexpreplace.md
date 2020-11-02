@@ -14,18 +14,19 @@ inside data.
 
 ### Plugin parameters:
 
-| Param           | Required | Type  | Default |        Example         | Description                                         |
-|:----------------|:--------:|:-----:|:-------:|:----------------------:|:----------------------------------------------------|
-| **input**       |    +     | array |   []    |    ["twitter.text"]    | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                  |
-| **output**      |    +     | array |   []    |     ["data.text0"]     | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                     |
-| **regexp**      |    +     | array |   []    | ["regexps.bad", "war"] | List of config templates/raw regexps for replacing. |
-| **replacement** |    +     | array |   []    | ["vanished", "peace"]  | List of replacements.                               |
+| Param       | Required | Type  | Default |        Example         | Description                                                                                                                 |
+|:------------|:--------:|:-----:|:-------:|:----------------------:|:----------------------------------------------------------------------------------------------------------------------------|
+| **input**   |    +     | array |   []    |    ["twitter.text"]    | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                         |
+| **output**  |    +     | array |   []    |     ["data.text0"]     | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                            |
+| **regexp**  |    +     | array |   []    | ["regexps.bad", "war"] | List of config templates/raw regexps for replacing.                                                                         |
+| **replace** |    +     | array |   []    | ["vanished", "peace"]  | List of replacements.                                                                                                       |
+| replace_all |    -     | bool  |  false  | ["vanished", "peace"]  | Patterns must be replaced in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
 
 ### Flow sample:
 
 ```yaml
 flow:
-  name: "regexpreplace-sample"
+  name: "regexpreplace-example"
 
   input:
     plugin: "twitter"
@@ -42,8 +43,8 @@ flow:
       params:
         input:  ["twitter.text"]
         output: ["data.text0"]
-        regexp: ["regexps.words.bad", "regexps.words.good"]
-        replacement: ["GOOD", "BAD"]
+        regexp: [" for ", "regexps.words"]
+        replacement: ["_FOR_", "_TO_"]
         
     - id: 1
       plugin: "echo"
@@ -61,10 +62,7 @@ access_secret = "<ACCESS_SECRET>"
 consumer_key = "<CONSUMER_KEY>"
 consumer_secret = "<CONSUMER_SECRET>"
 
-[regexps.words.bad]
-regexp = ["war", "violence"]
-
-[regexps.words.good]
-regexp = ["peace", "humanism"]
+[regexps.words]
+regexp = [" to "]
 ```
 
