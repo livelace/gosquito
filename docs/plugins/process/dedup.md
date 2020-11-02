@@ -28,7 +28,7 @@ flow:
     plugin: "twitter"
     params:
       cred: "creds.twitter.default"
-      input: ["rianru"]
+      input: ["rianru", "AP"]
       force: true
       force_count: 10
 
@@ -39,7 +39,7 @@ flow:
       params:
         include: false
         input: ["twitter.text"]
-        regexp: ["Россия", "Russia"]
+        regexp: ["а", "a"]
 
     - id: 1
       alias: "match usa"
@@ -47,13 +47,20 @@ flow:
       params:
         include: false
         input: ["twitter.text"]
-        regexp: ["США", "US"]
+        regexp: ["с", "s"]
 
     - id: 2
       alias: "dedup tweets"
       plugin: "dedup"
       params:
         require: [0, 1]
+
+    # Duplicates shouldn't exist.
+    - id: 3
+      plugin: "echo"
+      params:
+        require: [2]
+        input: ["twitter.text"]
 ```
 
 ### Config sample:
