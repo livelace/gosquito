@@ -1,6 +1,7 @@
 package smtpOut
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -16,6 +17,7 @@ const (
 	DEFAULT_BODY_HTML      = true
 	DEFAULT_SMTP_PORT      = 25
 	DEFAULT_SSL_ENABLE     = false
+	DEFAULT_SSL_VERIFY     = true
 	DEFAULT_SUBJECT_LENGTH = 100
 )
 
@@ -42,6 +44,7 @@ type Plugin struct {
 	Output          []string
 	Server          string
 	SSL             bool
+	SSLVerify       bool
 	Subject         string
 	SubjectTemplate *tmpl.Template
 	SubjectLength   int
@@ -66,6 +69,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 	if p.SSL {
 		server.Encryption = mail.EncryptionTLS
+		server.TLSConfig = &tls.Config{InsecureSkipVerify: p.SSLVerify}
 	}
 
 	server.KeepAlive = true
@@ -181,6 +185,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"port":           -1,
 		"server":         1,
 		"ssl":            -1,
+		"ssl_verify":     -1,
 		"subject":        1,
 		"subject_length": -1,
 	}
@@ -350,6 +355,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSSL(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl", template)))
 	setSSL((*pluginConfig.Params)["ssl"])
 	showParam("ssl", plugin.SSL)
+
+	// ssl_verify.
+	setSSLVerify := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["ssl_verify"] = 0
+			plugin.SSL = v
+		}
+	}
+	setSSLVerify(DEFAULT_SSL_VERIFY)
+	setSSLVerify(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl_verify", template)))
+	setSSLVerify((*pluginConfig.Params)["ssl_verify"])
+	showParam("ssl_verify", plugin.SSL)
 
 	// subject.
 	setSubject := func(p interface{}) {

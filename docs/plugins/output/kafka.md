@@ -30,7 +30,9 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+      input: ["http://tass.ru/rss/v2.xml"]
+      force: true
+      force_count: 10
 
   output:
     plugin: "kafka"

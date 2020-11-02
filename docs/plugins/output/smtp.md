@@ -12,22 +12,23 @@
 
 ### Plugin parameters:
 
-| Param          | Required |  Type  | Cred | Template | Text Template | Default |        Example         | Description                               |
-|:---------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:----------------------:|:------------------------------------------|
+| Param          | Required |  Type  | Cred | Template | Text Template | Default |        Example         | Description                                                                                                |
+|:---------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:----------------------:|:-----------------------------------------------------------------------------------------------------------|
 | attachments    |    -     | array  |  -   |    +     |       -       |   []    |    ["data.array0"]     | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths. |
-| **body**       |    +     | string |  -   |    +     |       +       |   ""    |   "{{.RSS.CONTENT}}"   | Email body.                               |
-| body_html      |    -     |  bool  |  -   |    +     |       -       |  true   |         false          | Send body as HTML.                        |
-| body_length    |    -     |  int   |  -   |    +     |       -       |  10000  |          1000          | Maximum body length in letters.           |
-| **from**       |    +     | string |  -   |    +     |       -       |   ""    | "gosquito@example.com" | Email from.                               |
-| headers        |    -     | map[]  |  -   |    +     |       -       |  map[]  |      see example       | Dynamic list of email headers.            |
-| **output**     |    +     | array  |  -   |    +     |       -       |   []    | ["user1@example.com"]  | List of recipients.                       |
-| password       |    -     | string |  +   |    -     |       -       |   ""    |           ""           | SMTP password.                            |
-| port           |    -     |  int   |  -   |    +     |       -       |   25    |          465           | SMTP port.                                |
-| **server**     |    +     | string |  -   |    +     |       -       |   ""    |   "mail.example.com"   | SMTP server.                              |
-| ssl            |    -     |  bool  |  -   |    +     |       -       |  false   |         true          | Use SSL for connection.                   |
-| **subject**    |    +     | string |  -   |    +     |       +       |   ""    |  "{{.TWITTER.TEXT}}"   | Email subject.                            |
-| subject_length |    -     |  int   |  -   |    +     |       -       |   100   |          300           | Maximum subject length in letters.        |
-| username       |    -     |  int   |  +   |    -     |       -       |   ""    |           ""           | SMTP user.                                |
+| **body**       |    +     | string |  -   |    +     |       +       |   ""    |   "{{.RSS.CONTENT}}"   | Email body.                                                                                                |
+| body_html      |    -     |  bool  |  -   |    +     |       -       |  true   |         false          | Send body as HTML.                                                                                         |
+| body_length    |    -     |  int   |  -   |    +     |       -       |  10000  |          1000          | Maximum body length in letters.                                                                            |
+| **from**       |    +     | string |  -   |    +     |       -       |   ""    | "gosquito@example.com" | Email from.                                                                                                |
+| headers        |    -     | map[]  |  -   |    +     |       -       |  map[]  |      see example       | Dynamic list of email headers.                                                                             |
+| **output**     |    +     | array  |  -   |    +     |       -       |   []    | ["user1@example.com"]  | List of recipients.                                                                                        |
+| password       |    -     | string |  +   |    -     |       -       |   ""    |           ""           | SMTP password.                                                                                             |
+| port           |    -     |  int   |  -   |    +     |       -       |   25    |          465           | SMTP port.                                                                                                 |
+| **server**     |    +     | string |  -   |    +     |       -       |   ""    |   "mail.example.com"   | SMTP server.                                                                                               |
+| ssl            |    -     |  bool  |  -   |    +     |       -       |  false  |          true          | Use SSL for connection.                                                                                    |
+| ssl_verify     |    -     |  bool  |  -   |    +     |       -       |  true   |         false          | Verify server certificate.                                                                                    |
+| **subject**    |    +     | string |  -   |    +     |       +       |   ""    |  "{{.TWITTER.TEXT}}"   | Email subject.                                                                                             |
+| subject_length |    -     |  int   |  -   |    +     |       -       |   100   |          300           | Maximum subject length in letters.                                                                         |
+| username       |    -     |  int   |  +   |    -     |       -       |   ""    |           ""           | SMTP user.                                                                                                 |
 
 
 ### Flow sample:
@@ -39,7 +40,9 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["https://iz.ru/xml/rss/all.xml", "http://tass.ru/rss/v2.xml"]
+      input: ["http://tass.ru/rss/v2.xml"]
+      force: true
+      force_count: 10
 
   output:
     plugin: "smtp"
@@ -86,3 +89,4 @@ x-gosquito-source = "source"
 x-gosquito-time   = "time"
 x-gosquito-uuid   = "uuid"
 ```
+

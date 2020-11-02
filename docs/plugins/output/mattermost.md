@@ -46,6 +46,8 @@ flow:
     params:
       cred: "creds.twitter.default"
       input: ["rianru"]
+      force: true
+      force_count: 10
 
   process:
     - id: 0
