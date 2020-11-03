@@ -13,7 +13,7 @@ const (
 	DEFAULT_REPLACE_ALL = false
 )
 
-func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) string {
+func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) (string, bool) {
 	temp := text
 
 	for _, re := range regexps {
@@ -21,9 +21,9 @@ func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) s
 	}
 
 	if temp != text {
-		return strings.TrimSpace(temp)
+		return strings.TrimSpace(temp), true
 	} else {
-		return ""
+		return text, false
 	}
 }
 
@@ -71,16 +71,20 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if s := findAndReplace(p.Regexp[index], ri.String(), p.Replace[index]); len(s) > 0 {
+				if s, b := findAndReplace(p.Regexp[index], ri.String(), p.Replace[index]); b {
 					replaced[index] = true
+					ro.SetString(s)
+				} else {
 					ro.SetString(s)
 				}
 			case reflect.Slice:
 				somethingWasReplaced := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if s := findAndReplace(p.Regexp[index], ri.Index(i).String(), p.Replace[index]); len(s) > 0 {
+					if s, b := findAndReplace(p.Regexp[index], ri.Index(i).String(), p.Replace[index]); b {
 						somethingWasReplaced = true
+						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
+					} else {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
 					}
 				}
