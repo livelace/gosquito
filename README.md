@@ -20,7 +20,7 @@ To replace various in-house automated tasks for data gathering with single tool.
 ### Build dependencies:
 
 * Kafka support: [librdkafka](https://github.com/edenhill/librdkafka)
-* Telegram support: [tdlib](https://github.com/tdlib/td)
+* Telegram support: [TDLib](https://github.com/tdlib/td)
 
 ```shell script
 go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
