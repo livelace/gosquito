@@ -17,6 +17,25 @@ To replace various in-house automated tasks for data gathering with single tool.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or send fetched data every time. 
 
+### Build dependencies:
+
+* Kafka support: [librdkafka](https://github.com/edenhill/librdkafka)
+* Telegram support: [tdlib](https://github.com/tdlib/td)
+
+```shell script
+go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
+```
+
+### Quick start:
+```shell script
+user@localhost /tmp $ docker run -ti --rm livelace/gosquito bash
+gosquito@005de15aef7f / $ gosquito 
+INFO[03.11.2020 14:08:58.723] gosquito v1.0.0   
+INFO[03.11.2020 14:08:58.724] config init        path="/home/gosquito/.gosquito"
+ERRO[03.11.2020 14:08:58.724] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
+gosquito@005de15aef7f / $
+```
+
 ### Flow sample ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
 
 ```yaml

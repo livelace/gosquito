@@ -104,9 +104,9 @@ const (
 #flow_enable             = ["flow1", "flow2", "flow3"]
 
 # How often flows run.
-#flow_interval           = "60s"
+#flow_interval           = "5m"
 
-#log_level               = "INFO"
+#log_level               = "DEBUG"
 
 # Process plugins results will be send by default.
 #plugin_include          = true
