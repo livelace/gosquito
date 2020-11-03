@@ -29,11 +29,11 @@ go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
 ### Quick start:
 ```shell script
 user@localhost /tmp $ docker run -ti --rm livelace/gosquito bash
-gosquito@005de15aef7f / $ gosquito 
-INFO[03.11.2020 14:08:58.723] gosquito v1.0.0   
-INFO[03.11.2020 14:08:58.724] config init        path="/home/gosquito/.gosquito"
-ERRO[03.11.2020 14:08:58.724] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
-gosquito@005de15aef7f / $
+gosquito@fa388e89e10e ~ $ gosquito 
+INFO[03.11.2020 14:44:15.806] gosquito v1.0.0   
+INFO[03.11.2020 14:44:15.807] config init        path="/home/gosquito/.gosquito"
+ERRO[03.11.2020 14:44:15.807] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
+gosquito@fa388e89e10e ~ $
 ```
 
 ### Flow example ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
