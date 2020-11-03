@@ -22,4 +22,6 @@ RUN             useradd -m -u 1000 -s "/bin/bash" "gosquito"
 
 USER            "gosquito"
 
+WORKDIR         "/home/gosquito"
+
 CMD             ["/usr/local/bin/gosquito"]
