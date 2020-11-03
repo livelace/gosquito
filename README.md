@@ -36,11 +36,11 @@ ERRO[03.11.2020 14:08:58.724] flow read          path="/home/gosquito/.gosquito/
 gosquito@005de15aef7f / $
 ```
 
-### Flow sample ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
+### Flow example ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
 
 ```yaml
 flow:
-  name: "russia"
+  name: "flow-example"
   params:
     interval: "10m"
 
@@ -61,7 +61,7 @@ flow:
       plugin: "regexpmatch"
       params:
         input: ["twitter.text"]
-        regexp: ["Россия", "Russia"]
+        regexp: ["regexps.words"]
 
     - id: 1
       alias: "clean text"
@@ -71,8 +71,8 @@ flow:
         include: false
         input:  ["twitter.text"]
         output: ["data.text0"]
-        regexp: ["regexps.urls", "\n"]
-        replacement: [""]
+        regexp: ["regexps.urls"]
+        replace: [""]
 
     - id: 2
       alias: "fetch media"
@@ -89,10 +89,12 @@ flow:
       template: "templates.twitter.smtp.default"
 ```
 
-### Config sample ([options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
+### Config example ([options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
 
 ```toml
 [default]
+
+#log_level = "DEBUG"
 time_format = "15:04 02.01.2006"
 time_zone = "Europe/Moscow"
 
@@ -104,8 +106,13 @@ consumer_secret = "<CONSUMER_SECRET>"
 
 [regexps.urls]
 regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
-    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+  'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
+  'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+]
+
+[regexps.words]
+regexp = [
+  "Россия", "Russia"
 ]
 
 [templates.twitter.smtp.default]
@@ -116,12 +123,12 @@ ssl = true
 from = "gosquito@example.com"
 output = ["user@example.com"]
 
-subject = "{{ .DATA.TEXT0 }}"
+subject = "{{.DATA.TEXT0}}"
 subject_length = 150
 
 body = """
 <br>
-<div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+<div align="right"><b>{{.FLOW}}&nbsp;&nbsp;&nbsp;{{.TIMEFORMAT}}</b></div>
 {{.DATA.TEXT0}}<br><br>
 {{range .TWITTER.URLS}}{{printf "%s<br>" .}}{{end}}
 """
