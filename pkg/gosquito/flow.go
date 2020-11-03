@@ -625,12 +625,16 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 		// 1. Pass data from "process" plugins to "output" plugin.
 		// 2. Pass data from "input" plugin to "output" plugin directly.
 		if len(results) > 0 {
+			somethingIncluded := false
+
 			for index := 0; index < len(results); index++ {
 				data := results[index]
 
 				// Send only needed data (param "include" is "true").
 				// Send only not empty data (some plugins can produce zero data).
 				if flow.ProcessPlugins[index].GetInclude() && len(data) > 0 {
+					somethingIncluded = true
+
 					err = flow.OutputPlugin.Send(data)
 
 					if err != nil {
@@ -644,6 +648,10 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 						logFlowStat(fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
 					}
 				}
+			}
+
+			if !somethingIncluded {
+				logFlowStat(fmt.Sprintf("no data included for sending"))
 			}
 
 		} else if len(inputData) > 0 {
