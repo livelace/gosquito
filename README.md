@@ -175,6 +175,6 @@ x-gosquito-time   = "time"
 x-gosquito-uuid   = "uuid"
 ```
 
-### Grafana:
+### Grafana charts:
 
 ![grafana](https://github.com/livelace/gosquito/blob/master/assets/grafana.png)
