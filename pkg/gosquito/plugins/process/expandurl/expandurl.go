@@ -17,8 +17,6 @@ const (
 )
 
 var (
-	depth = DEFAULT_DEPTH // it uses in recursions.
-
 	httpSchema  = regexp.MustCompile("http://")
 	httpsSchema = regexp.MustCompile("https://")
 )
@@ -126,7 +124,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			switch ri.Kind() {
 			case reflect.Slice:
 				for i := 0; i < ri.Len(); i++ {
-					expandedUrl := expandUrl(p, ri.Index(i).String(), "", depth)
+					expandedUrl := expandUrl(p, ri.Index(i).String(), "", p.Depth)
 
 					if expandedUrl != ri.Index(i).String() {
 						expanded = true
@@ -142,7 +140,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 						"id":     p.ID,
 						"alias":  p.Alias,
 						"data": fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
-							ri.Index(i).String(), depth, expandedUrl),
+							ri.Index(i).String(), p.Depth, expandedUrl),
 					}).Debug(core.LOG_PLUGIN_STAT)
 				}
 			}
@@ -244,7 +242,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setDepth(DEFAULT_DEPTH)
 	setDepth(pluginConfig.Config.GetInt(fmt.Sprintf("%s.depth", template)))
 	setDepth((*pluginConfig.Params)["depth"])
-	depth = plugin.Depth
 	showParam("depth", plugin.Depth)
 
 	// include.
