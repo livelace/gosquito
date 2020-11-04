@@ -1,21 +1,36 @@
 # gosquito
 
 
-***gosquito*** ("go" + "mosquito") is a pluggable tool for data gathering from different sources ([RSS](https://en.wikipedia.org/wiki/RSS), [Twitter](https://twitter.com), [Telegram](https://telegram.org/) etc.), data processing (fetch, [minio](https://min.io/), regexp, [webchela](https://github.com/livelace/webchela) etc.) and data transmitting to various destinations ([SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol), [Mattermost](https://mattermost.org/), [Kafka](https://kafka.apache.org/) etc.).
+***gosquito*** ("go" + "mosquito") is a pluggable tool for data
+gathering from different sources
+([RSS](https://en.wikipedia.org/wiki/RSS),
+[Twitter](https://twitter.com), [Telegram](https://telegram.org/) etc.),
+data processing (fetch, [minio](https://min.io/), regexp,
+[webchela](https://github.com/livelace/webchela) etc.) and data
+transmitting to various destinations
+([SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol),
+[Mattermost](https://mattermost.org/),
+[Kafka](https://kafka.apache.org/) etc.).
 
 ### Main goal:
 
-To replace various in-house automated tasks for data gathering with single tool.
+To replace various in-house automated tasks for data gathering with
+single tool.
 
 ### Features:
 
-* [Pluggable](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md) architecture. [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md) organized as chains of plugins.
-* Flow approach. Flow consists of: input plugin, process plugins, output plugin.
-* Plugins dependencies. Plugin "B" will process data only if plugin "A" derived some data. 
+* [Pluggable](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md)
+  architecture.
+  [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md)
+  organized as chains of plugins.
+* Flow approach. Flow consists of: input plugin, process plugins, output
+  plugin.
+* Plugins dependencies. Plugin "B" will process data only if plugin "A"
+  derived some data.
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
-* Send only new data or send fetched data every time. 
+* Send only new data or send fetched data every time.
 
 ### Build dependencies:
 
@@ -26,14 +41,28 @@ To replace various in-house automated tasks for data gathering with single tool.
 go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
 ```
 
+### AppImage dependencies:
+
+* [FUSE](https://github.com/libfuse/libfuse)
+* [Glibc](https://www.gnu.org/software/libc/) >= 2.29 (Ubuntu 20.04)
+
 ### Quick start:
+
 ```shell script
-user@localhost /tmp $ docker run -ti --rm livelace/gosquito bash
+# Docker.
+user@localhost /tmp $ docker run -ti --rm livelace/gosquito:v1.0.0 bash
 gosquito@fa388e89e10e ~ $ gosquito 
 INFO[03.11.2020 14:44:15.806] gosquito v1.0.0   
 INFO[03.11.2020 14:44:15.807] config init        path="/home/gosquito/.gosquito"
 ERRO[03.11.2020 14:44:15.807] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
 gosquito@fa388e89e10e ~ $
+
+# AppImage:
+user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v1.0.0/gosquito-v1.0.0.appimage" -o "/tmp/gosquito-v1.0.0.appimage" && chmod +x "/tmp/gosquito-v1.0.0.appimage"
+user@localhost ~ $ /tmp/gosquito-v1.0.0.appimage 
+INFO[04.11.2020 16:59:00.228] gosquito v1.0.0   
+INFO[04.11.2020 16:59:00.230] config init        path="/home/user/.gosquito"
+ERRO[04.11.2020 16:59:00.233] flow read          path="/home/user/.gosquito/flow/conf" error="no valid flow"
 ```
 
 ### Flow example ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
@@ -145,7 +174,5 @@ x-gosquito-source = "source"
 x-gosquito-time   = "time"
 x-gosquito-uuid   = "uuid"
 ```
-
-
 
 
