@@ -177,4 +177,4 @@ x-gosquito-uuid   = "uuid"
 
 ### Grafana:
 
-[grafana](https://github.com/livelace/gosquito/blob/master/assets/grafana.png)
+![grafana](https://github.com/livelace/gosquito/blob/master/assets/grafana.png)
