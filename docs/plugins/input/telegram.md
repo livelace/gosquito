@@ -61,9 +61,17 @@ flow:
 
   process:
     - id: 0
+      alias: "match all"
+      plugin: "regexpmatch"
+      params:
+        input:  ["telegram.text"]
+        regexp: [".*"]
+
+    - id: 1
       alias: "replace newline"
       plugin: "regexpreplace"
       params:
+        include: false
         input:  ["telegram.text"]
         output: ["data.text0"]
         regexp: ["\n"]
