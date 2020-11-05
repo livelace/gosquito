@@ -23,14 +23,15 @@ single tool.
   architecture.
   [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md)
   organized as chains of plugins.
-* Flow approach. Flow consists of: input plugin, process plugins, output
-  plugin.
+* Flow approach. Flow consists of: input plugin (grab), process plugins (transform), output
+  plugin (send).
 * Plugins dependencies. Plugin "B" will process data only if plugin "A"
   derived some data.
 * Include/exclude data from all or specific plugins.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
-* Send only new data or send fetched data every time.
+* Send only new data or send all fetched data every time.
+
 
 ### Build dependencies:
 
