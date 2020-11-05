@@ -384,17 +384,16 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		if v, ok := flowStates[item.SOURCE]; ok {
 			lastTime = v.(time.Time)
 		} else {
-			lastTime = currentTime
+			lastTime = time.Unix(0, 0)
 		}
-		newLastTime := lastTime
 
 		// Append to results if data is new.
-		if item.TIME.Unix() > newLastTime.Unix() {
-			newLastTime = item.TIME
+		if item.TIME.Unix() > lastTime.Unix() {
+			lastTime = item.TIME
 			temp = append(temp, item)
 		}
 
-		flowStates[item.SOURCE] = newLastTime
+		flowStates[item.SOURCE] = lastTime
 		sourceStat[item.SOURCE] += 1
 	}
 
