@@ -59,6 +59,16 @@ flow:
       template: "templates.telegram.default"
       input: ["breakingmash", "interfax_ru", "izvestia"]
 
+  process:
+    - id: 0
+      alias: "replace newline"
+      plugin: "regexpreplace"
+      params:
+        input:  ["telegram.text"]
+        output: ["data.text0"]
+        regexp: ["\n"]
+        replace: ["<br>"]
+
   output:
     plugin: "smtp"
     params:
@@ -88,7 +98,7 @@ subject = "{{ .TELEGRAM.TEXT }}"
 
 body = """
     <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
-    {{ .TELEGRAM.TEXT }}<br><br>
+    {{ .DATA.TEXT0 }}<br><br>
     {{ .TELEGRAM.URL }}
     """
 attachments = ["telegram.media"]
