@@ -23,8 +23,8 @@ single tool.
   architecture.
   [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md)
   organized as chains of plugins.
-* Flow approach. Flow consists of: input plugin (grab data), process plugins (transform/enrich data), output
-  plugin (send data).
+* Flow approach. Flow consists of: input plugin (grab), process plugins (transform/enrich), output
+  plugin (send).
 * Plugins dependencies. Plugin "B" will process data only if plugin "A"
   derived some data.
 * Include/exclude data from all or specific plugins.
