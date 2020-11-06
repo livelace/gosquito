@@ -40,8 +40,8 @@ flow:
       template: "templates.rss.kafka.default"
       output: ["kafka-example"]
       
-      # These fields are merged with template fields and
-      # sorted alphabetically.  
+      # These fields have higher priority and will be merged with 
+      # template fields and sorted alphabetically. 
       schema:
         content: "rss.content"
         title: "rss.title"
