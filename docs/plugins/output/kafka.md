@@ -1,7 +1,7 @@
 ### Description:
 
 **kafka** output plugin is intended for sending data to Kafka topics.
-Kafka messages are generated in Avro format with an arbitrary schema (flat, no nested objects).
+Kafka messages are generated in [Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an arbitrary schema (flat, no nested objects).
 
 
 ### Generic parameters:
