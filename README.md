@@ -27,11 +27,11 @@ single tool.
   plugin (send).
 * Plugins dependencies. Plugin "B" will process data only if plugin "A"
   derived some data.
-* Include/exclude data from all or specific plugins.
+* Include/exclude data from all or specific [plugins](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md).
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or send all fetched data every time.
-* Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela).
+* Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela) [plugin](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md).
 
 
 ### Build dependencies:
