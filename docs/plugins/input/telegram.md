@@ -8,7 +8,7 @@ Right now plugin supports only
 [public chats](https://core.telegram.org/tdlib/getting-started) (find,
 join, receive messages). Plugin registration happens during first flow
 start (phone number + verify code), every flow has its own Telegram
-authorization.
+client, separated from others (different phone numbers can be used).
 
 ### Data structure:
 
