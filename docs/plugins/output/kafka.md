@@ -1,6 +1,7 @@
 ### Description:
 
 **kafka** output plugin is intended for sending data to Kafka topics.
+Kafka messages are generated in Avro format with an arbitrary schema (flat, no nested objects).
 
 
 ### Generic parameters:
@@ -8,7 +9,6 @@
 | Param   | Required | Type | Template | Default |
 |:--------|:--------:|:----:|:--------:|:-------:|
 | timeout |    -     | int  |    +     |    3    |
-
 
 
 ### Plugin parameters:
