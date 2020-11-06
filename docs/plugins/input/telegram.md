@@ -24,7 +24,6 @@ type TelegramData struct {
 | expire_action_delay   |    -     | string |    +     |         "1d"          |
 | expire_action_timeout |    -     |  int   |    +     |          30           |
 | expire_interval       |    -     | string |    +     |         "7d"          |
-| force                 |    -     |  bool  |    +     |         false         |
 | timeout               |    -     |  int   |    +     |          60           |
 | time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
 | time_zone             |    -     | string |    +     |         "UTC"         |
@@ -44,7 +43,10 @@ type TelegramData struct {
 ### Flow sample:
 
 ```yaml
-# Due to Telegram API limits we just wait new messages events in background.
+# Due to Telegram _API limits_ we just wait new messages events in background,
+# we don't make requests for new/not received messages.
+# For more information see: https://github.com/tdlib/td/issues/682
+#
 # Right after we received new message event we compare event timestamp with
 # last received message timestamp and if event contains new data - 
 # we process new data.
