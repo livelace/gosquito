@@ -39,6 +39,9 @@ flow:
     params:
       template: "templates.rss.kafka.default"
       output: ["kafka-example"]
+      
+      # These fields are merged with template fields and
+      # sorted alphabetically.  
       schema:
         content: "rss.content"
         title: "rss.title"
