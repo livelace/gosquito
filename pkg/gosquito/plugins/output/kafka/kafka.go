@@ -48,9 +48,13 @@ func genSchema(schema *map[string]interface{}) (string, error) {
 		return "", err
 	}
 
+	schemaFields := core.MapKeysToStringSlice(schema)
+
 	// Try to detect/expand data fields and/or use field as string.
-	for k, v := range *schema {
-		if fieldType, err := core.GetDataFieldType(v); err == nil {
+	for _, field := range schemaFields {
+		fieldValue := (*schema)[field]
+
+		if fieldType, err := core.GetDataFieldType(fieldValue); err == nil {
 			var schemaItem string
 
 			switch fieldType {
@@ -60,9 +64,9 @@ func genSchema(schema *map[string]interface{}) (string, error) {
 				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			}
 
-			fields = append(fields, fmt.Sprintf(schemaItem, k))
+			fields = append(fields, fmt.Sprintf(schemaItem, field))
 		} else {
-			fields = append(fields, fmt.Sprintf("{\"name\": \"%s\", \"type\": \"string\"}", k))
+			fields = append(fields, fmt.Sprintf("{\"name\": \"%s\", \"type\": \"string\"}", field))
 		}
 	}
 
@@ -314,6 +318,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	} else {
 		return &Plugin{}, ERROR_SCHEMA_NOT_SET
 	}
+
+	showParam("schema", plugin.SchemaCodec.CanonicalSchema())
 
 	// timeout.
 	setTimeout := func(p interface{}) {

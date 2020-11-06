@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	tmpl "text/template"
@@ -613,6 +614,18 @@ func IsValueInSlice(v string, s *[]string) bool {
 		}
 	}
 	return false
+}
+
+func MapKeysToStringSlice(m *map[string]interface{}) []string {
+	temp := make([]string, 0)
+
+	for k := range *m {
+		temp = append(temp, k)
+	}
+
+	sort.Strings(temp)
+
+	return temp
 }
 
 func PluginLoadData(path string, file string) (map[string]interface{}, error) {
