@@ -31,6 +31,7 @@ single tool.
 * Declarative YAML configurations with templates support.
 * Export flow statistics to [Prometheus](https://prometheus.io/).
 * Send only new data or send all fetched data every time.
+* Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela).
 
 
 ### Build dependencies:
