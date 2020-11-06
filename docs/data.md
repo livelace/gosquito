@@ -4,7 +4,7 @@ Typical flow steps:
 
 1. *Input plugin* gathers data and produces set of *DataItem*.
 2. *Process plugins* handle *DataItem* set and fill chosen fields with
-   produced data.
+   produced data (no copies of DataItem are created).
 3. Finally, *Output plugin* constructs messages with selected *DataItem*
    fields and send messages to destinations.
 
