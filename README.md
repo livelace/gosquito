@@ -50,7 +50,7 @@ go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
 ### Quick start:
 
 ```shell script
-# Docker.
+# Docker:
 user@localhost /tmp $ docker run -ti --rm livelace/gosquito:v1.0.3 bash
 gosquito@fa388e89e10e ~ $ gosquito 
 INFO[03.11.2020 14:44:15.806] gosquito v1.0.3   

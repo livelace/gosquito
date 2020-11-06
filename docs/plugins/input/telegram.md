@@ -47,13 +47,12 @@ type TelegramData struct {
 ### Flow sample:
 
 ```yaml
-# Due to Telegram _API limits_ we just wait new messages events in background,
+# Due to Telegram _API limits_ we just wait new message events in background,
 # we don't make requests for new/not received messages.
 # For more information see: https://github.com/tdlib/td/issues/682
 #
-# Right after we received new message event we compare event timestamp with
-# last received message timestamp and if event contains new data - 
-# we process new data.
+# Right after we received a new message event we compare event timestamp with
+# last received message timestamp and if event contains new data - we process new data.
 # We cannot use "force" here and have to wait new messages explicitly.
 flow:
   name: "telegram-example"
