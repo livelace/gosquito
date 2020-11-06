@@ -94,8 +94,7 @@ api_id = "<API_ID>"
 api_hash = "<API_HASH>"
 
 [templates.telegram.default]
-file_max_size = "1g"
-# be careful with logs :)
+#file_max_size = "30m"
 #log_level = 90
 
 [templates.telegram.smtp.default]
