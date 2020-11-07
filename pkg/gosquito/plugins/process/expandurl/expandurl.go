@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	DEFAULT_DEPTH   = 3
+	DEFAULT_DEPTH   = 10
 	DEFAULT_TIMEOUT = 2
 )
 

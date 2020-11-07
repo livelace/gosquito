@@ -15,12 +15,12 @@ full URLs.
 
 ### Plugin parameters:
 
-| Param      | Required |  Type  |      Default      |     Example      | Description                          |
-|:-----------|:--------:|:------:|:-----------------:|:----------------:|:-------------------------------------|
-| depth      |    -     |  int   |         3         |        10        | Maximum depth of HTTP redirects.     |
-| **input**  |    +     | array  |        []         | ["twitter.urls"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs.   |
-| **output** |    +     | array  |        []         | ["data.array0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.      |
-| user_agent |    -     | string | "gosquito v1.0.0" |  "webchela 1.0"  | Custom User-Agent for HTTP requests. |
+| Param      | Required |  Type  |      Default      |     Example      | Description                                                                                         |
+|:-----------|:--------:|:------:|:-----------------:|:----------------:|:----------------------------------------------------------------------------------------------------|
+| depth      |    -     |  int   |        10         |        5         | Maximum depth of HTTP redirects.                                                                    |
+| **input**  |    +     | array  |        []         | ["twitter.urls"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs. |
+| **output** |    +     | array  |        []         | ["data.array0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
+| user_agent |    -     | string | "gosquito v1.0.0" |  "webchela 1.0"  | Custom User-Agent for HTTP requests.                                                                |
 
 ### Flow sample:
 
@@ -70,6 +70,5 @@ access_secret = "<ACCESS_SECRET>"
 consumer_key = "<CONSUMER_KEY>"
 consumer_secret = "<CONSUMER_SECRET>"
 ```
-
 
 
