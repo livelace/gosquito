@@ -1,7 +1,9 @@
 ### Description:
 
 **kafka** output plugin is intended for sending data to Kafka topics.
-Kafka messages are generated in [Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an arbitrary schema (flat, no nested objects).
+Kafka messages are generated in
+[Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an
+arbitrary schema (flat, no nested objects).
 
 
 ### Generic parameters:
@@ -13,12 +15,18 @@ Kafka messages are generated in [Avro](https://en.wikipedia.org/wiki/Apache_Avro
 
 ### Plugin parameters:
 
-| Param       | Required |  Type  | Template | Default |                Example                 | Description                        |
-|:------------|:--------:|:------:|:--------:|:-------:|:--------------------------------------:|:-----------------------------------|
-| **brokers** |    +     | string |    +     |   ""    | "127.0.0.1:9092,host.example.com:1111" | List of Kafka brokers.             |
-| compress    |    -     | string |    +     | "none"  |                 "zstd"                 | Compression algorithm.             |
-| **output**  |    +     | array  |    +     |   []    |                ["news"]                | List of Kafka topics.              |
-| **schema**  |    +     |  map   |    +     |  map[]  |              see example               | Dynamic schema for Kafka messages. |
+| Param                   | Required |  Type  | Template |         Default         |                Example                 | Description                        |
+|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:--------------------------------------:|:-----------------------------------|
+| **brokers**             |    +     | string |    +     |           ""            | "127.0.0.1:9092,host.example.com:1111" | List of Kafka brokers.             |
+| client_id               |    -     | string |    +     |       <FLOW_NAME>       |               "gosquito"               | Client identification.             |
+| compress                |    -     | string |    +     |         "none"          |                 "zstd"                 | Compression algorithm.             |
+| confluent_avro          |    -     |  bool  |    +     |          false          |                  true                  | Send Confluent Avro.               |
+| message_key             |    -     | string |    +     |         "none"          |               "partkey1"               | Message partition key.             |
+| **output**              |    +     | array  |    +     |           []            |                ["news"]                | List of Kafka topics.              |
+| **schema**              |    +     |  map   |    +     |          map[]          |              see example               | Dynamic schema for Kafka messages. |
+| schema_record_name      |    -     | string |    +     |       "DataItem"        |                "event"                 | Avro record name.                  |
+| schema_record_namespace |    -     | string |    +     | "ru.livelace.gosquito"  |             "com.example"              | Avro record namespace.             |
+| schema_registry         |    -     | string |    +     | "http://127.0.0.1:8081" |     "https://schemas.example.com"      | Confluent schema registry.         |
 
 
 ### Flow sample:

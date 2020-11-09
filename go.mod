@@ -30,6 +30,7 @@ require (
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/poy/onpar v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.9.3
+	github.com/riferrei/srclient v0.0.0-20201104212601-60b6ece41d4c
 	github.com/spf13/viper v1.7.1
 	github.com/xhit/go-simple-mail/v2 v2.5.1
 	github.com/zelenin/go-tdlib v0.2.0
