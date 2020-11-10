@@ -161,135 +161,145 @@ func loadChats(p *Plugin) (*map[string]int64, error) {
 }
 
 func receiveFiles(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
-	defer listener.Close()
-
 	tempDirMatcher := regexp.MustCompile(filepath.Join(DEFAULT_FILES_DIR, "temp"))
 
-	// Wait for new files, be sure they are not in temp, send file.id into channel.
-	for update := range listener.Updates {
-		switch update.(type) {
-		case *client.UpdateFile:
-			newFile := update.(*client.UpdateFile).File
-			if newFile.Local.Path != "" && newFile.Size > 0 && !tempDirMatcher.MatchString(newFile.Local.Path) {
-				p.FileChannel <- newFile.Id
+	// Loop till the app end.
+	for {
+		listener := p.TdlibClient.GetListener()
+
+		// Wait for new files, be sure they are not in temp, send file.id into channel.
+		for update := range listener.Updates {
+			switch update.(type) {
+			case *client.UpdateFile:
+				newFile := update.(*client.UpdateFile).File
+				if newFile.Local.Path != "" && newFile.Size > 0 && !tempDirMatcher.MatchString(newFile.Local.Path) {
+					p.FileChannel <- newFile.Id
+				}
 			}
 		}
+
+		listener.Close()
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func receiveMessages(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
-	defer listener.Close()
+	// Loop till the app end.
+	for {
+		listener := p.TdlibClient.GetListener()
 
-	// Loop over updates.
-	for update := range listener.Updates {
+		// Loop over message events.
+		for update := range listener.Updates {
 
-		// We need updates with type "UpdateNewMessage".
-		switch update.(type) {
-		case *client.UpdateNewMessage:
-			newMessage := update.(*client.UpdateNewMessage)
-			messageChatId := newMessage.Message.ChatId
-			messageContent := newMessage.Message.Content
-			messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
+			// We need updates with type "UpdateNewMessage".
+			switch update.(type) {
+			case *client.UpdateNewMessage:
+				newMessage := update.(*client.UpdateNewMessage)
+				messageChatId := newMessage.Message.ChatId
+				messageContent := newMessage.Message.Content
+				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
 
-			// Process only specific chats.
-			if chatUserName, ok := (*p.ChatsById)[messageChatId]; ok {
-				var u, _ = uuid.NewRandom()
+				// Process only specific chats.
+				if chatUserName, ok := (*p.ChatsById)[messageChatId]; ok {
+					var u, _ = uuid.NewRandom()
 
-				// Process only text messages for now.
-				switch messageContent.(type) {
-				case *client.MessageText:
-					var textURL string
-					formattedText := messageContent.(*client.MessageText).Text
+					// Process only text messages for now.
+					switch messageContent.(type) {
+					case *client.MessageText:
+						var textURL string
+						formattedText := messageContent.(*client.MessageText).Text
 
-					// Search for text URL.
-					for _, entity := range formattedText.Entities {
-						switch entity.Type.(type) {
-						case *client.TextEntityTypeTextUrl:
-							textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
+						// Search for text URL.
+						for _, entity := range formattedText.Entities {
+							switch entity.Type.(type) {
+							case *client.TextEntityTypeTextUrl:
+								textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
+							}
 						}
-					}
 
-					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow,
-							PLUGIN:     p.Name,
-							SOURCE:     chatUserName,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
-							UUID:       u,
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow,
+								PLUGIN:     p.Name,
+								SOURCE:     chatUserName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								UUID:       u,
 
-							TELEGRAM: core.TelegramData{
-								TEXT: formattedText.Text,
-								URL:  textURL,
-							},
+								TELEGRAM: core.TelegramData{
+									TEXT: formattedText.Text,
+									URL:  textURL,
+								},
+							}
 						}
-					}
-				case *client.MessagePhoto:
-					media := make([]string, 0)
-					caption := messageContent.(*client.MessagePhoto).Caption
-					photo := messageContent.(*client.MessagePhoto).Photo
+					case *client.MessagePhoto:
+						media := make([]string, 0)
+						caption := messageContent.(*client.MessagePhoto).Caption
+						photo := messageContent.(*client.MessagePhoto).Photo
 
-					photoFile := photo.Sizes[len(photo.Sizes)-1]
+						photoFile := photo.Sizes[len(photo.Sizes)-1]
 
-					if int64(photoFile.Photo.Size) < p.FileMaxSize {
-						localFile, err := downloadFile(p, photoFile.Photo.Remote.Id)
-						if err == nil {
-							media = append(media, localFile)
+						if int64(photoFile.Photo.Size) < p.FileMaxSize {
+							localFile, err := downloadFile(p, photoFile.Photo.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
 						}
-					}
 
-					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow,
-							PLUGIN:     p.Name,
-							SOURCE:     chatUserName,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
-							UUID:       u,
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow,
+								PLUGIN:     p.Name,
+								SOURCE:     chatUserName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								UUID:       u,
 
-							TELEGRAM: core.TelegramData{
-								MEDIA: media,
-								TEXT:  caption.Text,
-							},
+								TELEGRAM: core.TelegramData{
+									MEDIA: media,
+									TEXT:  caption.Text,
+								},
+							}
 						}
-					}
 
-				case *client.MessageVideo:
-					media := make([]string, 0)
-					caption := messageContent.(*client.MessageVideo).Caption
-					video := messageContent.(*client.MessageVideo).Video
+					case *client.MessageVideo:
+						media := make([]string, 0)
+						caption := messageContent.(*client.MessageVideo).Caption
+						video := messageContent.(*client.MessageVideo).Video
 
-					if int64(video.Video.Size) < p.FileMaxSize {
-						localFile, err := downloadFile(p, video.Video.Remote.Id)
-						if err == nil {
-							media = append(media, localFile)
+						if int64(video.Video.Size) < p.FileMaxSize {
+							localFile, err := downloadFile(p, video.Video.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
 						}
-					}
 
-					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow,
-							PLUGIN:     p.Name,
-							SOURCE:     chatUserName,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
-							UUID:       u,
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow,
+								PLUGIN:     p.Name,
+								SOURCE:     chatUserName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								UUID:       u,
 
-							TELEGRAM: core.TelegramData{
-								MEDIA: media,
-								TEXT:  caption.Text,
-							},
+								TELEGRAM: core.TelegramData{
+									MEDIA: media,
+									TEXT:  caption.Text,
+								},
+							}
 						}
-					}
 
+					}
 				}
 			}
 		}
+
+		listener.Close()
+		time.Sleep(1 * time.Second)
 	}
 }
 
