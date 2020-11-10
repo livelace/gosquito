@@ -18,7 +18,7 @@ import (
 const (
 	DEFAULT_COMPRESSION    = "none"
 	DEFAULT_CONFLUENT_AVRO = false
-	DEFAULT_MESSAGE_KEY    = "none"
+	DEFAULT_MESSAGE_KEY    = ""
 	DEFAULT_SCHEMA_BASE    = `
 {
   "type": "record",
