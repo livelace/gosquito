@@ -15,18 +15,18 @@ arbitrary schema (flat, no nested objects).
 
 ### Plugin parameters:
 
-| Param                   | Required |  Type  | Template |         Default         |                Example                 | Description                        |
-|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:--------------------------------------:|:-----------------------------------|
-| **brokers**             |    +     | string |    +     |           ""            | "127.0.0.1:9092,host.example.com:1111" | List of Kafka brokers.             |
-| client_id               |    -     | string |    +     |       <FLOW_NAME>       |               "gosquito"               | Client identification.             |
-| compress                |    -     | string |    +     |         "none"          |                 "zstd"                 | Compression algorithm.             |
-| confluent_avro          |    -     |  bool  |    +     |          false          |                  true                  | Send Confluent Avro.               |
-| message_key             |    -     | string |    +     |         "none"          |               "partkey1"               | Message partition key.             |
-| **output**              |    +     | array  |    +     |           []            |                ["news"]                | List of Kafka topics.              |
-| **schema**              |    +     |  map   |    +     |          map[]          |              see example               | Dynamic schema for Kafka messages. |
-| schema_record_name      |    -     | string |    +     |       "DataItem"        |                "event"                 | Avro record name.                  |
-| schema_record_namespace |    -     | string |    +     | "ru.livelace.gosquito"  |             "com.example"              | Avro record namespace.             |
-| schema_registry         |    -     | string |    +     | "http://127.0.0.1:8081" |     "https://schemas.example.com"      | Confluent schema registry.         |
+| Param                   | Required |  Type  | Template |         Default         |                Example                 | Description                                                                                                                           |
+|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:--------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------|
+| **brokers**             |    +     | string |    +     |           ""            | "127.0.0.1:9092,host.example.com:1111" | List of Kafka brokers.                                                                                                                |
+| client_id               |    -     | string |    +     |       <FLOW_NAME>       |               "gosquito"               | Client identification.                                                                                                                |
+| compress                |    -     | string |    +     |         "none"          |                 "zstd"                 | Compression algorithm.                                                                                                                |
+| confluent_avro          |    -     |  bool  |    +     |          false          |                  true                  | Send [Confluent Avro (magic byte + schema)](https://docs.confluent.io/current/schema-registry/serdes-develop/index.html#wire-format). |
+| message_key             |    -     | string |    +     |         "none"          |               "partkey1"               | Message partition key.                                                                                                                |
+| **output**              |    +     | array  |    +     |           []            |                ["news"]                | List of Kafka topics.                                                                                                                 |
+| **schema**              |    +     |  map   |    +     |          map[]          |              see example               | Dynamic schema for Kafka messages.                                                                                                    |
+| schema_record_name      |    -     | string |    +     |       "DataItem"        |                "event"                 | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                     |
+| schema_record_namespace |    -     | string |    +     | "ru.livelace.gosquito"  |             "com.example"              | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                                                                |
+| schema_registry         |    -     | string |    +     | "http://127.0.0.1:8081" |     "https://schemas.example.com"      | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                                                                            |
 
 
 ### Flow sample:
