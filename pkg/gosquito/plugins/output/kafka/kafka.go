@@ -11,6 +11,7 @@ import (
 	"github.com/riferrei/srclient"
 	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
 	"reflect"
+	"strings"
 	tmpl "text/template"
 )
 
@@ -32,13 +33,17 @@ const (
 	DEFAULT_SCHEMA_RECORD_NAME      = "DataItem"
 	DEFAULT_SCHEMA_RECORD_NAMESPACE = "ru.livelace.gosquito"
 	DEFAULT_SCHEMA_REGISTRY         = "http://127.0.0.1:8081"
+	DEFAULT_SCHEMA_SUBJECT_STRATEGY = "TopicName"
 	DEFAULT_TIMEOUT                 = 3
 )
 
 var (
-	ERROR_SCHEMA_CREATE  = errors.New("schema create error: %s")
-	ERROR_SCHEMA_ERROR   = errors.New("schema error: %s")
-	ERROR_SCHEMA_NOT_SET = errors.New("schema not set")
+	ERROR_SCHEMA_CREATE            = errors.New("schema create error: %s")
+	ERROR_SCHEMA_ERROR             = errors.New("schema error: %s")
+	ERROR_SCHEMA_NOT_SET           = errors.New("schema not set")
+	ERROR_SUBJECT_STRATEGY_UNKNOWN = errors.New("schema subject strategy unknown: %s")
+
+	SUBJECT_STRATEGIES = []string{"TOPICNAME", "RECORDNAME", "TOPICRECORDNAME"}
 )
 
 func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
@@ -155,6 +160,7 @@ type Plugin struct {
 	SchemaRecordNamespace string
 	SchemaNative          map[string]interface{}
 	SchemaRegistry        string
+	SchemaSubjectStrategy string
 	Timeout               int
 
 	KafkaConfig *kafka.ConfigMap
@@ -199,11 +205,23 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			}
 
 			if p.ConfluentAvro {
+				var subject string
+
+				switch p.SchemaSubjectStrategy {
+				case "TOPICNAME":
+					subject = topic
+				case "RECORDNAME":
+					subject = p.SchemaRecordName
+				case "TOPICRECORDNAME":
+					subject = fmt.Sprintf("%s-%s", topic, p.SchemaRecordName)
+				}
+
 				schemaRegistryClient := srclient.CreateSchemaRegistryClient(p.SchemaRegistry)
-				registrySchema, _ := schemaRegistryClient.GetLatestSchema(topic, false)
+				registrySchema, _ := schemaRegistryClient.GetLatestSchema(subject, false)
 
 				if registrySchema == nil {
-					registrySchema, err = schemaRegistryClient.CreateSchema(topic, p.Schema, srclient.Avro, false)
+					registrySchema, err =
+						schemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
 					if err != nil {
 						return fmt.Errorf(ERROR_SCHEMA_CREATE.Error(), err)
 					}
@@ -282,6 +300,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"schema_record_name":      -1,
 		"schema_record_namespace": -1,
 		"schema_registry":         -1,
+		"schema_subject_strategy": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -407,6 +426,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaRegistry((*pluginConfig.Params)["schema_registry"])
 	showParam("schema_registry", plugin.SchemaRegistry)
 
+	// schema_subject_strategy.
+	setSchemaSubjectStrategy := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["schema_subject_strategy"] = 0
+			plugin.SchemaSubjectStrategy = v
+		}
+	}
+	setSchemaSubjectStrategy(DEFAULT_SCHEMA_SUBJECT_STRATEGY)
+	setSchemaSubjectStrategy(pluginConfig.Config.GetString(fmt.Sprintf("%s.schema_subject_strategy", template)))
+	setSchemaSubjectStrategy((*pluginConfig.Params)["schema_subject_strategy"])
+	showParam("schema_subject_strategy", plugin.SchemaSubjectStrategy)
+
 	// schema.
 	templateSchema, _ := core.IsMapWithStringAsKey(pluginConfig.Config.GetStringMap(fmt.Sprintf("%s.schema", template)))
 	configSchema, _ := core.IsMapWithStringAsKey((*pluginConfig.Params)["schema"])
@@ -480,6 +511,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	plugin.KafkaConfig = &kafkaConfig
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Additional checks.
+
+	if !core.IsValueInSlice(strings.ToUpper(plugin.SchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
+		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.SchemaSubjectStrategy)
+	} else {
+		plugin.SchemaSubjectStrategy = strings.ToUpper(plugin.SchemaSubjectStrategy)
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
