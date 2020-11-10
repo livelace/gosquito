@@ -307,7 +307,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setBucket(pluginConfig.Config.GetString(fmt.Sprintf("%s.bucket", template)))
 	setBucket((*pluginConfig.Params)["bucket"])
-	showParam("bucket", plugin.Action)
+	showParam("bucket", plugin.Bucket)
 
 	// include.
 	setInclude := func(p interface{}) {
