@@ -73,7 +73,7 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 
 			switch fieldType {
 			case reflect.Slice:
-				schemaItem = "{\"name\": \"%s\", \"type\": \"array\", \"items\": \"string\"}"
+				schemaItem = "{\"name\": \"%s\", \"type\": {\"type\": \"array\", \"items\": \"string\"}}"
 			default:
 				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			}
