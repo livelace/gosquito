@@ -14,9 +14,16 @@ client, separated from others (different phone numbers can be used).
 
 ```go
 type TelegramData struct {
-	MEDIA []string
-	TEXT  string
-	URL   string
+	USERNAME string
+	USERTYPE string
+
+	FIRSTNAME string
+	LASTNAME string
+	PHONE string
+
+	MEDIA    []string
+	TEXT     string
+	URL      string
 }
 ```
 

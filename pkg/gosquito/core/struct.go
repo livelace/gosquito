@@ -15,8 +15,8 @@ type InputPlugin interface {
 	GetName() string
 	GetType() string
 
-	LoadState() (map[string]interface{}, error)
-	SaveState(map[string]interface{}) error
+	LoadState() (map[string]time.Time, error)
+	SaveState(map[string]time.Time) error
 
 	Recv() ([]*DataItem, error)
 }
@@ -172,6 +172,13 @@ type RssData struct {
 }
 
 type TelegramData struct {
+	USERNAME string
+	USERTYPE string
+
+	FIRSTNAME string
+	LASTNAME  string
+	PHONE     string
+
 	MEDIA []string
 	TEXT  string
 	URL   string

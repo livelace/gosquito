@@ -628,8 +628,8 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(path string, file string) (map[string]interface{}, error) {
-	temp := make(map[string]interface{}, 0)
+func PluginLoadData(path string, file string) (interface{}, error) {
+	var temp interface{}
 
 	if IsFile(path, file) {
 		// read file.
@@ -650,9 +650,9 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 		}
 
 		// decode data.
-		gob.Register(time.Time{})
+		//gob.Register(time.Time{})
 		decoder := gob.NewDecoder(bytes.NewReader(data))
-		err = decoder.Decode(&temp)
+		err = decoder.Decode(temp)
 		if err != nil {
 			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
@@ -661,10 +661,9 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 
 		return temp, err
 
-	} else {
-		err := PluginSaveData(path, file, temp)
-		return temp, err
 	}
+
+	return temp, nil
 }
 
 // TODO: Sources' state time has to be truly last despite of concurrency.
@@ -674,10 +673,10 @@ func PluginLoadData(path string, file string) (map[string]interface{}, error) {
 // TODO: proc1 may save state time as 11111 last.
 // TODO: "Last time" 11111 isn't what we expect.
 // TODO: Should be atomic operation.
-func PluginSaveData(path string, file string, data map[string]interface{}) error {
+func PluginSaveData(path string, file string, data interface{}) error {
 	buffer := new(bytes.Buffer)
 
-	gob.Register(time.Time{})
+	//gob.Register(time.Time{})
 	encoder := gob.NewEncoder(buffer)
 
 	err := encoder.Encode(data)

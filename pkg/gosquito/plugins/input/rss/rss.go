@@ -8,6 +8,7 @@ import (
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
 	"net/http"
+	"reflect"
 	"sync"
 	"time"
 )
@@ -124,7 +125,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[source]; ok {
-			lastTime = v.(time.Time)
+			lastTime = v
 		} else {
 			lastTime = currentTime
 		}
@@ -218,7 +219,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.(time.Time).Unix()) > p.ExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.ExpireInterval {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
@@ -230,7 +231,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				// We don't worry about command return code.
 				if len(p.ExpireAction) > 0 {
 					cmd := p.ExpireAction[0]
-					args := []string{p.Flow, source, fmt.Sprintf("%v", sourceTime.(time.Time).Unix())}
+					args := []string{p.Flow, source, fmt.Sprintf("%v", sourceTime.Unix())}
 					args = append(args, p.ExpireAction[1:]...)
 
 					output, err := core.ExecWithTimeout(cmd, args, p.ExpireActionTimeout)
@@ -275,14 +276,30 @@ func (p *Plugin) GetType() string {
 	return p.Type
 }
 
-func (p *Plugin) LoadState() (map[string]interface{}, error) {
+func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginLoadData(p.StateDir, p.Flow)
+	temp := make(map[string]time.Time, 0)
+
+	if data, err := core.PluginLoadData(p.StateDir, p.Flow); err == nil {
+		rd := reflect.ValueOf(data)
+
+		if rd.Kind() == reflect.Map {
+			iter := rd.MapRange()
+			for iter.Next() {
+				temp[iter.Key().String()] = iter.Value().Interface().(time.Time)
+			}
+		}
+
+	} else {
+		return temp, err
+	}
+
+	return temp, nil
 }
 
-func (p *Plugin) SaveState(data map[string]interface{}) error {
+func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
