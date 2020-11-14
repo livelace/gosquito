@@ -628,42 +628,39 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(path string, file string) (interface{}, error) {
-	var temp interface{}
-
+func PluginLoadData(path string, file string, output interface{}) error {
 	if IsFile(path, file) {
 		// read file.
 		f, err := os.OpenFile(filepath.Join(path, file), os.O_RDONLY, 0644)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		fs, err := f.Stat()
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		data := make([]byte, fs.Size())
 		_, err = f.Read(data)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		// decode data.
-		//gob.Register(time.Time{})
 		decoder := gob.NewDecoder(bytes.NewReader(data))
-		err = decoder.Decode(temp)
+		err = decoder.Decode(output)
 		if err != nil {
-			return temp, fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
 		}
 
 		err = f.Close()
 
-		return temp, err
+		return err
 
 	}
 
-	return temp, nil
+	return nil
 }
 
 // TODO: Sources' state time has to be truly last despite of concurrency.

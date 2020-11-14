@@ -8,7 +8,6 @@ import (
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
 	"net/http"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -282,17 +281,7 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 
 	temp := make(map[string]time.Time, 0)
 
-	if data, err := core.PluginLoadData(p.StateDir, p.Flow); err == nil {
-		rd := reflect.ValueOf(data)
-
-		if rd.Kind() == reflect.Map {
-			iter := rd.MapRange()
-			for iter.Next() {
-				temp[iter.Key().String()] = iter.Value().Interface().(time.Time)
-			}
-		}
-
-	} else {
+	if err := core.PluginLoadData(p.StateDir, p.Flow, &temp); err != nil {
 		return temp, err
 	}
 

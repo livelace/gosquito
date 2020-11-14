@@ -7,7 +7,6 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"sync"
 	"time"
@@ -151,17 +150,9 @@ func joinToChat(p *Plugin, name string, id int64) error {
 func loadChats(p *Plugin) (map[string]int64, error) {
 	temp := make(map[string]int64, 0)
 
-	data, err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_CHATS_DB)
-
-	if err == nil {
-		rd := reflect.ValueOf(data)
-
-		if rd.Kind() == reflect.Map {
-			iter := rd.MapRange()
-			for iter.Next() {
-				temp[iter.Key().String()] = iter.Value().Interface().(int64)
-			}
-		}
+	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_CHATS_DB, &temp)
+	if err != nil {
+		return temp, err
 	}
 
 	return temp, nil
@@ -170,17 +161,9 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 func loadUsers(p *Plugin) (map[int32][]string, error) {
 	temp := make(map[int32][]string, 0)
 
-	data, err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_USERS_DB)
-
-	if err == nil {
-		rd := reflect.ValueOf(data)
-
-		if rd.Kind() == reflect.Map {
-			iter := rd.MapRange()
-			for iter.Next() {
-				temp[iter.Key().Interface().(int32)] = iter.Value().Interface().([]string)
-			}
-		}
+	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_USERS_DB, &temp)
+	if err != nil {
+		return temp, err
 	}
 
 	return temp, nil
@@ -220,29 +203,30 @@ func receiveMessages(p *Plugin) {
 
 			case *client.UpdateUser:
 				user := update.(*client.UpdateUser).User
-				(*p.UsersById)[user.Id] = []string{
+				p.UsersById[user.Id] = []string{
 					user.Username, user.Type.UserTypeType(),
 					user.FirstName, user.LastName, user.PhoneNumber,
 				}
 
-				/*fmt.Printf("Id: %v, Username: %v, FirstName: %v, LastName: %v, Phone: %v, Type: %v\n",
+				fmt.Printf("Id: %v, Username: %v, FirstName: %v, LastName: %v, Phone: %v, Type: %v\n",
 					user.Id, user.Username, user.FirstName, user.LastName, user.PhoneNumber, user.Type)
-				fmt.Println(user)*/
+				fmt.Println(user)
 
 			case *client.UpdateNewMessage:
 				newMessage := update.(*client.UpdateNewMessage)
 				messageChatId := newMessage.Message.ChatId
 				messageContent := newMessage.Message.Content
 				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
-				messageUserId := newMessage.Message.SenderUserId
+				messageSenderId := newMessage.Message.SenderUserId
 
-				messageUsername := "unknown"
+				messageUserId := fmt.Sprintf("%v", messageSenderId)
+				messageUsername := ""
 				messageUsertype := ""
 				messageUserFirstName := ""
 				messageUserLastName := ""
 				messageUserPhoneNumber := ""
 
-				if v, ok := (*p.UsersById)[messageUserId]; ok {
+				if v, ok := p.UsersById[messageSenderId]; ok {
 					messageUsername = v[0]
 					messageUsertype = v[1]
 					messageUserFirstName = v[2]
@@ -251,7 +235,7 @@ func receiveMessages(p *Plugin) {
 				}
 
 				// Process only specified chats.
-				if chatUserName, ok := (*p.ChatsById)[messageChatId]; ok {
+				if chatUserName, ok := p.ChatsById[messageChatId]; ok {
 					var u, _ = uuid.NewRandom()
 
 					// Process only text messages for now.
@@ -280,6 +264,7 @@ func receiveMessages(p *Plugin) {
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
+									USERID:   messageUserId,
 									USERNAME: messageUsername,
 									USERTYPE: messageUsertype,
 
@@ -318,6 +303,7 @@ func receiveMessages(p *Plugin) {
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
+									USERID:   messageUserId,
 									USERNAME: messageUsername,
 									USERTYPE: messageUsertype,
 
@@ -354,6 +340,7 @@ func receiveMessages(p *Plugin) {
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
+									USERID:   messageUserId,
 									USERNAME: messageUsername,
 									USERTYPE: messageUsertype,
 
@@ -428,9 +415,9 @@ type Plugin struct {
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
 
-	ChatsById   *map[int64]string
-	ChatsByName *map[string]int64
-	UsersById   *map[int32][]string
+	ChatsById   map[int64]string
+	ChatsByName map[string]int64
+	UsersById   map[int32][]string
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
@@ -566,17 +553,7 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 
 	temp := make(map[string]time.Time, 0)
 
-	if data, err := core.PluginLoadData(p.StateDir, p.Flow); err == nil {
-		rd := reflect.ValueOf(data)
-
-		if rd.Kind() == reflect.Map {
-			iter := rd.MapRange()
-			for iter.Next() {
-				temp[iter.Key().String()] = iter.Value().Interface().(time.Time)
-			}
-		}
-
-	} else {
+	if err := core.PluginLoadData(p.StateDir, p.Flow, &temp); err != nil {
 		return temp, err
 	}
 
@@ -871,8 +848,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Set plugin data.
-	plugin.ChatsById = &chatsById
-	plugin.ChatsByName = &chatsByName
+	plugin.ChatsById = chatsById
+	plugin.ChatsByName = chatsByName
 
 	// Save chats.
 	if err := saveChats(&plugin); err != nil {
@@ -881,10 +858,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// Load users.
 	if users, err := loadUsers(&plugin); err == nil {
-		plugin.UsersById = &users
+		plugin.UsersById = users
 	} else {
 		return &Plugin{}, fmt.Errorf(ERROR_LOAD_USERS_ERROR.Error(), err)
 	}
+
+	showParam("chats amount", len(plugin.ChatsByName))
+	showParam("users amount", len(plugin.UsersById))
 
 	// Get messages and files in background.
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)

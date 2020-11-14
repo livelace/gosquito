@@ -172,6 +172,7 @@ type RssData struct {
 }
 
 type TelegramData struct {
+	USERID   string
 	USERNAME string
 	USERTYPE string
 
