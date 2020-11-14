@@ -208,10 +208,6 @@ func receiveMessages(p *Plugin) {
 					user.FirstName, user.LastName, user.PhoneNumber,
 				}
 
-				fmt.Printf("Id: %v, Username: %v, FirstName: %v, LastName: %v, Phone: %v, Type: %v\n",
-					user.Id, user.Username, user.FirstName, user.LastName, user.PhoneNumber, user.Type)
-				fmt.Println(user)
-
 			case *client.UpdateNewMessage:
 				newMessage := update.(*client.UpdateNewMessage)
 				messageChatId := newMessage.Message.ChatId
@@ -243,7 +239,6 @@ func receiveMessages(p *Plugin) {
 					case *client.MessageText:
 						var textURL string
 						formattedText := messageContent.(*client.MessageText).Text
-						fmt.Println("MSG", formattedText.Text)
 
 						// Search for text URL.
 						for _, entity := range formattedText.Entities {
@@ -358,6 +353,7 @@ func receiveMessages(p *Plugin) {
 				}
 			}
 
+			// Save users between updates receiving.
 			_ = saveUsers(p)
 		}
 
@@ -863,8 +859,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, fmt.Errorf(ERROR_LOAD_USERS_ERROR.Error(), err)
 	}
 
-	showParam("chats amount", len(plugin.ChatsByName))
-	showParam("users amount", len(plugin.UsersById))
+	//showParam("chats amount", len(plugin.ChatsByName))
+	//showParam("users amount", len(plugin.UsersById))
 
 	// Get messages and files in background.
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
