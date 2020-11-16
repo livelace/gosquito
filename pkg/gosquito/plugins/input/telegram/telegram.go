@@ -357,7 +357,6 @@ func receiveMessages(p *Plugin) {
 						"file":   p.File,
 						"plugin": p.Name,
 						"type":   p.Type,
-						"source": chatName,
 						"data":   fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId),
 					}).Debug(core.LOG_PLUGIN_STAT)
 				}
