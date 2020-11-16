@@ -231,7 +231,7 @@ func receiveMessages(p *Plugin) {
 				}
 
 				// Process only specified chats.
-				if chatUserName, ok := p.ChatsById[messageChatId]; ok {
+				if chatName, ok := p.ChatsById[messageChatId]; ok {
 					var u, _ = uuid.NewRandom()
 
 					// Process only text messages for now.
@@ -253,7 +253,7 @@ func receiveMessages(p *Plugin) {
 							p.DataChannel <- &core.DataItem{
 								FLOW:       p.Flow,
 								PLUGIN:     p.Name,
-								SOURCE:     chatUserName,
+								SOURCE:     chatName,
 								TIME:       messageTime,
 								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
 								UUID:       u,
@@ -292,7 +292,7 @@ func receiveMessages(p *Plugin) {
 							p.DataChannel <- &core.DataItem{
 								FLOW:       p.Flow,
 								PLUGIN:     p.Name,
-								SOURCE:     chatUserName,
+								SOURCE:     chatName,
 								TIME:       messageTime,
 								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
 								UUID:       u,
@@ -329,7 +329,7 @@ func receiveMessages(p *Plugin) {
 							p.DataChannel <- &core.DataItem{
 								FLOW:       p.Flow,
 								PLUGIN:     p.Name,
-								SOURCE:     chatUserName,
+								SOURCE:     chatName,
 								TIME:       messageTime,
 								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
 								UUID:       u,
@@ -348,8 +348,18 @@ func receiveMessages(p *Plugin) {
 								},
 							}
 						}
-
 					}
+
+				} else {
+					log.WithFields(log.Fields{
+						"hash":   p.Hash,
+						"flow":   p.Flow,
+						"file":   p.File,
+						"plugin": p.Name,
+						"type":   p.Type,
+						"source": chatName,
+						"data":   fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId),
+					}).Debug(core.LOG_PLUGIN_STAT)
 				}
 			}
 
@@ -787,7 +797,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		FilesDirectory:         filepath.Join(plugin.TgBaseDir, DEFAULT_FILES_DIR),
 		IgnoreFileNames:        true,
 		SystemLanguageCode:     "en",
-		SystemVersion:          core.APP_VERSION,
+		SystemVersion:          plugin.Flow,
 		UseChatInfoDatabase:    true,
 		UseFileDatabase:        true,
 		UseMessageDatabase:     true,
