@@ -8,6 +8,7 @@ import (
 	log "github.com/livelace/logrus"
 	"github.com/xhit/go-simple-mail/v2"
 	"path"
+	"strings"
 	tmpl "text/template"
 	"time"
 )
@@ -95,6 +96,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			if err != nil {
 				return err
 			}
+			s = strings.ReplaceAll(s, "\n", " ")
 			subject := core.ShrinkString(&s, p.SubjectLength)
 
 			// Assemble letter.
