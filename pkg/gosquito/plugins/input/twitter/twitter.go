@@ -150,9 +150,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		if v, ok := flowStates[source]; ok {
 			lastTime = v
 		} else {
-			lastTime = currentTime
+			lastTime = time.Unix(0, 0)
 		}
-		newLastTime := lastTime
 
 		// Try to fetch new tweets.
 		tweets, err := fetchTweets(p, source)
@@ -177,10 +176,10 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 		// Process fetched data in reverse order.
 		for i := start; i >= end; i-- {
-			item := (*tweets)[i]
-
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
+
+			item := (*tweets)[i]
 
 			itemTime, err = item.CreatedAtTime()
 			if err != nil {
@@ -189,11 +188,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 			// Process only new items.
 			if itemTime.Unix() > lastTime.Unix() || p.Force {
-				// Set last item time as a new checkpoint.
-				// Items may arrive disordered.
-				if itemTime.Unix() > newLastTime.Unix() {
-					newLastTime = itemTime
-				}
+				lastTime = itemTime
 
 				// Derive various data.
 				media := expandMedia(&item.Entities.Media)
@@ -223,7 +218,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			}
 		}
 
-		flowStates[source] = newLastTime
+		flowStates[source] = lastTime
 
 		log.WithFields(log.Fields{
 			"hash":   p.Hash,
@@ -232,7 +227,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.Name,
 			"type":   p.Type,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", newLastTime, len(*tweets)),
+			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(*tweets)),
 		}).Debug(core.LOG_PLUGIN_STAT)
 	}
 

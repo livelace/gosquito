@@ -126,9 +126,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		if v, ok := flowStates[source]; ok {
 			lastTime = v
 		} else {
-			lastTime = currentTime
+			lastTime = time.Unix(0, 0)
 		}
-		newLastTime := lastTime
 
 		// Try to fetch new articles.
 		feeds, err := fetchFeed(source, p.UserAgent, p.Timeout)
@@ -149,15 +148,14 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 		// Process fetched data.
 		for i := start; i <= end; i++ {
-			item := feeds.Items[i]
-
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
+
+			item := feeds.Items[i]
 
 			// Item's update time has higher priority over publishing time.
 			if item.UpdatedParsed != nil {
 				itemTime = *item.UpdatedParsed
-
 			} else {
 				if item.PublishedParsed != nil {
 					itemTime = *item.PublishedParsed
@@ -168,12 +166,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 			// Process only new items.
 			if itemTime.Unix() > lastTime.Unix() || p.Force {
-
-				// Set last item time as a new checkpoint.
-				// Items may arrive disordered.
-				if itemTime.Unix() > newLastTime.Unix() {
-					newLastTime = itemTime
-				}
+				lastTime = itemTime
 
 				temp = append(temp, &core.DataItem{
 					FLOW:       p.Flow,
@@ -195,7 +188,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			}
 		}
 
-		flowStates[source] = newLastTime
+		flowStates[source] = lastTime
 
 		log.WithFields(log.Fields{
 			"hash":   p.Hash,
@@ -204,7 +197,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.Name,
 			"type":   p.Type,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", newLastTime, len(feeds.Items)),
+			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(feeds.Items)),
 		}).Debug(core.LOG_PLUGIN_STAT)
 	}
 
