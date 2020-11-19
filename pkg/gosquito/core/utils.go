@@ -832,9 +832,11 @@ func UniqueSliceValues(s *[]string) []string {
 	m := make(map[string]bool, 0)
 
 	for _, v := range *s {
-		if _, ok := m[v]; !ok {
-			m[v] = true
-			temp = append(temp, v)
+		if v != "" {
+			if _, ok := m[v]; !ok {
+				m[v] = true
+				temp = append(temp, v)
+			}
 		}
 	}
 
