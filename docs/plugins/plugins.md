@@ -20,7 +20,7 @@
 | [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md) | Replace patterns in data.            |
 | [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)               | Remove duplicates from data.         |
 | [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)           | Interact with web pages, fetch data. |
-| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                 | Find HTML elements with [Xpath](https://en.wikipedia.org/wiki/XPath) |
+| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                 | Find HTML elements with [Xpath](https://en.wikipedia.org/wiki/XPath). |
 
 ### Output plugins:
 
