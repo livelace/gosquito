@@ -49,7 +49,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 			"type":   p.Type,
 			"id":     p.ID,
 			field:    message,
-		}).Debug(core.LOG_PLUGIN_STAT)
+		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
 	connectTimeout := time.Duration(p.ServerTimeout) * time.Second
@@ -145,7 +145,7 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 			"type":   p.Type,
 			"id":     p.ID,
 			"error":  msg,
-		}).Error(core.LOG_PLUGIN_STAT)
+		}).Error(core.LOG_PLUGIN_DATA)
 	}
 
 	// Connect to server.
@@ -289,7 +289,7 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 			"type":   p.Type,
 			"id":     p.ID,
 			"data":   fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir),
-		}).Debug(core.LOG_PLUGIN_STAT)
+		}).Debug(core.LOG_PLUGIN_DATA)
 
 		b.Output = append(b.Output, outputDir)
 	}
@@ -361,7 +361,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			"type":   p.Type,
 			"id":     p.ID,
 			"error":  msg,
-		}).Error(core.LOG_PLUGIN_STAT)
+		}).Error(core.LOG_PLUGIN_DATA)
 	}
 
 	// Gather input data from all data items into one flat slice.

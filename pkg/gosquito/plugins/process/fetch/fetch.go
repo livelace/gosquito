@@ -107,7 +107,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 						"id":     p.ID,
 						"alias":  p.Alias,
 						"data":   url,
-					}).Debug(core.LOG_PLUGIN_STAT)
+					}).Debug(core.LOG_PLUGIN_DATA)
 				} else {
 					log.WithFields(log.Fields{
 						"hash":   p.Hash,

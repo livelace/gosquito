@@ -37,12 +37,12 @@ const (
 	LOG_FLOW_READ         = "flow read"
 	LOG_FLOW_RECEIVE      = "receive data ..."
 	LOG_FLOW_SEND         = "send data ..."
-	LOG_FLOW_SKIP         = "--- flow skip"
+	LOG_FLOW_WARN         = "--- flow warn"
 	LOG_FLOW_START        = "--- flow start"
 	LOG_FLOW_STAT         = "flow stat"
 	LOG_FLOW_STOP         = "--- flow stop"
 	LOG_PLUGIN_INIT       = "plugin init"
-	LOG_PLUGIN_STAT       = "plugin stat"
+	LOG_PLUGIN_DATA       = "plugin data"
 	LOG_SET_VALUE         = "set value"
 
 	// -----------------------------------------------------------------------------------------------------------------

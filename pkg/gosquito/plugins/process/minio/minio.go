@@ -150,7 +150,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 								"id":     p.ID,
 								"alias":  p.Alias,
 								"data":   fmt.Sprintf("put: %s/%s/%s", p.Server, p.Bucket, object),
-							}).Debug(core.LOG_PLUGIN_STAT)
+							}).Debug(core.LOG_PLUGIN_DATA)
 							ro.Set(reflect.Append(ro, reflect.ValueOf(object)))
 						}
 					}

@@ -141,7 +141,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 						"alias":  p.Alias,
 						"data": fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
 							ri.Index(i).String(), p.Depth, expandedUrl),
-					}).Debug(core.LOG_PLUGIN_STAT)
+					}).Debug(core.LOG_PLUGIN_DATA)
 				}
 			}
 		}

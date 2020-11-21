@@ -126,8 +126,9 @@ type Plugin struct {
 }
 
 func (p *Plugin) Recv() ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
 	currentTime := time.Now().UTC()
+	failedSources := make([]string, 0)
+	temp := make([]*core.DataItem, 0)
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -156,7 +157,19 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		// Try to fetch new tweets.
 		tweets, err := fetchTweets(p, source)
 		if err != nil {
-			return temp, err
+			failedSources = append(failedSources, source)
+
+			log.WithFields(log.Fields{
+				"hash":   p.Hash,
+				"flow":   p.Flow,
+				"file":   p.File,
+				"plugin": p.Name,
+				"type":   p.Type,
+				"source": source,
+				"error":  err,
+			}).Error(core.LOG_PLUGIN_DATA)
+
+			continue
 		}
 
 		// Grab only specific amount of tweets from
@@ -228,7 +241,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"type":   p.Type,
 			"source": source,
 			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(*tweets)),
-		}).Debug(core.LOG_PLUGIN_STAT)
+		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
 	// Save updated flow states.
@@ -268,7 +281,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 						"data": fmt.Sprintf(
 							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
 							cmd, args, output, err),
-					}).Debug(core.LOG_PLUGIN_STAT)
+					}).Debug(core.LOG_PLUGIN_DATA)
 				}
 			}
 		}
@@ -277,6 +290,11 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 	// Inform about expiration.
 	if sourcesExpired {
 		return temp, core.ERROR_FLOW_EXPIRE
+	}
+
+	// Inform about sources failures.
+	if len(failedSources) > 0 {
+		return temp, core.ERROR_FLOW_SOURCE_FAIL
 	}
 
 	return temp, nil

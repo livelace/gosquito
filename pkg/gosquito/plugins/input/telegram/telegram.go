@@ -358,7 +358,7 @@ func receiveMessages(p *Plugin) {
 						"plugin": p.Name,
 						"type":   p.Type,
 						"data":   fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId),
-					}).Debug(core.LOG_PLUGIN_STAT)
+					}).Debug(core.LOG_PLUGIN_DATA)
 				}
 			}
 
@@ -482,7 +482,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"type":   p.Type,
 			"source": source,
 			"data":   fmt.Sprintf("last update: %v, fetched data: %d", flowStates[source], sourceStat[source]),
-		}).Debug(core.LOG_PLUGIN_STAT)
+		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
 	// Save updated flow states.
@@ -522,7 +522,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 						"data": fmt.Sprintf(
 							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
 							cmd, args, output, err),
-					}).Debug(core.LOG_PLUGIN_STAT)
+					}).Debug(core.LOG_PLUGIN_DATA)
 				}
 			}
 		}

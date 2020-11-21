@@ -456,14 +456,14 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get data from "input" plugin.
 
-	logFlowSkip := func(err error) {
+	logFlowWarn := func(err error) {
 		log.WithFields(log.Fields{
 			"hash":   flow.Hash,
 			"flow":   flow.Name,
 			"plugin": flow.InputPlugin.GetName(),
 			"type":   flow.InputPlugin.GetType(),
 			"error":  err,
-		}).Warn(core.LOG_FLOW_SKIP)
+		}).Warn(core.LOG_FLOW_WARN)
 	}
 
 	logFlowStat := func(msg interface{}) {
@@ -477,6 +477,13 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 		}).Debug(core.LOG_FLOW_STAT)
 	}
 
+	logFlowStop := func() {
+		log.WithFields(log.Fields{
+			"hash": flow.Hash,
+			"flow": flow.Name,
+		}).Info(core.LOG_FLOW_STOP)
+	}
+
 	log.WithFields(log.Fields{
 		"hash":   flow.Hash,
 		"flow":   flow.Name,
@@ -488,25 +495,28 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	inputData, err := flow.InputPlugin.Recv()
 	logFlowStat(len(inputData))
 
-	// Skip flow if we have problems with data receiving.
-	// Update metrics.
+	// Process data if some of flow sources are expired/failed.
+	// Skip flow if we have other problems.
 	if err == core.ERROR_FLOW_EXPIRE {
 		atomic.AddInt32(&flow.MetricExpire, 1)
-		logFlowSkip(err)
-		cleanFlowTemp()
+		logFlowWarn(err)
+
+	} else if err == core.ERROR_FLOW_SOURCE_FAIL {
+		atomic.AddInt32(&flow.MetricError, 1)
+		logFlowWarn(err)
 
 	} else if err != nil {
 		atomic.AddInt32(&flow.MetricError, 1)
-		logFlowSkip(err)
+		logFlowWarn(err)
 		cleanFlowTemp()
+		logFlowStop()
 		return
 	}
 
 	// Skip flow if we don't have new data.
-	// Update metrics.
 	if len(inputData) == 0 {
 		atomic.AddInt32(&flow.MetricNoData, 1)
-		logFlowSkip(core.ERROR_NO_NEW_DATA)
+		logFlowWarn(core.ERROR_NO_NEW_DATA)
 		cleanFlowTemp()
 		return
 	} else {
@@ -517,7 +527,6 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// Process received data with "process" plugins.
 
 	if len(flow.ProcessPlugins) > 0 {
-
 		log.WithFields(log.Fields{
 			"hash":   flow.Hash,
 			"flow":   flow.Name,
@@ -566,7 +575,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 					"id":     plugin.GetId(),
 					"alias":  plugin.GetAlias(),
 					"error":  err,
-				}).Warn(core.LOG_FLOW_SKIP)
+				}).Warn(core.LOG_FLOW_WARN)
 
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
@@ -594,14 +603,14 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 	if flow.OutputPlugin != nil {
 
-		logFlowSkip = func(err error) {
+		logFlowWarn = func(err error) {
 			log.WithFields(log.Fields{
 				"hash":   flow.Hash,
 				"flow":   flow.Name,
 				"plugin": flow.OutputPlugin.GetName(),
 				"type":   flow.OutputPlugin.GetType(),
 				"error":  err,
-			}).Warn(core.LOG_FLOW_SKIP)
+			}).Warn(core.LOG_FLOW_WARN)
 		}
 
 		logFlowStat = func(msg interface{}) {
@@ -639,7 +648,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 					if err != nil {
 						atomic.AddInt32(&flow.MetricError, 1)
-						logFlowSkip(err)
+						logFlowWarn(err)
 						cleanFlowTemp()
 						return
 
@@ -659,7 +668,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 			if err != nil {
 				atomic.AddInt32(&flow.MetricError, 1)
-				logFlowSkip(err)
+				logFlowWarn(err)
 				cleanFlowTemp()
 				return
 
@@ -681,8 +690,5 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Fin.
 
-	log.WithFields(log.Fields{
-		"hash": flow.Hash,
-		"flow": flow.Name,
-	}).Info(core.LOG_FLOW_STOP)
+	logFlowStop()
 }
