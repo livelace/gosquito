@@ -106,7 +106,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 						"type":   p.Type,
 						"id":     p.ID,
 						"alias":  p.Alias,
-						"data":   url,
+						"data":   fmt.Sprintf("%s -> %s", url, savePath),
 					}).Debug(core.LOG_PLUGIN_DATA)
 				} else {
 					log.WithFields(log.Fields{
@@ -282,7 +282,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// input and output must have equal size.
 	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
 	} else {
 		core.SliceStringToUpper(&plugin.Input)
 		core.SliceStringToUpper(&plugin.Output)

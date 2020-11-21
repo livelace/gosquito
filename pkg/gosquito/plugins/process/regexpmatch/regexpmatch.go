@@ -281,7 +281,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if availableParams["output"] == 0 {
 		if minLength != maxLength {
-			return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Regexp)
+			return &Plugin{}, fmt.Errorf(
+				"%s %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Regexp)
 		}
 
 		if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
@@ -289,7 +290,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 
 	} else if minLength != maxLength {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Regexp)
+		return &Plugin{}, fmt.Errorf(
+			"%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Regexp)
 
 	} else {
 		core.SliceStringToUpper(&plugin.Input)

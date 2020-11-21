@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DEFAULT_FIND_ALL = true
+	DEFAULT_FIND_ALL = false
 )
 
 func findPatternsAndReturnSlice(regexps []*regexp.Regexp, text string) []string {
@@ -36,8 +36,8 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	Input   []string
 	FindAll bool
+	Input   []string
 	Output  []string
 	Regexp  [][]*regexp.Regexp
 }
@@ -266,7 +266,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	if minLength != maxLength {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, len(plugin.Regexp))
+		return &Plugin{}, fmt.Errorf(
+			"%s: %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, len(plugin.Regexp))
 	} else {
 		core.SliceStringToUpper(&plugin.Input)
 		core.SliceStringToUpper(&plugin.Output)

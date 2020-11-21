@@ -280,6 +280,28 @@ func ExtractTemplateIntoString(data *DataItem, t *tmpl.Template) (string, error)
 	return b.String(), nil
 }
 
+func ExtractXpathsIntoArrays(config *viper.Viper, xpaths []string) [][]string {
+	temp := make([][]string, 0)
+
+	for _, s := range xpaths {
+		currentXpaths := make([]string, 0)
+		templateXpaths := config.GetStringSlice(fmt.Sprintf("%s.xpath", s))
+
+		if len(templateXpaths) > 0 {
+			for _, x := range templateXpaths {
+				currentXpaths = append(currentXpaths, x)
+
+			}
+		} else {
+			currentXpaths = append(currentXpaths, s)
+		}
+
+		temp = append(temp, currentXpaths)
+	}
+
+	return temp
+}
+
 func ExecWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(timeout)*time.Second)

@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/Masterminds/squirrel v1.4.0 // indirect
+	github.com/antchfx/htmlquery v1.2.3
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/dghubble/go-twitter v0.0.0-20200725221434-4bc8ad7ad1b4
@@ -35,6 +36,7 @@ require (
 	github.com/xhit/go-simple-mail/v2 v2.5.1
 	github.com/zelenin/go-tdlib v0.2.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.23.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect

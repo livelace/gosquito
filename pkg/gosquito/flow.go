@@ -21,6 +21,7 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpreplace"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/unique"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/webchela"
+	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/xpath"
 	log "github.com/livelace/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -346,6 +347,8 @@ func getFlow(config *viper.Viper) []*core.Flow {
 				plugin, err = unique.Init(&processPluginConfig)
 			case "webchela":
 				plugin, err = webchela.Init(&processPluginConfig)
+			case "xpath":
+				plugin, err = xpath.Init(&processPluginConfig)
 			default:
 				err = core.ERROR_PLUGIN_UNKNOWN
 			}

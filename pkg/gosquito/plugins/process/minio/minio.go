@@ -395,7 +395,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// input and output must have equal size.
 	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf(core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
 
 	} else if plugin.Action != "put" {
 		return &Plugin{}, fmt.Errorf(ERROR_ACTION_UNKNOWN.Error(), plugin.Action)
