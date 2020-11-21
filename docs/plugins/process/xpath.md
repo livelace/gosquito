@@ -38,7 +38,6 @@ flow:
       alias: "search urls"
       plugin: "regexpfind"
       params:
-        include: false
         input:  ["rss.link"]
         output: ["data.array0"]
         regexp: ["regexps.urls"]
@@ -47,7 +46,6 @@ flow:
       alias: "fetch pages"
       plugin: "fetch"
       params:
-        include: false
         input:  ["data.array0"]
         output: ["data.array1"]
 
@@ -55,10 +53,15 @@ flow:
       alias: "xpath href"
       plugin: "xpath"
       params:
-        include: false
         input:  ["data.array1"]
         output: ["data.array2"]
         xpath:  ["templates.xpath.hh.ru"]
+
+    - id: 3
+      alias: "echo data"
+      plugin: "echo"
+      params:
+        input:  ["data.array2"]
 ```
 
 ### Config sample:
