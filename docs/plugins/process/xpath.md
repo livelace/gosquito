@@ -31,7 +31,7 @@ flow:
     params:
       input: ["https://spb.hh.ru/search/vacancy/rss?area=1&clusters=true&enable_snippets=true&search_period=1&specialization=1&text=."]
       force: true
-      force_count: 1
+      force_count: 10
 
   process:
     - id: 0
