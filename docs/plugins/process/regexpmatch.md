@@ -6,20 +6,20 @@ data.
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example |
-|:--------|:--------:|:-----:|:-------:|:-------:|
-| include |    -     | bool  |  true   |  false  |
-| require |    -     | array |   []    | [1, 2]  |
+| Param   | Required | Type  | Template | Default | Example |
+|:--------|:--------:|:-----:|:--------:|:-------:|:-------:|
+| include |    -     | bool  |    -     |  true   |  false  |
+| require |    -     | array |    -     |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |     Example      | Description                                                                                                                |
-|:-----------|:--------:|:-----:|:-------:|:----------------:|:---------------------------------------------------------------------------------------------------------------------------|
-| **input**  |    +     | array |   []    | ["twitter.text"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                        |
-| match_all  |    -     | bool  |  false  |       true       | Patterns must be matched in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
-| output     |    -     | array |   []    |  ["data.text0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                           |
-| **regexp** |    +     | array |   []    |    ["Россия"]    | List of config templates/raw regexps for matching.                                                                         |
+| Param      | Required | Type  | Template | Default |     Example      | Description                                                                                                                |
+|:-----------|:--------:|:-----:|:--------:|:-------:|:----------------:|:---------------------------------------------------------------------------------------------------------------------------|
+| **input**  |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                        |
+| match_all  |    -     | bool  |    -     |  false  |       true       | Patterns must be matched in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
+| output     |    -     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                           |
+| **regexp** |    +     | array |    +     |   []    |    ["Россия"]    | List of config templates/raw regexps for matching.                                                                         |
 
 
 ### Flow sample:

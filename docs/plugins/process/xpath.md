@@ -6,19 +6,19 @@ data.
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example |
-|:--------|:--------:|:-----:|:-------:|:-------:|
-| include |    -     | bool  |  true   |  false  |
-| require |    -     | array |   []    | [1, 2]  |
+| Param   | Required | Type  | Templates | Default | Example |
+|:--------|:--------:|:-----:|:---------:|:-------:|:-------:|
+| include |    -     | bool  |     -     |  true   |  false  |
+| require |    -     | array |     -     |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |     Example     | Description                                                                                         |
-|:-----------|:--------:|:-----:|:-------:|:---------------:|:----------------------------------------------------------------------------------------------------|
-| **input**  |    +     | array |   []    | ["data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data. |
-| **output** |    +     | array |   []    | ["data.array0"] | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
-| **xpath**  |    +     | array |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                       |
+| Param      | Required | Type  | Template | Default |     Example     | Description                                                                                         |
+|:-----------|:--------:|:-----:|:--------:|:-------:|:---------------:|:----------------------------------------------------------------------------------------------------|
+| **input**  |    +     | array |    -     |   []    | ["data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data. |
+| **output** |    +     | array |    -     |   []    | ["data.array0"] | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
+| **xpath**  |    +     | array |    +     |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                       |
 
 ### Flow sample:
 

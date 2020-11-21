@@ -1,24 +1,25 @@
 ### Description:
 
-**regexpfind** process plugin is intended for finding patterns inside data.
+**regexpfind** process plugin is intended for finding patterns inside
+data.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example |
-|:--------|:--------:|:-----:|:-------:|:-------:|
-| include |    -     | bool  |  true   |  false  |
-| require |    -     | array |   []    | [1, 2]  |
+| Param   | Required | Type  | Template | Default | Example |
+|:--------|:--------:|:-----:|:--------:|:-------:|:-------:|
+| include |    -     | bool  |    -     |  true   |  false  |
+| require |    -     | array |    -     |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |         Example          | Description                                                                                                              |
-|:-----------|:--------:|:-----:|:-------:|:------------------------:|:-------------------------------------------------------------------------------------------------------------------------|
-| find_all   |    -     | bool  |  false  |           true           | Patterns must be found in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
-| **input**  |    +     | array |   []    |     ["twitter.urls"]     | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                      |
-| **output** |    +     | array |   []    |     ["data.array0"]      | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                         |
-| **regexp** |    +     | array |   []    | ["http://go.tass.ru/.*"] | List of config templates/raw regexps for searching.                                                                      |
+| Param      | Required | Type  | Template | Default |         Example          | Description                                                                                                              |
+|:-----------|:--------:|:-----:|:--------:|:-------:|:------------------------:|:-------------------------------------------------------------------------------------------------------------------------|
+| find_all   |    -     | bool  |    -     |  false  |           true           | Patterns must be found in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
+| **input**  |    +     | array |    -     |   []    |     ["twitter.urls"]     | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                      |
+| **output** |    +     | array |    -     |   []    |     ["data.array0"]      | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                         |
+| **regexp** |    +     | array |    +     |   []    | ["http://go.tass.ru/.*"] | List of config templates/raw regexps for searching.                                                                      |
 
 ### Flow sample:
 
