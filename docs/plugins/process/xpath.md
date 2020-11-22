@@ -44,7 +44,7 @@ flow:
         output: ["data.array0"]
 
     - id: 1
-      alias: "xpath href"
+      alias: "xpath description and tags"
       plugin: "xpath"
       params:
         input:  ["data.array0"]
