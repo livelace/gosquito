@@ -77,7 +77,6 @@ flow:
 
 ```toml
 [creds.slack.default]
-url = "https://host.example.com"
 token = "<INTERNAL_APP_TOKEN>"
 
 [creds.twitter.default]
