@@ -58,7 +58,7 @@ flow:
       plugin: "echo"
       params:
         require: [0]
-        input:  ["data.array1"]
+        input:  ["data.array0", "data.array1"]
 ```
 
 ### Config sample:

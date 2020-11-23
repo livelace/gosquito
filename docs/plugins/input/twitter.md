@@ -63,7 +63,7 @@ flow:
       params:
         input:  ["twitter.text"]
         output: ["data.text0"]
-        regexp: ["regexps.urls", "\n"]
+        regexp: ["regexps.urls"]
         replacement: [ "" ]
 
     - id: 1
@@ -73,7 +73,7 @@ flow:
         include: false
         input:  ["twitter.urls"]
         output: ["data.array0"]
-        regexp: ["https://ria.ru/.*", "https://rsport.ria.ru/.*"]
+        regexp: ["https://ria.ru/.*"]
 
     - id: 2
       alias: "fetch media"

@@ -113,10 +113,10 @@ server = "mail.example.com"
 from = "gosquito@example.com"
 output = ["user@example.com"]
 
-subject = "{{ .TELEGRAM.TEXT }}"
+subject = "{{.TELEGRAM.TEXT}}"
 
 body = """
-    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
+    <div align="right"><b>{{.FLOW}}&nbsp;&nbsp;&nbsp;{{.TIMEFORMAT}}</b></div>
     {{ .DATA.TEXT0 }}<br><br>
     {{ .TELEGRAM.URL }}
     """

@@ -28,7 +28,7 @@ flow:
     plugin: "twitter"
     params:
       cred: "creds.twitter.default"
-      input: ["rianru", "AP"]
+      input: ["AP"]
       force: true
       force_count: 10
 
@@ -37,13 +37,13 @@ flow:
       plugin: "regexpmatch"
       params:
         input: ["twitter.text"]
-        regexp: ["а", "a"]
+        regexp: ["a"]
 
     - id: 1
       plugin: "regexpmatch"
       params:
         input: ["twitter.text"]
-        regexp: ["с", "s"]
+        regexp: ["c"]
 
     - id: 2
       alias: "dedup tweets"

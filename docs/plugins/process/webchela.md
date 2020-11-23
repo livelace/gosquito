@@ -59,7 +59,7 @@ flow:
         include: false
         input:  ["twitter.urls"]
         output: ["data.array0"]
-        regexp: ["https://ria.ru/.*", "https://rsport.ria.ru/.*"]
+        regexp: ["https://ria.ru/.*"]
 
     - id: 1
       alias: "grab pages"
