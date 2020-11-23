@@ -8,19 +8,19 @@
 
 ### Process plugins:
 
-| Plugin                                                                                                  | Description                                                                           |
-|:--------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------|
-| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | Deduplicate [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md. |
-| [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | Echoing processing data.                                                              |
-| [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)         | Expand short urls.                                                                    |
-| [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                 | Fetch remote data.                                                                    |
-| [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                 | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                     |
-| [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)       | Find patters in data.                                                                 |
-| [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)     | Match data by patterns.                                                               |
-| [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                                             |
-| [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)               | Remove duplicates from data.                                                          |
-| [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)           | Interact with web pages, fetch data.                                                  |
-| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                 | Find HTML elements with [Xpath](https://en.wikipedia.org/wiki/XPath).                 |
+| Plugin                                                                                                  | Description                                                                            |
+|:--------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------|
+| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | Deduplicate [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md). |
+| [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | Echoing processing data.                                                               |
+| [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)         | Expand short urls.                                                                     |
+| [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                 | Fetch remote data.                                                                     |
+| [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                 | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                      |
+| [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)       | Find patters in data.                                                                  |
+| [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)     | Match data by patterns.                                                                |
+| [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                                              |
+| [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)               | Remove duplicates from data.                                                           |
+| [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)           | Interact with web pages, fetch data.                                                   |
+| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                 | Find HTML elements with [Xpath](https://en.wikipedia.org/wiki/XPath).                  |
 
 ### Output plugins:
 
