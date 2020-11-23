@@ -28,5 +28,6 @@
 |:-------------------------------------------------------------------------------------------------|:-----------------------------------------------------|
 | [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)           | Send data to Kafka topics.                           |
 | [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md) | Send data to Mattermost channels/users.              |
+| [slack](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/slack.md) | Send data to Slack channels/users.              |
 | [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)             | Send data as emails with custom attachments/headers. |
 

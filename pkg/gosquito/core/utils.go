@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
@@ -63,6 +64,14 @@ func CreateDirIfNotExist(d string) error {
 	}
 
 	return nil
+}
+
+func DetectFileType(path string) (*mimetype.MIME, error) {
+	if IsFile(path, "") {
+		return mimetype.DetectFile(path)
+	} else {
+		return &mimetype.MIME{}, fmt.Errorf("not a file: %v", path)
+	}
 }
 
 func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) []string {
@@ -828,6 +837,23 @@ func ShrinkString(s *string, l int) string {
 	return *s
 }
 
+func UniqueSliceValues(s *[]string) []string {
+	temp := make([]string, 0)
+
+	m := make(map[string]bool, 0)
+
+	for _, v := range *s {
+		if v != "" {
+			if _, ok := m[v]; !ok {
+				m[v] = true
+				temp = append(temp, v)
+			}
+		}
+	}
+
+	return temp
+}
+
 func WriteStringToFile(path string, file string, s string) error {
 	fp := filepath.Join(path, file)
 
@@ -846,21 +872,4 @@ func WriteStringToFile(path string, file string, s string) error {
 	}
 
 	return nil
-}
-
-func UniqueSliceValues(s *[]string) []string {
-	temp := make([]string, 0)
-
-	m := make(map[string]bool, 0)
-
-	for _, v := range *s {
-		if v != "" {
-			if _, ok := m[v]; !ok {
-				m[v] = true
-				temp = append(temp, v)
-			}
-		}
-	}
-
-	return temp
 }

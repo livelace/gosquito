@@ -1,18 +1,13 @@
-package mattermostOut
+package slackOut
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	mattermost "github.com/mattermost/mattermost-server/model"
-	"io"
-	"net/http"
-	"os"
+	"github.com/slack-go/slack"
 	"path/filepath"
 	tmpl "text/template"
-	"time"
 )
 
 const (
@@ -27,62 +22,6 @@ var (
 	ERROR_SEND_FAIL         = errors.New("sending finished with errors")
 )
 
-func uploadFile(p *Plugin, channel string, file string) (string, error) {
-	// Form file name.
-	fileExtension := ".unknown"
-	mime, err := core.DetectFileType(file)
-	if err == nil {
-		fileExtension = mime.Extension()
-	}
-
-	fileName := fmt.Sprintf("%s%s", filepath.Base(file), fileExtension)
-
-	// Read file.
-	f, err := os.Open(file)
-	if err != nil {
-		return "", err
-	}
-
-	buf := bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, f)
-	if err != nil {
-		return "", err
-	}
-	data := buf.Bytes()
-
-	// Upload file.
-	fileUploadResponse, response := p.Api.UploadFile(data, channel, fileName)
-	if response.Error != nil {
-		return "", response.Error
-	}
-
-	_ = f.Close()
-
-	return fileUploadResponse.FileInfos[0].Id, nil
-}
-
-func uploadFiles(p *Plugin, channel string, files *[]string) []string {
-	filesId := make([]string, 0)
-
-	for _, file := range *files {
-		if id, err := uploadFile(p, channel, file); err == nil {
-			filesId = append(filesId, id)
-		} else {
-			log.WithFields(log.Fields{
-				"hash":   p.Hash,
-				"flow":   p.Flow,
-				"file":   p.File,
-				"plugin": p.Name,
-				"type":   p.Type,
-				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
-			}).Error(core.LOG_PLUGIN_DATA)
-			continue
-		}
-	}
-
-	return filesId
-}
-
 type Plugin struct {
 	Hash string
 	Flow string
@@ -91,18 +30,15 @@ type Plugin struct {
 	Name string
 	Type string
 
-	Api  *mattermost.Client4
-	User *mattermost.User
+	Api *slack.Client
 
 	Channels        []string
 	Files           []string
 	Message         string
 	MessageTemplate *tmpl.Template
 	Output          []string
-	Password        string
-	Team            string
 	Timeout         int
-	Username        string
+	Token           string
 	Users           []string
 	URL             string
 
@@ -115,6 +51,37 @@ type Plugin struct {
 	TitleLink       []string
 	Text            string
 	TextTemplate    *tmpl.Template
+}
+
+func uploadFile(p *Plugin, channel string, file string) error {
+	mime, err := core.DetectFileType(file)
+	if err != nil {
+		return err
+	}
+
+	_, err = p.Api.UploadFile(slack.FileUploadParameters{
+		Channels: []string{channel},
+		File:     file,
+		Filename: fmt.Sprintf("%s%s", filepath.Base(file), mime.Extension()),
+	})
+
+	return err
+}
+
+func uploadFiles(p *Plugin, channel string, files *[]string) {
+	for _, file := range *files {
+		if err := uploadFile(p, channel, file); err != nil {
+			log.WithFields(log.Fields{
+				"hash":   p.Hash,
+				"flow":   p.Flow,
+				"file":   p.File,
+				"plugin": p.Name,
+				"type":   p.Type,
+				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
+			}).Error(core.LOG_PLUGIN_DATA)
+			continue
+		}
+	}
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -132,21 +99,23 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
 
-	// Process and send data.
+	// process and send data.
 	for _, item := range data {
+
 		// files.
 		files := make([]string, 0)
 		for _, v := range p.Files {
 			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
 		}
 
-		// attachments.
+		// message text.
 		message, err := core.ExtractTemplateIntoString(item, p.MessageTemplate)
 		if err != nil {
 			return err
 		}
 
-		props := make(map[string]interface{}, 0)
+		// attachments.
+		attachments := slack.Attachment{}
 
 		if p.Attachments {
 			color := p.Color
@@ -168,65 +137,58 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 			titleLink := core.ExtractDataFieldIntoString(item, p.TitleLink)
 
-			props["attachments"] = []interface{}{
-				map[string]string{
-					"color":      color,
-					"pretext":    pretext,
-					"text":       text,
-					"title":      title,
-					"title_link": titleLink,
-				},
-			}
+			attachments.Color = color
+			attachments.Pretext = pretext
+			attachments.Text = text
+			attachments.Title = title
+			attachments.TitleLink = titleLink
 		}
 
 		// Send to channels.
 		for _, channel := range p.Channels {
-			filesId := uploadFiles(p, channel, &files)
+			_, _, err := p.Api.PostMessage(
+				channel,
+				slack.MsgOptionAsUser(true),
+				slack.MsgOptionAttachments(attachments),
+				slack.MsgOptionText(message, false),
+			)
 
-			post := mattermost.Post{
-				UserId:    p.User.Id,
-				ChannelId: channel,
-				Message:   message,
-				FileIds:   filesId,
-				Props:     props,
-			}
-
-			_, res := p.Api.CreatePost(&post)
-			if res.Error != nil {
-				logError(fmt.Sprintf("cannot send message to channel: %s, %v", channel, res.Error))
+			if err != nil {
+				logError(fmt.Sprintf("cannot send message to channel: %s, %v", channel, err))
 				sendFail = true
 				continue
 			}
+
+			uploadFiles(p, channel, &files)
 		}
 
 		// Send to users.
 		for _, user := range p.Users {
-			ch, res := p.Api.CreateDirectChannel(p.User.Id, user)
-			if res.Error != nil {
-				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, res.Error))
+			ch, _, _, err := p.Api.OpenConversation(&slack.OpenConversationParameters{Users: []string{user}})
+			if err != nil {
+				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, err))
 				sendFail = true
 				continue
 			}
 
-			filesId := uploadFiles(p, ch.Id, &files)
+			_, _, err = p.Api.PostMessage(
+				ch.ID,
+				slack.MsgOptionAsUser(true),
+				slack.MsgOptionAttachments(attachments),
+				slack.MsgOptionText(message, false),
+			)
 
-			post := mattermost.Post{
-				UserId:    p.User.Id,
-				ChannelId: ch.Id,
-				Message:   message,
-				FileIds:   filesId,
-				Props:     props,
-			}
-
-			_, res = p.Api.CreatePost(&post)
-			if res.Error != nil {
-				logError(fmt.Sprintf("cannot send message to user: %s, %v", user, res.Error))
+			if err != nil {
+				logError(fmt.Sprintf("cannot send message to user: %s, %v", user, err))
 				sendFail = true
 				continue
 			}
+
+			uploadFiles(p, ch.ID, &files)
 		}
 	}
 
+	// Inform about sending failures.
 	if sendFail {
 		return ERROR_SEND_FAIL
 	}
@@ -273,13 +235,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"template": -1,
 		"timeout":  -1,
 
-		"files":    -1,
-		"message":  -1,
-		"output":   1,
-		"password": 1,
-		"team":     1,
-		"url":      1,
-		"username": 1,
+		"files":   -1,
+		"message": -1,
+		"output":  1,
+		"token":   1,
 
 		"attachments": -1,
 		"color":       -1,
@@ -309,46 +268,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
 
-	// username.
-	setUsername := func(p interface{}) {
+	// token.
+	setToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
-			availableParams["username"] = 0
-			plugin.Username = v
+			availableParams["token"] = 0
+			plugin.Token = v
 		}
 	}
-	setUsername(pluginConfig.Config.GetString(fmt.Sprintf("%s.username", cred)))
-	setUsername((*pluginConfig.Params)["username"])
-
-	// password.
-	setPassword := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["password"] = 0
-			plugin.Password = v
-		}
-	}
-	setPassword(pluginConfig.Config.GetString(fmt.Sprintf("%s.password", cred)))
-	setPassword((*pluginConfig.Params)["password"])
-
-	// team.
-	setTeam := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["team"] = 0
-			plugin.Team = v
-		}
-	}
-	setTeam(pluginConfig.Config.GetString(fmt.Sprintf("%s.team", cred)))
-	setTeam((*pluginConfig.Params)["team"])
-
-	// url.
-	setURL := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["url"] = 0
-			plugin.URL = v
-		}
-	}
-	setURL(pluginConfig.Config.GetString(fmt.Sprintf("%s.url", cred)))
-	setURL((*pluginConfig.Params)["url"])
-	showParam("url", plugin.URL)
+	setToken(pluginConfig.Config.GetString(fmt.Sprintf("%s.token", cred)))
+	setToken((*pluginConfig.Params)["token"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -503,51 +431,59 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Mattermost.
+	// Slack.
 
-	// Login.
-	plugin.Api = mattermost.NewAPIv4Client(plugin.URL)
-	plugin.Api.HttpClient = &http.Client{
-		Timeout: time.Duration(plugin.Timeout) * time.Second,
-	}
-
-	user, res := plugin.Api.Login(plugin.Username, plugin.Password)
-	if res.Error != nil {
-		return &Plugin{}, res.Error
-	}
-	plugin.User = user
-
-	// Team.
-	team, res := plugin.Api.GetTeamByName(plugin.Team, "")
-	if res.Error != nil {
-		return &Plugin{}, res.Error
-	}
-
-	// Resolve channels ids.
-	channelsId := make([]string, 0)
-	for _, channel := range plugin.Channels {
-		ch, res := plugin.Api.GetChannelByName(channel, team.Id, "")
-		if res.Error == nil {
-			channelsId = append(channelsId, ch.Id)
-		} else {
-			return &Plugin{}, fmt.Errorf(ERROR_CHANNEL_NOT_FOUND.Error(), channel)
-		}
-	}
-
-	plugin.Channels = channelsId
+	plugin.Api = slack.New(plugin.Token)
 
 	// Resolve users ids.
+	workspaceUsers, err := plugin.Api.GetUsers()
+	if err != nil {
+		return &Plugin{}, err
+	}
+
 	usersId := make([]string, 0)
 	for _, user := range plugin.Users {
-		u, res := plugin.Api.GetUserByUsername(user, "")
-		if res.Error == nil {
-			usersId = append(usersId, u.Id)
-		} else {
+		found := false
+
+		for _, u := range workspaceUsers {
+			if user == u.Name || user == u.ID {
+				usersId = append(usersId, u.ID)
+				found = true
+				break
+			}
+		}
+
+		if !found {
 			return &Plugin{}, fmt.Errorf(ERROR_USER_NOT_FOUND.Error(), user)
 		}
 	}
 
 	plugin.Users = usersId
+
+	// Resolve channels ids.
+	workspaceChannels, _, err := plugin.Api.GetConversations(&slack.GetConversationsParameters{Limit: 100})
+	if err != nil {
+		return &Plugin{}, err
+	}
+
+	channelsId := make([]string, 0)
+	for _, channel := range plugin.Channels {
+		found := false
+
+		for _, c := range workspaceChannels {
+			if channel == c.Name || channel == c.ID {
+				channelsId = append(channelsId, c.ID)
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return &Plugin{}, fmt.Errorf(ERROR_CHANNEL_NOT_FOUND.Error(), channel)
+		}
+	}
+
+	plugin.Channels = channelsId
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.

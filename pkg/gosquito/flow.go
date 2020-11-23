@@ -9,6 +9,7 @@ import (
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
 	kafkaOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/kafka"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
+	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
 	smtpOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/smtp"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dedup"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dirname"
@@ -393,6 +394,8 @@ func getFlow(config *viper.Viper) []*core.Flow {
 				outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
 			case "mattermost":
 				outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
+			case "slack":
+				outputPlugin, err = slackOut.Init(&outputPluginConfig)
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
 			default:
