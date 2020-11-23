@@ -1,7 +1,7 @@
 ### Description:
 
-**telegram** input plugin is intended for data gathering from Telegram
-chats. This plugin uses
+**telegram** input plugin is intended for data gathering from
+[Telegram](https://telegram.org/) chats. This plugin uses
 [TDLib client API](https://core.telegram.org/tdlib), not
 [Telegram Bot API](https://core.telegram.org/bots/api).  
 Right now plugin supports only
@@ -46,7 +46,7 @@ type TelegramData struct {
 |:--------------|:--------:|:------:|:----:|:--------:|:-------:|:----------------:|:-----------------------------------------------------------------------------------------------------------|
 | **api_id**    |    +     | string |  +   |    -     |   ""    |        ""        | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | **api_hash**  |    +     | string |  +   |    -     |   ""    |        ""        | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| file_max_size |    -     |  size  |  -   |    +     |  "10m"  |       "1g"       | Maximum file size for download.                                                                         |
+| file_max_size |    -     |  size  |  -   |    +     |  "10m"  |       "1g"       | Maximum file size for download.                                                                            |
 | **input**     |    +     | array  |  -   |    +     |   []    | ["breakingmash"] | List of Telegram chats.                                                                                    |
 | log_level     |    -     |  int   |  -   |    +     |    0    |        90        | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 

@@ -1,7 +1,7 @@
 ### Description:
 
-**twitter** input plugin is intended for data gathering from Twitter
-channels.
+**twitter** input plugin is intended for data gathering from
+[Twitter](https://twitter.com/) channels.
 
 ### Data structure:
 
@@ -120,6 +120,5 @@ body = """
 
 attachments = ["data.array1"]
 ```
-
 
 
