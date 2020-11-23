@@ -10,7 +10,7 @@
 
 | Plugin                                                                                                  | Description                                                                            |
 |:--------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------|
-| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | Deduplicate [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md)s. |
+| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                 | Deduplicate [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md)'s. |
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                   | Echoing processing data.                                                               |
 | [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)         | Expand short urls.                                                                     |
 | [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                 | Fetch remote data.                                                                     |
