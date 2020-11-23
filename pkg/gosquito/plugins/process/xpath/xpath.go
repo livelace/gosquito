@@ -11,7 +11,10 @@ import (
 )
 
 const (
-	DEFAULT_FIND_ALL = false
+	DEFAULT_FIND_ALL        = false
+	DEFAULT_XPATH_HTML      = true
+	DEFAULT_XPATH_HTML_SELF = true
+	DEFAULT_XPATH_SEPARATOR = "\n"
 )
 
 type Plugin struct {
@@ -28,10 +31,13 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	FindAll bool
-	Input   []string
-	Output  []string
-	Xpath   [][]string
+	FindAll        bool
+	Input          []string
+	Output         []string
+	Xpath          [][]string
+	XpathHtml      bool
+	XpathHtmlSelf  bool
+	XpathSeparator string
 }
 
 func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
@@ -67,7 +73,12 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 
 			if err == nil {
 				for _, node := range nodes {
-					temp += fmt.Sprintf("%s\n", htmlquery.InnerText(node))
+					if p.XpathHtml {
+						temp += fmt.Sprintf(
+							"%s%s", htmlquery.OutputHTML(node, p.XpathHtmlSelf), p.XpathSeparator)
+					} else {
+						temp += fmt.Sprintf("%s%s", htmlquery.InnerText(node), p.XpathSeparator)
+					}
 				}
 			} else {
 				logError(fmt.Sprintf("xpath: %s", xpath), err)
@@ -200,10 +211,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include": -1,
 		"require": -1,
 
-		"find_all": -1,
-		"input":    1,
-		"output":   1,
-		"xpath":    1,
+		"find_all":        -1,
+		"input":           1,
+		"output":          1,
+		"xpath":           1,
+		"xpath_html":      -1,
+		"xpath_separator": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -286,6 +299,39 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setXpath((*pluginConfig.Params)["xpath"])
 	showParam("xpath", plugin.Xpath)
+
+	// xpath_html.
+	setXpathHtml := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["xpath_html"] = 0
+			plugin.XpathHtml = v
+		}
+	}
+	setXpathHtml(DEFAULT_XPATH_HTML)
+	setXpathHtml((*pluginConfig.Params)["xpath_html"])
+	showParam("xpath_html", plugin.XpathHtml)
+
+	// xpath_html_self.
+	setXpathHtmlSelf := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["xpath_html_self"] = 0
+			plugin.XpathHtmlSelf = v
+		}
+	}
+	setXpathHtmlSelf(DEFAULT_XPATH_HTML_SELF)
+	setXpathHtmlSelf((*pluginConfig.Params)["xpath_html_self"])
+	showParam("xpath_html_self", plugin.XpathHtmlSelf)
+
+	// xpath_separator.
+	setXpathSeparator := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["xpath_separator"] = 0
+			plugin.XpathSeparator = v
+		}
+	}
+	setXpathSeparator(DEFAULT_XPATH_SEPARATOR)
+	setXpathSeparator((*pluginConfig.Params)["xpath_separator"])
+	showParam("xpath_separator", plugin.XpathSeparator)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

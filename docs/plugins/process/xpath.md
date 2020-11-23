@@ -14,11 +14,14 @@ data.
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Template | Default |     Example     | Description                                                                                         |
-|:-----------|:--------:|:-----:|:--------:|:-------:|:---------------:|:----------------------------------------------------------------------------------------------------|
-| **input**  |    +     | array |    -     |   []    | ["data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data. |
-| **output** |    +     | array |    -     |   []    | ["data.array0"] | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
-| **xpath**  |    +     | array |    +     |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                       |
+| Param           | Required |  Type  | Template | Default |     Example     | Description                                                                                         |
+|:----------------|:--------:|:------:|:--------:|:-------:|:---------------:|:----------------------------------------------------------------------------------------------------|
+| **input**       |    +     | array  |    -     |   []    | ["data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data. |
+| **output**      |    +     | array  |    -     |   []    | ["data.array0"] | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
+| **xpath**       |    +     | array  |    +     |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                       |
+| xpath_html      |    -     |  bool  |    -     |  true   |      false      | Get nodes with HTML tags (only text if false).                                                      |
+| xpath_html_self |    -     |  bool  |    -     |  true   |      false      | Include HTML tags of Xpath node.                                                                    |
+| xpath_separator |    -     | string |    -     |  "\n"   |      false      | Add a custom separator between found nodes.                                                           |
 
 ### Flow sample:
 
@@ -44,7 +47,7 @@ flow:
         output: ["data.array0"]
 
     - id: 1
-      alias: "xpath description and tags"
+      alias: "xpath desc"
       plugin: "xpath"
       params:
         input:  ["data.array0"]
@@ -52,10 +55,25 @@ flow:
         xpath:  ["templates.xpath.hh.ru"]
 
     - id: 2
-      alias: "echo data"
+      alias: "xpath tags"
+      plugin: "xpath"
+      params:
+        input:  ["data.array0"]
+        output: ["data.array2"]
+        xpath:  ["//span[contains(@data-qa, 'bloko-tag__text')]"]
+        xpath_html: false
+
+    - id: 3
+      alias: "echo desc"
       plugin: "echo"
       params:
         input:  ["data.array1"]
+        
+    - id: 4
+      alias: "echo tags"
+      plugin: "echo"
+      params:
+        input:  ["data.array2"]
 ```
 
 ### Config sample:
@@ -63,8 +81,7 @@ flow:
 ```toml
 [templates.xpath.hh.ru]
 xpath = [
-  "//div[contains(@data-qa, 'vacancy-description')]", 
-  "//span[contains(@data-qa, 'bloko-tag__text')]"
+  "//div[contains(@data-qa, 'vacancy-description')]"
 ]
 ```
 
