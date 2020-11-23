@@ -220,7 +220,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 
 		File: pluginConfig.File,
-		Name: "mattermost",
+		Name: "slack",
 		Type: "output",
 	}
 
