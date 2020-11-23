@@ -1,6 +1,6 @@
 ### Description:
 
-**mattermost** output plugin is intended for sending data to Mattermost
+**mattermost** output plugin is intended for sending data to [Mattermost](https://mattermost.org/)
 users/channels.
 
 

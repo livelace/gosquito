@@ -1,6 +1,6 @@
 ### Description:
 
-**kafka** output plugin is intended for sending data to Kafka topics.
+**kafka** output plugin is intended for sending data to [Kafka](https://kafka.apache.org/) topics.
 Kafka messages are generated in
 [Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an
 arbitrary schema (flat, no nested objects).

@@ -1,6 +1,6 @@
 ### Description:
 
-**slack** output plugin is intended for sending data to Slack
+**slack** output plugin is intended for sending data to [Slack](https://slack.com)
 users/channels.
 
 
