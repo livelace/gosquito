@@ -47,7 +47,7 @@ var (
 )
 
 func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
-	var b bytes.Buffer
+	var buffer bytes.Buffer
 	fields := make([]string, 0)
 
 	// Parse base schema.
@@ -85,23 +85,23 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 	}
 
 	// Populate schema.
-	type data struct {
+	type schemaData struct {
 		Name      string
 		Namespace string
 		Fields    []string
 	}
 
-	d := data{
+	data := schemaData{
 		Name:      p.SchemaRecordName,
 		Namespace: p.SchemaRecordNamespace,
 		Fields:    fields,
 	}
 
-	if err := template.Execute(&b, d); err != nil {
+	if err := template.Execute(&buffer, data); err != nil {
 		return "", err
 	}
 
-	return b.String(), nil
+	return buffer.String(), nil
 }
 
 func sendData(p *Plugin, messages []*kafka.Message) error {
@@ -140,6 +140,21 @@ func sendData(p *Plugin, messages []*kafka.Message) error {
 	return nil
 }
 
+func upsertSchema(p *Plugin, subject string) (*srclient.Schema, error) {
+	registrySchema, _ := p.SchemaRegistryClient.GetLatestSchema(subject, false)
+
+	if registrySchema == nil {
+		return p.SchemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
+
+	} else {
+		if registrySchema.Codec().CanonicalSchema() != p.SchemaCodec.CanonicalSchema() {
+			return p.SchemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
+		} else {
+			return registrySchema, nil
+		}
+	}
+}
+
 type Plugin struct {
 	Hash string
 	Flow string
@@ -160,6 +175,7 @@ type Plugin struct {
 	SchemaRecordNamespace string
 	SchemaNative          map[string]interface{}
 	SchemaRegistry        string
+	SchemaRegistryClient  *srclient.SchemaRegistryClient
 	SchemaSubjectStrategy string
 	Timeout               int
 
@@ -192,7 +208,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				}
 			}
 
-			// Convert data into Avro avroBinary.
+			// Convert data into Avro binary.
 			avroBinary, err := p.SchemaCodec.BinaryFromNative(nil, schema)
 			if err != nil {
 				return err
@@ -204,6 +220,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				Key:            []byte(p.MessageKey),
 			}
 
+			// Create confluent avro (magic + version + message) or vanilla avro message.
 			if p.ConfluentAvro {
 				var subject string
 
@@ -216,15 +233,9 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 					subject = fmt.Sprintf("%s-%s", topic, p.SchemaRecordName)
 				}
 
-				schemaRegistryClient := srclient.CreateSchemaRegistryClient(p.SchemaRegistry)
-				registrySchema, _ := schemaRegistryClient.GetLatestSchema(subject, false)
-
-				if registrySchema == nil {
-					registrySchema, err =
-						schemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
-					if err != nil {
-						return fmt.Errorf(ERROR_SCHEMA_CREATE.Error(), err)
-					}
+				registrySchema, err := upsertSchema(p, subject)
+				if err != nil {
+					return fmt.Errorf(ERROR_SCHEMA_CREATE.Error(), err)
 				}
 
 				registrySchemaIDBytes := make([]byte, 4)
@@ -236,10 +247,10 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				resultBinary = append(resultBinary, avroBinary...)
 
 				message.Value = resultBinary
+
 			} else {
 				message.Value = avroBinary
 			}
-
 			messages = append(messages, &message)
 		}
 
@@ -419,6 +430,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_registry"] = 0
 			plugin.SchemaRegistry = v
+			plugin.SchemaRegistryClient = srclient.CreateSchemaRegistryClient(v)
 		}
 	}
 	setSchemaRegistry(DEFAULT_SCHEMA_REGISTRY)
@@ -493,7 +505,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Kafka.
 
-	// Set client id for identification (really ?! where ?!).
+	// Set client id for identification.
 	var clientId string
 	if plugin.ClientId == "" {
 		clientId = plugin.Flow
