@@ -524,6 +524,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 		atomic.AddInt32(&flow.MetricNoData, 1)
 		logFlowWarn(core.ERROR_NO_NEW_DATA)
 		cleanFlowTemp()
+		logFlowStop()
 		return
 	} else {
 		atomic.AddInt32(&flow.MetricReceive, int32(len(inputData)))
