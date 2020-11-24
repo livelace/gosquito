@@ -157,9 +157,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require": -1,
 
 		"input":      1,
+		"match_case": -1,
 		"output":     1,
 		"regexp":     1,
-		"match_case": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
