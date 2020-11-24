@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	DEFAULT_MATCH_ALL = false
+	DEFAULT_MATCH_ALL  = false
+	DEFAULT_MATCH_CASE = true
 )
 
 func matchRegexes(regexps []*regexp.Regexp, text string) bool {
@@ -36,10 +37,11 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	Input    []string
-	Output   []string
-	MatchAll bool
-	Regexp   [][]*regexp.Regexp
+	Input     []string
+	Output    []string
+	MatchAll  bool
+	MatchCase bool
+	Regexp    [][]*regexp.Regexp
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -216,6 +218,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchAll((*pluginConfig.Params)["match_all"])
 	showParam("match_all", plugin.MatchAll)
 
+	// match_case.
+	setMatchCase := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_case"] = 0
+			plugin.MatchCase = v
+		}
+	}
+	setMatchCase(DEFAULT_MATCH_CASE)
+	setMatchCase((*pluginConfig.Params)["match_case"])
+	showParam("match_case", plugin.MatchCase)
+
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -230,7 +243,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v, plugin.MatchCase)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])

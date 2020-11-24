@@ -235,7 +235,7 @@ func ExtractDataFieldIntoString(data *DataItem, field interface{}) string {
 	return temp
 }
 
-func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string) [][]*regexp.Regexp {
+func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string, matchCase bool) [][]*regexp.Regexp {
 	temp := make([][]*regexp.Regexp, 0)
 
 	for _, s := range regexps {
@@ -244,6 +244,10 @@ func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string) [][]*regexp
 
 		if len(templateRegexps) > 0 {
 			for _, r := range templateRegexps {
+				if !matchCase {
+					r = fmt.Sprintf("(?i)%s", r)
+				}
+
 				if re, err := regexp.Compile(r); err == nil {
 					currentRegexps = append(currentRegexps, re)
 				} else {
@@ -252,6 +256,10 @@ func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string) [][]*regexp
 
 			}
 		} else {
+			if !matchCase {
+				s = fmt.Sprintf("(?i)%s", s)
+			}
+
 			if re, err := regexp.Compile(s); err == nil {
 				currentRegexps = append(currentRegexps, re)
 			}

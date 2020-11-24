@@ -11,6 +11,7 @@ import (
 
 const (
 	DEFAULT_REPLACE_ALL = false
+	DEFAULT_MATCH_CASE  = true
 )
 
 func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) (string, bool) {
@@ -42,6 +43,7 @@ type Plugin struct {
 	Require []int
 
 	Input      []string
+	MatchCase  bool
 	Output     []string
 	Regexp     [][]*regexp.Regexp
 	Replace    []string
@@ -209,6 +211,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput((*pluginConfig.Params)["input"])
 	showParam("input", plugin.Input)
 
+	// match_case.
+	setMatchCase := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_case"] = 0
+			plugin.MatchCase = v
+		}
+	}
+	setMatchCase(DEFAULT_MATCH_CASE)
+	setMatchCase((*pluginConfig.Params)["match_case"])
+	showParam("match_case", plugin.MatchCase)
+
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -223,7 +236,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v, plugin.MatchCase)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])

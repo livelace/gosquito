@@ -17,6 +17,7 @@ inside data.
 | Param       | Required | Type  | Template | Default |     Example      | Description                                                                                                                 |
 |:------------|:--------:|:-----:|:--------:|:-------:|:----------------:|:----------------------------------------------------------------------------------------------------------------------------|
 | **input**   |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                         |
+| match_case  |    -     | array |    -     |  true   |      false       | Case sensitive/insensitive.                                                                                                 |
 | **output**  |    +     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                            |
 | **regexp**  |    +     | array |    +     |   []    |     ["war"]      | List of config templates/raw regexps for replacing.                                                                         |
 | **replace** |    +     | array |    -     |   []    |    ["peace"]     | List of replacements.                                                                                                       |

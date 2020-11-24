@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	DEFAULT_FIND_ALL = false
+	DEFAULT_FIND_ALL   = false
+	DEFAULT_MATCH_CASE = true
 )
 
 func findPatternsAndReturnSlice(regexps []*regexp.Regexp, text string) []string {
@@ -36,10 +37,11 @@ type Plugin struct {
 	Include bool
 	Require []int
 
-	FindAll bool
-	Input   []string
-	Output  []string
-	Regexp  [][]*regexp.Regexp
+	FindAll   bool
+	Input     []string
+	MatchCase bool
+	Output    []string
+	Regexp    [][]*regexp.Regexp
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -154,9 +156,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include": -1,
 		"require": -1,
 
-		"input":  1,
-		"output": 1,
-		"regexp": 1,
+		"input":      1,
+		"output":     1,
+		"regexp":     1,
+		"match_case": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -207,6 +210,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput((*pluginConfig.Params)["input"])
 	showParam("input", plugin.Input)
 
+	// match_case.
+	setMatchCase := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_case"] = 0
+			plugin.MatchCase = v
+		}
+	}
+	setMatchCase(DEFAULT_MATCH_CASE)
+	setMatchCase((*pluginConfig.Params)["match_case"])
+	showParam("match_case", plugin.MatchCase)
+
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -223,7 +237,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v)
+			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v, plugin.MatchCase)
 		}
 	}
 	setRegexp((*pluginConfig.Params)["regexp"])
