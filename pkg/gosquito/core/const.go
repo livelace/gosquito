@@ -29,21 +29,23 @@ const (
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	LOG_CONFIG_ERROR      = "config error"
-	LOG_CONFIG_INIT       = "config init"
-	LOG_FLOW_IGNORE       = "flow ignore"
-	LOG_FLOW_LOCK_WARNING = "--- flow lock warning"
-	LOG_FLOW_PROCESS      = "process data ..."
-	LOG_FLOW_READ         = "flow read"
-	LOG_FLOW_RECEIVE      = "receive data ..."
-	LOG_FLOW_SEND         = "send data ..."
-	LOG_FLOW_WARN         = "--- flow warn"
-	LOG_FLOW_START        = "--- flow start"
-	LOG_FLOW_STAT         = "flow stat"
-	LOG_FLOW_STOP         = "--- flow stop"
-	LOG_PLUGIN_INIT       = "plugin init"
-	LOG_PLUGIN_DATA       = "plugin data"
-	LOG_SET_VALUE         = "set value"
+	LOG_CONFIG_ERROR               = "config error"
+	LOG_CONFIG_INIT                = "config init"
+	LOG_FLOW_IGNORE                = "flow ignore"
+	LOG_FLOW_LOCK_WARNING          = "--- flow lock warning"
+	LOG_FLOW_SEND_NO_DATA          = "no data for sending"
+	LOG_FLOW_SEND_NO_DATA_INCLUDED = "no data included for sending"
+	LOG_FLOW_PROCESS               = "process data ..."
+	LOG_FLOW_READ                  = "flow read"
+	LOG_FLOW_RECEIVE               = "receive data ..."
+	LOG_FLOW_SEND                  = "send data ..."
+	LOG_FLOW_START                 = "--- flow start"
+	LOG_FLOW_STAT                  = "flow stat"
+	LOG_FLOW_STOP                  = "--- flow stop"
+	LOG_FLOW_WARN                  = "--- flow warn"
+	LOG_PLUGIN_DATA                = "plugin data"
+	LOG_PLUGIN_INIT                = "plugin init"
+	LOG_SET_VALUE                  = "set value"
 
 	// -----------------------------------------------------------------------------------------------------------------
 

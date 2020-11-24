@@ -99,22 +99,22 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
 
-	// process and send data.
+	// Process and send data.
 	for _, item := range data {
 
-		// files.
+		// Files.
 		files := make([]string, 0)
 		for _, v := range p.Files {
 			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
 		}
 
-		// message text.
+		// Message text.
 		message, err := core.ExtractTemplateIntoString(item, p.MessageTemplate)
 		if err != nil {
 			return err
 		}
 
-		// attachments.
+		// Attachments.
 		attachments := slack.Attachment{}
 
 		if p.Attachments {

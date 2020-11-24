@@ -641,32 +641,41 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 		// 2. Pass data from "input" plugin to "output" plugin directly.
 		if len(results) > 0 {
 			somethingIncluded := false
+			somethingHasData := false
 
 			for index := 0; index < len(results); index++ {
 				data := results[index]
 
 				// Send only needed data (param "include" is "true").
-				// Send only not empty data (some plugins can produce zero data).
-				if flow.ProcessPlugins[index].GetInclude() && len(data) > 0 {
+				if flow.ProcessPlugins[index].GetInclude() {
 					somethingIncluded = true
 
-					err = flow.OutputPlugin.Send(data)
+					// Send only not empty data (some plugins can produce zero data).
+					if len(data) > 0 {
+						somethingHasData = true
+						err = flow.OutputPlugin.Send(data)
 
-					if err != nil {
-						atomic.AddInt32(&flow.MetricError, 1)
-						logFlowWarn(err)
-						cleanFlowTemp()
-						return
+						if err != nil {
+							atomic.AddInt32(&flow.MetricError, 1)
+							logFlowWarn(err)
+							cleanFlowTemp()
+							return
 
-					} else {
-						atomic.AddInt32(&flow.MetricSend, int32(len(data)))
-						logFlowStat(fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
+						} else {
+							atomic.AddInt32(&flow.MetricSend, int32(len(data)))
+							logFlowStat(fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
+						}
 					}
 				}
 			}
 
+			// More informative messages.
 			if !somethingIncluded {
-				logFlowStat(fmt.Sprintf("no data included for sending"))
+				logFlowStat(core.LOG_FLOW_SEND_NO_DATA_INCLUDED)
+			}
+
+			if !somethingHasData {
+				logFlowStat(core.LOG_FLOW_SEND_NO_DATA)
 			}
 
 		} else if len(inputData) > 0 {
