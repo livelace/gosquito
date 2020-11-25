@@ -696,7 +696,6 @@ func PluginLoadData(path string, file string, output interface{}) error {
 		err = f.Close()
 
 		return err
-
 	}
 
 	return nil
