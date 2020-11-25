@@ -25,7 +25,7 @@ require (
 	github.com/mattermost/mattermost-server v5.11.1+incompatible
 	github.com/mattn/go-sqlite3 v1.14.3 // indirect
 	github.com/minio/minio-go/v7 v7.0.5
-	github.com/mmcdole/gofeed v1.1.0
+	github.com/mmcdole/gofeed v1.1.1-0.20201005053009-96998c2d6be5
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/onsi/ginkgo v1.14.1 // indirect
 	github.com/onsi/gomega v1.10.2 // indirect
@@ -38,7 +38,7 @@ require (
 	github.com/xhit/go-simple-mail/v2 v2.5.1
 	github.com/zelenin/go-tdlib v0.2.0
 	github.com/ziutek/mymysql v1.5.4 // indirect
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/net v0.0.0-20201027133719-8eef5233e2a1
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.23.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
