@@ -166,11 +166,15 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 			item := feeds.Items[i]
 
-			// Use only "published time", "updated time" may be generated with each request on some sites.
-			if item.PublishedParsed != nil {
-				itemTime = *item.PublishedParsed
+			// Item's update time has higher priority over publishing time.
+			if item.UpdatedParsed != nil {
+				itemTime = *item.UpdatedParsed
 			} else {
-				itemTime = time.Now().UTC()
+				if item.PublishedParsed != nil {
+					itemTime = *item.PublishedParsed
+				} else {
+					itemTime = time.Now().UTC()
+				}
 			}
 
 			// Process only new items.
