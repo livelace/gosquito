@@ -1,5 +1,7 @@
 FROM            docker.io/livelace/gentoo:latest
 
+ARG             VERSION
+
 ENV             GOSQUITO_BIN="/usr/local/bin/gosquito"
 ENV             GOSQUITO_TEMP="/tmp/gosquito"
 ENV             GOSQUITO_URL="https://github.com/livelace/gosquito"
@@ -12,7 +14,7 @@ RUN             emerge -G -q \
                 rm -rf "/usr/portage/packages"
 
 # build application.
-RUN             git clone "$GOSQUITO_URL" "$GOSQUITO_TEMP" && \
+RUN             git clone --depth 1 --branch "$VERSION" "$GOSQUITO_URL" "$GOSQUITO_TEMP" && \
                 cd "$GOSQUITO_TEMP" && \
                 go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito" && \
                 cp "gosquito" "$GOSQUITO_BIN" && \
