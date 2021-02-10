@@ -135,6 +135,6 @@ const (
 #time_zone               = "UTC"
 
 # Default user_agent for all compatible plugins.
-#user_agent              = "gosquito v2.1.3"
+#user_agent              = "gosquito v2.2.0"
 `
 )
