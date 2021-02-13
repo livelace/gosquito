@@ -43,6 +43,7 @@ message Task {
     int64 page_size = 7;
     int32 page_timeout = 8;
     int32 script_timeout = 9;
+    string proxy = 10;
   }
 
   string client_id = 1;
