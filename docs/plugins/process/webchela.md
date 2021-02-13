@@ -24,6 +24,7 @@
 | browser_instance_tab   |    -     |  int   |    +     |      5      |                 3                 | Maximum amount of tabs per browser instance.   |
 | browser_page_size      |    -     | string |    +     |    "10m"    |               "3m"                | Maximum page size.                             |
 | browser_page_timeout   |    -     |  int   |    +     |     20      |                30                 | Maximum time in seconds for page loading.      |
+| browser_proxy          |    -     | string |    +     |     ""      |       "http://1.2.3.4:3128"       | Proxy settings (http and socks are supported). |
 | browser_script_timeout |    -     |  int   |    +     |     20      |                30                 | Maximum time in seconds for script executions. |
 | browser_type           |    -     | string |    +     |  "firefox"  |             "chrome"              | Supported browser types: firefox, chrome.      |
 | chunk_size             |    -     | string |    +     |    "3m"     |               "1m"                | Split large messages into sized chunks.        |

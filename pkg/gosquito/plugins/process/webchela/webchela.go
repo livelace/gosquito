@@ -22,6 +22,7 @@ const (
 	DEFAULT_BROWSER_INSTANCE_TAB   = 5
 	DEFAULT_BROWSER_PAGE_SIZE      = "10M"
 	DEFAULT_BROWSER_PAGE_TIMEOUT   = 20
+	DEFAULT_BROWSER_PROXY          = ""
 	DEFAULT_BROWSER_SCRIPT_TIMEOUT = 20
 	DEFAULT_BROWSER_TYPE           = "firefox"
 	DEFAULT_BUFFER_LENGHT          = 1000
@@ -167,6 +168,7 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 		InstanceTab:   int32(p.BrowserInstanceTab),
 		PageSize:      p.BrowserPageSize,
 		PageTimeout:   int32(p.BrowserPageTimeout),
+		Proxy:         p.BrowserProxy,
 		ScriptTimeout: int32(p.BrowserScriptTimeout),
 	}
 
@@ -332,6 +334,7 @@ type Plugin struct {
 	BrowserInstanceTab   int
 	BrowserPageSize      int64
 	BrowserPageTimeout   int
+	BrowserProxy         string
 	BrowserScriptTimeout int
 	ChunkSize            int64
 	ClientId             string
@@ -579,6 +582,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"browser_instance_tab":   -1,
 		"browser_page_size":      -1,
 		"browser_page_timeout":   -1,
+		"browser_proxy":          -1,
 		"browser_script_timeout": -1,
 		"chunk_size":             -1,
 		"client_id":              -1,
@@ -728,6 +732,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserPageTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.browser_page_timeout", template)))
 	setBrowserPageTimeout((*pluginConfig.Params)["browser_page_timeout"])
 	showParam("browser_page_timeout", plugin.BrowserPageTimeout)
+
+	// browser_proxy.
+	setBrowserProxy := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["browser_proxy"] = 0
+			plugin.BrowserProxy = v
+		}
+	}
+	setBrowserProxy(DEFAULT_BROWSER_PROXY)
+	setBrowserProxy(pluginConfig.Config.GetString(fmt.Sprintf("%s.browser_proxy", template)))
+	setBrowserProxy((*pluginConfig.Params)["browser_proxy"])
+	showParam("browser_proxy", plugin.BrowserProxy)
 
 	// browser_script_timeout.
 	setBrowserScriptTimeout := func(p interface{}) {
