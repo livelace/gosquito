@@ -2,6 +2,7 @@ package rssIn
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -12,7 +13,11 @@ import (
 	"time"
 )
 
-func fetchFeed(url string, userAgent string, timeout int) (*gofeed.Feed, error) {
+const (
+	DEFAULT_SSL_VERIFY = true
+)
+
+func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofeed.Feed, error) {
 	temp := &gofeed.Feed{}
 
 	// context.
@@ -21,7 +26,8 @@ func fetchFeed(url string, userAgent string, timeout int) (*gofeed.Feed, error) 
 	defer cancel()
 
 	// http.
-	client := http.Client{}
+	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: !sslVerify}}
+	client := http.Client{Transport: transport}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -93,6 +99,7 @@ type Plugin struct {
 	ExpireLast          int64
 	Force               bool
 	ForceCount          int
+	SSLVerify           bool
 	Timeout             int
 	TimeFormat          string
 	TimeZone            *time.Location
@@ -131,7 +138,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		}
 
 		// Try to fetch new articles.
-		feeds, err := fetchFeed(source, p.UserAgent, p.Timeout)
+		feeds, err := fetchFeed(source, p.UserAgent, p.SSLVerify, p.Timeout)
 		if err != nil {
 			failedSources = append(failedSources, source)
 
@@ -334,6 +341,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"expire_interval":       -1,
 		"force":                 -1,
 		"force_count":           -1,
+		"ssl_verify":            -1,
 		"template":              -1,
 		"timeout":               -1,
 		"time_format":           -1,
@@ -441,6 +449,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.Params)["input"])
 	showParam("input", plugin.Input)
+
+	// ssl_verify.
+	setSSLVerify := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["ssl_verify"] = 0
+			plugin.SSLVerify = v
+		}
+	}
+	setSSLVerify(DEFAULT_SSL_VERIFY)
+	setSSLVerify(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl_verify", template)))
+	setSSLVerify((*pluginConfig.Params)["ssl_verify"])
+	showParam("ssl_verify", plugin.SSLVerify)
 
 	// timeout.
 	setTimeout := func(p interface{}) {

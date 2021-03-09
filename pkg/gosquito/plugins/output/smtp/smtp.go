@@ -70,7 +70,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 	if p.SSL {
 		server.Encryption = mail.EncryptionTLS
-		server.TLSConfig = &tls.Config{InsecureSkipVerify: p.SSLVerify}
+		server.TLSConfig = &tls.Config{InsecureSkipVerify: !p.SSLVerify}
 	}
 
 	server.KeepAlive = true
