@@ -20,9 +20,7 @@ RUN             git clone --depth 1 --branch "$VERSION" "$GOSQUITO_URL" "$GOSQUI
                 cp "gosquito" "$GOSQUITO_BIN" && \
                 rm -rf "/root/go" "$GOSQUITO_TEMP"
 
-RUN             useradd -m -u 1000 -s "/bin/bash" "gosquito"
-
-USER            "gosquito"
+USER            "user"
 
 WORKDIR         "/home/gosquito"
 
