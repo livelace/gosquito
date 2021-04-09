@@ -388,6 +388,8 @@ github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/zelenin/go-tdlib v0.2.0 h1:i5H3zQLPKjiP5NjLwoU7K9gKkwfhjY2i1GIqxQe8NBA=
 github.com/zelenin/go-tdlib v0.2.0/go.mod h1:Xs8fXbk5n7VaPyrSs9DP7QYoBScWYsjX+lUcWmx1DIU=
+github.com/zelenin/go-tdlib v0.4.0 h1:pCC930uZrVdfJm0X096E3PZH/LNxxB+GN9MmZEu4y0I=
+github.com/zelenin/go-tdlib v0.4.0/go.mod h1:Xs8fXbk5n7VaPyrSs9DP7QYoBScWYsjX+lUcWmx1DIU=
 github.com/ziutek/mymysql v1.5.4 h1:GB0qdRGsTwQSBVYuVShFBKaXSnSnYYC2d9knnE1LHFs=
 github.com/ziutek/mymysql v1.5.4/go.mod h1:LMSpPZ6DbqWFxNCHW77HeMg9I646SAhApZ/wKdgO/C0=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=

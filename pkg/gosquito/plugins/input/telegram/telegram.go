@@ -201,6 +201,7 @@ func receiveMessages(p *Plugin) {
 		for update := range listener.Updates {
 			switch update.(type) {
 
+			// Log all updated users profiles. Passive data gathering.
 			case *client.UpdateUser:
 				user := update.(*client.UpdateUser).User
 				p.UsersById[user.Id] = []string{
@@ -213,18 +214,25 @@ func receiveMessages(p *Plugin) {
 				messageChatId := newMessage.Message.ChatId
 				messageContent := newMessage.Message.Content
 				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
-				messageSenderId := newMessage.Message.SenderUserId
+
+				messageSenderId := int32(-1)
+				switch messageSender := newMessage.Message.Sender.(type) {
+				case *client.MessageSenderChat:
+					messageSenderId = int32(messageSender.ClientId)
+				case *client.MessageSenderUser:
+					messageSenderId = int32(messageSender.ClientId)
+				}
 
 				messageUserId := fmt.Sprintf("%v", messageSenderId)
-				messageUsername := ""
-				messageUsertype := ""
+				messageUserName := ""
+				messageUserType := ""
 				messageUserFirstName := ""
 				messageUserLastName := ""
 				messageUserPhoneNumber := ""
 
 				if v, ok := p.UsersById[messageSenderId]; ok {
-					messageUsername = v[0]
-					messageUsertype = v[1]
+					messageUserName = v[0]
+					messageUserType = v[1]
 					messageUserFirstName = v[2]
 					messageUserLastName = v[3]
 					messageUserPhoneNumber = v[4]
@@ -234,7 +242,6 @@ func receiveMessages(p *Plugin) {
 				if chatName, ok := p.ChatsById[messageChatId]; ok {
 					var u, _ = uuid.NewRandom()
 
-					// Process only text messages for now.
 					switch messageContent.(type) {
 					case *client.MessageText:
 						var textURL string
@@ -260,8 +267,8 @@ func receiveMessages(p *Plugin) {
 
 								TELEGRAM: core.TelegramData{
 									USERID:   messageUserId,
-									USERNAME: messageUsername,
-									USERTYPE: messageUsertype,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
 
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
@@ -299,8 +306,8 @@ func receiveMessages(p *Plugin) {
 
 								TELEGRAM: core.TelegramData{
 									USERID:   messageUserId,
-									USERNAME: messageUsername,
-									USERTYPE: messageUsertype,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
 
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
@@ -336,8 +343,8 @@ func receiveMessages(p *Plugin) {
 
 								TELEGRAM: core.TelegramData{
 									USERID:   messageUserId,
-									USERNAME: messageUsername,
-									USERTYPE: messageUsertype,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
 
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
