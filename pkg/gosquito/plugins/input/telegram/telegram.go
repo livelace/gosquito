@@ -820,7 +820,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	}
 
-	// Check if we known ids of all provided chats.
+	// Check if we known ids for all specified chats.
+	// We keep chats/user ids due api limits.
+	// We could be banned for 24 hours if limits were reached (~200 requests may be enough).
 	for _, chatName := range plugin.Input {
 
 		if id, ok := chatsByName[chatName]; !ok {
@@ -831,23 +833,33 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				chatsByName[chatName] = chatId
 				chatsById[chatId] = chatName
 
-				// Force join to chat for updates receiving.
+				// Force join to chat.
 				err = joinToChat(&plugin, chatName, chatId)
 				if err != nil {
 					return &Plugin{}, err
 				}
 
 			} else {
+				// We are not tolerate to unknown chats (they might be closed).
 				return &Plugin{}, fmt.Errorf(ERROR_CHAT_UNKNOWN.Error(), chatName, err)
 			}
 
 		} else {
-			chatsById[id] = chatName
-
-			// Force join to chat for updates receiving.
+			// Force join to known chat.
 			err = joinToChat(&plugin, chatName, id)
+
+			// Handle changed id for known chat (it might be changed "silently").
 			if err != nil {
-				return &Plugin{}, err
+				chatId, _ := getChatId(&plugin, chatName)
+				err = joinToChat(&plugin, chatName, chatId)
+
+				if err != nil {
+					return &Plugin{}, err
+				}
+
+				chatsById[chatId] = chatName
+			} else {
+				chatsById[id] = chatName
 			}
 		}
 	}
@@ -862,6 +874,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Load users.
+	// TODO: Users ids are mutable ?
 	if users, err := loadUsers(&plugin); err == nil {
 		plugin.UsersById = users
 	} else {
