@@ -214,14 +214,7 @@ func receiveMessages(p *Plugin) {
 				messageChatId := newMessage.Message.ChatId
 				messageContent := newMessage.Message.Content
 				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
-
-				messageSenderId := int32(-1)
-				switch messageSender := newMessage.Message.Sender.(type) {
-				case *client.MessageSenderChat:
-					messageSenderId = int32(messageSender.ClientId)
-				case *client.MessageSenderUser:
-					messageSenderId = int32(messageSender.ClientId)
-				}
+				messageSenderId := newMessage.Message.SenderUserId
 
 				messageUserId := fmt.Sprintf("%v", messageSenderId)
 				messageUserName := ""
