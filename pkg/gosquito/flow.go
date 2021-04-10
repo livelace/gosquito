@@ -97,6 +97,9 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
+	// Need for Telegram instance amount restrictions.
+	// Only one Telegram plugin instance available right now (since tdlib 1.7.0).
+	telegramInPluginTotal := 0
 
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
@@ -259,7 +262,14 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
-			inputPlugin, err = telegramIn.Init(&inputPluginConfig)
+			if telegramInPluginTotal < telegramIn.MAX_INSTANCE_PER_APP {
+				inputPlugin, err = telegramIn.Init(&inputPluginConfig)
+				telegramInPluginTotal += 1
+			} else {
+				LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
+					fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramInPluginTotal))
+				continue
+			}
 		case "twitter":
 			inputPlugin, err = twitterIn.Init(&inputPluginConfig)
 		default:
