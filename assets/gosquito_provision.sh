@@ -2,7 +2,9 @@
 
 #-----------------------------------------------------------------------------
 
-echo "WARNING:"
+echo "*********************************************************************************"
+echo "WARNING: This script is intended for auto provision gosquito bundles in clouds."
+echo "*********************************************************************************"
 
 #-----------------------------------------------------------------------------
 
@@ -37,7 +39,7 @@ function copy_flow() {
     mkdir -p "${target_flow_dir}"
 
     echo "INFO: Copy flow: ${flow}"
-    cp "${SOURCE_TEMP}/$flow" "${target_flow_dir}/"
+    cp "${SOURCE_TEMP}/$flow" "${target_flow_dir}/" || (echo "ERROR: Cannot copy flow: ${flow}" && exit 1)
   done
 }
 
@@ -56,9 +58,16 @@ mkdir -p ${TARGET_PLUGIN_DIR}/{data,state,temp} || (echo "ERROR: Cannot create d
 
 rm -rf "$SOURCE_TEMP"
 
-git clone "$SOURCE_REPO" "$SOURCE_TEMP" || (echo "ERROR: Cannot clone repo: ${SOURCE_REPO}" && exit 1)
+git clone "$SOURCE_REPO" "$SOURCE_TEMP" > /dev/null 2>&1 || (echo "ERROR: Cannot clone repo: ${SOURCE_REPO}" && exit 1)
 
 cd "$SET_DIR" || (echo "ERROR: Cannot find set: ${SOURCE_REPO}" && exit 1)
+
+#-----------------------------------------------------------------------------
+
+if [[ ! -f "$CONFIG_FILE" || ! -f "$FLOW_FILE" || ! -f "$FLOW_GROUP_FILE" ]];then
+  echo "ERROR: Each set must have three files: config.toml, flow.txt, flow_group.txt"
+  exit 1
+fi
 
 #-----------------------------------------------------------------------------
 
@@ -71,13 +80,19 @@ cp "${CONFIG_FILE}" "${TARGET_PATH}/"
 
 #-----------------------------------------------------------------------------
 
+echo "INFO: Flow file: $FLOW_FILE"
 copy_flow "$FLOW_FILE"
-
-for group_file in $(cat "$FLOW_GROUP_FILE");do
-  copy_flow "${SOURCE_TEMP}/${group_file}"
-done
 
 #-----------------------------------------------------------------------------
 
+for group_file in $(cat "$FLOW_GROUP_FILE");do
+  if [ -f "${SOURCE_TEMP}/${group_file}" ];then
+    echo "INFO: Flow group file: ${group_file}"
+    copy_flow "${SOURCE_TEMP}/${group_file}"
+  else
+    echo "ERROR: Flow group file not found: ${SOURCE_TEMP}/${group_file}"
+    exit 1
+  fi
+done
 
-
+#-----------------------------------------------------------------------------
