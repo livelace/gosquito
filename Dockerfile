@@ -22,6 +22,6 @@ RUN             git clone --depth 1 --branch "$VERSION" "$GOSQUITO_URL" "$GOSQUI
 
 USER            "user"
 
-WORKDIR         "/home/gosquito"
+WORKDIR         "/home/user"
 
 CMD             ["/usr/local/bin/gosquito"]
