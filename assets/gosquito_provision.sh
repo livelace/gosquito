@@ -10,7 +10,8 @@ echo "**************************************************************************
 
 SESSION_NAME="$1"
 SOURCE_REPO="$2"
-SET_NAME="$3"
+SECRET_PATH="$3"
+SET_NAME="$4"
 
 SOURCE_TEMP="/tmp/source"
 SET_DIR="${SOURCE_TEMP}/set/${SET_NAME}"
@@ -23,8 +24,6 @@ FLOW_FILE="flow.txt"
 FLOW_GROUP_FILE="flow_group.txt"
 
 GIRIE_SERVER="${SESSION_NAME}-girie"
-KAFKA_SERVER="${SESSION_NAME}-kafka"
-SCHEMA_REGISTRY_SERVER="${SESSION_NAME}-kafka"
 WEBCHELA_SERVER="${SESSION_NAME}-webchela"
 
 #-----------------------------------------------------------------------------
@@ -45,8 +44,8 @@ function copy_flow() {
 
 #-----------------------------------------------------------------------------
 
-if [[ ! "$SESSION_NAME" || ! "$SOURCE_REPO" || ! "$SET_NAME" ]];then
-  echo "ERROR: Usage $0 supersession https://github.com/username/gosquito-source-set.git superset"
+if [[ ! "$SESSION_NAME" || ! "$SOURCE_REPO" || ! "$SECRET_PATH" || ! "$SET_NAME" ]];then
+  echo "ERROR: Usage $0 supersession https://github.com/username/gosquito-source-set.git /path/to/secret superset"
   exit 1
 fi
 
@@ -62,6 +61,8 @@ git clone "$SOURCE_REPO" "$SOURCE_TEMP" > /dev/null 2>&1 || (echo "ERROR: Cannot
 
 cd "$SET_DIR" || (echo "ERROR: Cannot find set: ${SOURCE_REPO}" && exit 1)
 
+git-crypt unlock "$SECRET_PATH" || (echo "ERROR: Cannot unlock secrets: ${SECRET_PATH}" && exit 1)
+
 #-----------------------------------------------------------------------------
 
 if [[ ! -f "$CONFIG_FILE" || ! -f "$FLOW_FILE" || ! -f "$FLOW_GROUP_FILE" ]];then
@@ -72,8 +73,6 @@ fi
 #-----------------------------------------------------------------------------
 
 sed -i "s|<GIRIE_SERVER>|${GIRIE_SERVER}|g" "${CONFIG_FILE}"
-sed -i "s|<KAFKA_SERVER>|${KAFKA_SERVER}|g" "${CONFIG_FILE}"
-sed -i "s|<SCHEMA_REGISTRY_SERVER>|${SCHEMA_REGISTRY_SERVER}|g" "${CONFIG_FILE}"
 sed -i "s|<WEBCHELA_SERVER>|${WEBCHELA_SERVER}|g" "${CONFIG_FILE}"
 
 cp "${CONFIG_FILE}" "${TARGET_PATH}/"

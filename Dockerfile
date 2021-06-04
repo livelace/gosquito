@@ -10,6 +10,7 @@ ENV             GOSQUITO_URL="https://github.com/livelace/gosquito"
 # portage packages.
 RUN             emerge -G -q \
                 dev-lang/go \
+                dev-vcs/git-crypt \
                 dev-libs/librdkafka \
                 net-libs/tdlib && \
                 rm -rf "/usr/portage/packages"
