@@ -73,6 +73,7 @@ fi
 #-----------------------------------------------------------------------------
 
 sed -i "s|<GIRIE_SERVER>|${GIRIE_SERVER}|g" "${CONFIG_FILE}"
+sed -i "s|<SESSION_NAME>|${SESSION_NAME}|g" "${CONFIG_FILE}"
 sed -i "s|<WEBCHELA_SERVER>|${WEBCHELA_SERVER}|g" "${CONFIG_FILE}"
 
 cp "${CONFIG_FILE}" "${TARGET_PATH}/"
