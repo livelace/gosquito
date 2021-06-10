@@ -52,7 +52,7 @@ go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
 
 ```shell script
 # Docker:
-user@localhost /tmp $ docker run -ti --rm livelace/gosquito:v2.4.0 bash
+user@localhost /tmp $ docker run -ti --rm ghcr.io/livelace/gosquito:v2.4.0 bash
 gosquito@fa388e89e10e ~ $ gosquito 
 INFO[03.11.2020 14:44:15.806] gosquito v2.4.0   
 INFO[03.11.2020 14:44:15.807] config init        path="/home/gosquito/.gosquito"
