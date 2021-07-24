@@ -3,6 +3,10 @@ jte {
 }
 
 libraries {
+    appimage {
+        source = "gosquito"
+        destination = "gosquito-${VERSION}.appimage"
+    }
     git {
         repo_url = 'https://github.com/livelace/gosquito.git'
     }
