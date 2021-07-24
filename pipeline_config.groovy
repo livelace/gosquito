@@ -14,6 +14,10 @@ libraries {
         options = '-tags dynamic github.com/livelace/gosquito/cmd/gosquito'
     }
     mattermost
+    nexus {
+        source = 'gosquito-${VERSION}.appimage'
+        destination = 'dists-internal/gosquito/gosquito-${VERSION}.appimage'
+    }
     version
 }
 
