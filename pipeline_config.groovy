@@ -14,7 +14,7 @@ libraries {
         options = '-tags dynamic github.com/livelace/gosquito/cmd/gosquito'
     }
     kaniko {
-        destination = 'data/gosquito:${VERSION}'
+        destination = 'data/gosquito:latest'
     }
     mattermost
     nexus {
