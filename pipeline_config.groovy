@@ -13,6 +13,9 @@ libraries {
     go {
         options = '-tags dynamic github.com/livelace/gosquito/cmd/gosquito'
     }
+    kaniko {
+        destination = 'data/gosquito:${VERSION}'
+    }
     mattermost
     nexus {
         source = 'gosquito-${VERSION}.appimage'
