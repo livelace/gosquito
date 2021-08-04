@@ -9,6 +9,9 @@ libraries {
     go {
         options = "-tags dynamic github.com/livelace/gosquito/cmd/gosquito"
     }
+    harbor {
+        policy = "gosquito"
+    }
     k8s_build {
         image = "harbor-core.k8s-2.livelace.ru/dev/gobuild:latest"
     }
