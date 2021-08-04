@@ -11,8 +11,8 @@ RUN             emerge -G -q \
                 rm -rf "/usr/portage/packages"
 
 # copy application.
-COPY            "source/gosquito" $GOSQUITO_BIN
-COPY            "source/assets/gosquito_provision.sh" $GOSQUITO_PROVISION
+COPY            "work/gosquito" $GOSQUITO_BIN
+COPY            "work/assets/gosquito_provision.sh" $GOSQUITO_PROVISION
 
 USER            "user"
 
