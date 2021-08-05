@@ -14,6 +14,7 @@ libraries {
     }
     k8s_build {
         image = "harbor-core.k8s-2.livelace.ru/dev/gobuild:latest"
+        privileged = true
     }
     kaniko {
         destination = "data/gosquito:latest"
