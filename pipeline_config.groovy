@@ -3,6 +3,7 @@ libraries {
         source = "gosquito"
         destination = 'gosquito-${VERSION}.appimage'
     }
+    dependency_check
     git {
         repo_url = "https://github.com/livelace/gosquito.git"
     }
