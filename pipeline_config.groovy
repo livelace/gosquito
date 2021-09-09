@@ -24,5 +24,6 @@ libraries {
         source = 'gosquito-${VERSION}.appimage'
         destination = 'dists-internal/gosquito/gosquito-${VERSION}.appimage'
     }
+    sonarqube
     version
 }
