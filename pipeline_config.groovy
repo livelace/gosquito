@@ -6,7 +6,7 @@ libraries {
     dependency_check
     dependency_track {
         project = "gosquito"
-        version = "latest"
+        version = "master"
     }
     git {
         repo_url = "https://github.com/livelace/gosquito.git"
