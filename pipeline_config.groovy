@@ -17,10 +17,6 @@ libraries {
     harbor_replicate {
         policy = "gosquito"
     }
-    harbor_scan {
-        artifact = "data/gosquito:latest"
-        severity = "medium"
-    }
     k8s_build {
         image = "harbor-core.k8s-2.livelace.ru/dev/gobuild:latest"
         privileged = true
