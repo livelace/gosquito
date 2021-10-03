@@ -11,11 +11,11 @@ libraries {
     dependency_check
     dependency_track {
         project = "${APP_NAME}"
-        version = "env.VERSION"
+        version = env.VERSION
     }
     git {
         repo_url = "${APP_REPO}"
-        //repo_branch = env.VERSION
+        repo_branch = env.VERSION
     }
     go {
         options = "-tags dynamic github.com/livelace/gosquito/cmd/gosquito"

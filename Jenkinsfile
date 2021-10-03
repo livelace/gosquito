@@ -16,4 +16,4 @@ properties([
     ])
 ])
 
-//k8s_build()
+k8s_build()
