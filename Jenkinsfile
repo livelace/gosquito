@@ -7,7 +7,7 @@ properties([
             description         : null,
             filterLength        : 1,
             filterable          : false,
-            name                : 'RELEASE',
+            name                : 'VERSION',
             randomName          : 'choice-parameter-245877844563629',
             referencedParameters: '',
             script              : [$class: 'ScriptlerScript', parameters: [], scriptlerScriptId: 'gosquito_version.groovy']
