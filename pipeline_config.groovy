@@ -11,7 +11,7 @@ libraries {
     dependency_check
     dependency_track {
         project = "${APP_NAME}"
-        //version = env.VERSION
+        version = "env.VERSION"
     }
     git {
         repo_url = "${APP_REPO}"
