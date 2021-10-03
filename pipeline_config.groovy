@@ -24,7 +24,7 @@ libraries {
         policy = "${APP_NAME}"
     }
     k8s_build {
-        image = "harbor-core.k8s-2.livelace.ru/dev/gobuild:latest"
+        image = "harbor-core.k8s-2.livelace.ru/dev/gosquito:${IMAGE_TAG}"
         privileged = true
     }
     kaniko {
