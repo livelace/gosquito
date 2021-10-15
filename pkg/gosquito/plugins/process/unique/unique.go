@@ -13,21 +13,18 @@ var (
 )
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	File string
-	Name string
-	Type string
+	OptionInclude bool
+	OptionRequire []int
 
-	Include bool
-	Require []int
-
-	Input  []string
-	Output []string
+	OptionInput  []string
+	OptionOutput []string
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -41,10 +38,10 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	for _, item := range data {
 		inputs := make([]string, 0)
 
-		ro, _ := core.ReflectDataField(item, p.Output[0])
+		ro, _ := core.ReflectDataField(item, p.OptionOutput[0])
 
 		// Expand all inputs into single slice.
-		for _, input := range p.Input {
+		for _, input := range p.OptionInput {
 			inputs = append(inputs, core.ExtractDataFieldIntoArray(item, input)...)
 		}
 
@@ -58,23 +55,23 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetId() int {
-	return p.ID
+	return p.PluginID
 }
 
 func (p *Plugin) GetAlias() string {
-	return p.Alias
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) GetInclude() bool {
@@ -89,15 +86,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "unique",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "unique",
+		PluginType:  "process",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -119,11 +112,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
@@ -134,62 +127,62 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["input"] = 0
-			plugin.Input = v
+			plugin.OptionInput = v
 		}
 	}
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if len(plugin.Output) > 1 {
+	if len(plugin.OptionOutput) > 1 {
 		return &Plugin{}, ERROR_OUTPUT_SIZE
 
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	return &plugin, nil

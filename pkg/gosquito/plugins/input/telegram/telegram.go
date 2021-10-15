@@ -36,10 +36,10 @@ var (
 func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	showMessage := func(m string) {
 		log.WithFields(log.Fields{
-			"flow":    p.Flow,
-			"file":    p.File,
-			"plugin":  p.Name,
-			"type":    p.Type,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
 			"message": m,
 		}).Warnf(core.LOG_PLUGIN_INIT)
 	}
@@ -99,7 +99,7 @@ func downloadFile(p *Plugin, remoteId string) (string, error) {
 
 		// Read files ids from file channel.
 		// Return error if timeout is happened.
-		for i := 0; i < p.Timeout; i++ {
+		for i := 0; i < p.OptionTimeout; i++ {
 
 			for id := range p.FileChannel {
 				if id == downloadFile.Id {
@@ -124,7 +124,7 @@ func getClient(p *Plugin) (*client.Client, error) {
 	authorizer.TdlibParameters <- p.TdlibParams
 
 	verbosity := client.WithLogVerbosity(&client.SetLogVerbosityLevelRequest{
-		NewVerbosityLevel: int32(p.LogLevel),
+		NewVerbosityLevel: int32(p.OptionLogLevel),
 	})
 
 	return client.NewClient(authorizer, verbosity)
@@ -151,7 +151,7 @@ func joinToChat(p *Plugin, name string, id int64) error {
 func loadChats(p *Plugin) (map[string]int64, error) {
 	temp := make(map[string]int64, 0)
 
-	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_CHATS_DB, &temp)
+	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, &temp)
 	if err != nil {
 		return temp, err
 	}
@@ -162,7 +162,7 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 func loadUsers(p *Plugin) (map[int32][]string, error) {
 	temp := make(map[int32][]string, 0)
 
-	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_USERS_DB, &temp)
+	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, &temp)
 	if err != nil {
 		return temp, err
 	}
@@ -259,11 +259,11 @@ func receiveMessages(p *Plugin) {
 						// Send data to channel.
 						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
 							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow,
-								PLUGIN:     p.Name,
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
 								SOURCE:     chatName,
 								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
@@ -288,7 +288,7 @@ func receiveMessages(p *Plugin) {
 
 						photoFile := photo.Sizes[len(photo.Sizes)-1]
 
-						if int64(photoFile.Photo.Size) < p.FileMaxSize {
+						if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
 							localFile, err := downloadFile(p, photoFile.Photo.Remote.Id)
 							if err == nil {
 								media = append(media, localFile)
@@ -298,11 +298,11 @@ func receiveMessages(p *Plugin) {
 						// Send data to channel.
 						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
 							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow,
-								PLUGIN:     p.Name,
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
 								SOURCE:     chatName,
 								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
@@ -325,7 +325,7 @@ func receiveMessages(p *Plugin) {
 						caption := messageContent.(*client.MessageVideo).Caption
 						video := messageContent.(*client.MessageVideo).Video
 
-						if int64(video.Video.Size) < p.FileMaxSize {
+						if int64(video.Video.Size) < p.OptionFileMaxSize {
 							localFile, err := downloadFile(p, video.Video.Remote.Id)
 							if err == nil {
 								media = append(media, localFile)
@@ -335,11 +335,11 @@ func receiveMessages(p *Plugin) {
 						// Send data to channel.
 						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
 							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow,
-								PLUGIN:     p.Name,
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
 								SOURCE:     chatName,
 								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.TimeZone).Format(p.TimeFormat),
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
 								TELEGRAM: core.TelegramData{
@@ -360,11 +360,11 @@ func receiveMessages(p *Plugin) {
 
 				} else {
 					log.WithFields(log.Fields{
-						"hash":   p.Hash,
-						"flow":   p.Flow,
-						"file":   p.File,
-						"plugin": p.Name,
-						"type":   p.Type,
+						"hash":   p.Flow.FlowHash,
+						"flow":   p.Flow.FlowName,
+						"file":   p.Flow.FlowFile,
+						"plugin": p.PluginName,
+						"type":   p.PluginType,
 						"data":   fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId),
 					}).Debug(core.LOG_PLUGIN_DATA)
 				}
@@ -380,11 +380,11 @@ func receiveMessages(p *Plugin) {
 }
 
 func saveChats(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_CHATS_DB, p.ChatsByName)
+	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, p.ChatsByName)
 }
 
 func saveUsers(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow, p.Type, p.Name), DEFAULT_USERS_DB, p.UsersById)
+	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, p.UsersById)
 }
 
 type clientAuthorizer struct {
@@ -398,32 +398,15 @@ type clientAuthorizer struct {
 type Plugin struct {
 	m sync.Mutex
 
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	File string
-	Name string
-	Type string
+	PluginName string
+	PluginType string
 
 	PluginDir string
 	StateDir  string
 	TempDir   string
 	TgBaseDir string
-
-	ExpireAction        []string
-	ExpireActionDelay   int64
-	ExpireActionTimeout int
-	ExpireInterval      int64
-	ExpireLast          int64
-
-	ApiId       int
-	ApiHash     string
-	FileMaxSize int64
-	Input       []string
-	LogLevel    int
-	Timeout     int
-	TimeFormat  string
-	TimeZone    *time.Location
 
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
@@ -434,6 +417,21 @@ type Plugin struct {
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
+
+	OptionExpireAction        []string
+	OptionExpireActionDelay   int64
+	OptionExpireActionTimeout int
+	OptionExpireInterval      int64
+	OptionExpireLast          int64
+
+	OptionApiId       int
+	OptionApiHash     string
+	OptionFileMaxSize int64
+	OptionInput       []string
+	OptionLogLevel    int
+	OptionTimeout     int
+	OptionTimeFormat  string
+	OptionTimeZone    *time.Location
 }
 
 func (p *Plugin) Recv() ([]*core.DataItem, error) {
@@ -448,7 +446,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 	// Delete irrelevant/obsolete sources.
 	for source := range flowStates {
-		if !core.IsValueInSlice(source, &p.Input) {
+		if !core.IsValueInSlice(source, &p.OptionInput) {
 			delete(flowStates, source)
 		}
 	}
@@ -481,13 +479,13 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		sourceStat[item.SOURCE] += 1
 	}
 
-	for _, source := range p.Input {
+	for _, source := range p.OptionInput {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
 			"source": source,
 			"data":   fmt.Sprintf("last update: %v, fetched data: %d", flowStates[source], sourceStat[source]),
 		}).Debug(core.LOG_PLUGIN_DATA)
@@ -503,29 +501,29 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.ExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.ExpireLast) > p.ExpireActionDelay {
-				p.ExpireLast = currentTime.Unix()
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
 				// We don't worry about command return code.
-				if len(p.ExpireAction) > 0 {
-					cmd := p.ExpireAction[0]
-					args := []string{p.Flow, source, fmt.Sprintf("%v", sourceTime.Unix())}
-					args = append(args, p.ExpireAction[1:]...)
+				if len(p.OptionExpireAction) > 0 {
+					cmd := p.OptionExpireAction[0]
+					args := []string{p.Flow.FlowName, source, fmt.Sprintf("%v", sourceTime.Unix())}
+					args = append(args, p.OptionExpireAction[1:]...)
 
-					output, err := core.ExecWithTimeout(cmd, args, p.ExpireActionTimeout)
+					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
 					log.WithFields(log.Fields{
-						"hash":   p.Hash,
-						"flow":   p.Flow,
-						"file":   p.File,
-						"plugin": p.Name,
-						"type":   p.Type,
+						"hash":   p.Flow.FlowHash,
+						"flow":   p.Flow.FlowName,
+						"file":   p.Flow.FlowFile,
+						"plugin": p.PluginName,
+						"type":   p.PluginType,
 						"source": source,
 						"data": fmt.Sprintf(
 							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
@@ -545,19 +543,19 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetInput() []string {
-	return p.Input
+	return p.OptionInput
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) LoadState() (map[string]time.Time, error) {
@@ -566,7 +564,7 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 
 	temp := make(map[string]time.Time, 0)
 
-	if err := core.PluginLoadData(p.StateDir, p.Flow, &temp); err != nil {
+	if err := core.PluginLoadData(p.StateDir, p.Flow.FlowName, &temp); err != nil {
 		return temp, err
 	}
 
@@ -577,25 +575,22 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveData(p.StateDir, p.Flow, data)
+	return core.PluginSaveData(p.StateDir, p.Flow.FlowName, data)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
+		Flow:       pluginConfig.Flow,
+		PluginName: "telegram",
+		PluginType: "input",
 
-		File: pluginConfig.File,
-		Name: "telegram",
-		Type: "input",
+		PluginDir: pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
+		StateDir:  pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
+		TempDir:   pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
 
-		PluginDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_DATA),
-		StateDir:  pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_STATE),
-		TempDir:   pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP),
-
-		ExpireLast: 0,
+		OptionExpireLast: 0,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -627,176 +622,176 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// cred: get from config and/or set user specified values (higher priority).
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// api_id.
 	setApiID := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["api_id"] = 0
-			plugin.ApiId = v
+			plugin.OptionApiId = v
 		}
 	}
-	setApiID(pluginConfig.Config.GetInt(fmt.Sprintf("%s.api_id", cred)))
-	setApiID((*pluginConfig.Params)["api_id"])
+	setApiID(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.api_id", cred)))
+	setApiID((*pluginConfig.PluginParams)["api_id"])
 
 	// api_hash.
 	setApiHash := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["api_hash"] = 0
-			plugin.ApiHash = v
+			plugin.OptionApiHash = v
 		}
 	}
-	setApiHash(pluginConfig.Config.GetString(fmt.Sprintf("%s.api_hash", cred)))
-	setApiHash((*pluginConfig.Params)["api_hash"])
+	setApiHash(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.api_hash", cred)))
+	setApiHash((*pluginConfig.PluginParams)["api_hash"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// expire_action.
 	setExpireAction := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["expire_action"] = 0
-			plugin.ExpireAction = v
+			plugin.OptionExpireAction = v
 		}
 	}
-	setExpireAction(pluginConfig.Config.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
-	setExpireAction(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
-	setExpireAction((*pluginConfig.Params)["expire_action"])
-	showParam("expire_action", plugin.ExpireAction)
+	setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
+	setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
+	setExpireAction((*pluginConfig.PluginParams)["expire_action"])
+	showParam("expire_action", plugin.OptionExpireAction)
 
 	// expire_action_delay.
 	setExpireActionDelay := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["expire_action_delay"] = 0
-			plugin.ExpireActionDelay = v
+			plugin.OptionExpireActionDelay = v
 		}
 	}
-	setExpireActionDelay(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
-	setExpireActionDelay(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
-	setExpireActionDelay((*pluginConfig.Params)["expire_action_delay"])
-	showParam("expire_action_delay", plugin.ExpireActionDelay)
+	setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
+	setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
+	setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
+	showParam("expire_action_delay", plugin.OptionExpireActionDelay)
 
 	// expire_action_timeout.
 	setExpireActionTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["expire_action_timeout"] = 0
-			plugin.ExpireActionTimeout = v
+			plugin.OptionExpireActionTimeout = v
 		}
 	}
-	setExpireActionTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
-	setExpireActionTimeout(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
-	setExpireActionTimeout((*pluginConfig.Params)["expire_action_timeout"])
-	showParam("expire_action_timeout", plugin.ExpireActionTimeout)
+	setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
+	setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
+	setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
+	showParam("expire_action_timeout", plugin.OptionExpireActionTimeout)
 
 	// expire_interval.
 	setExpireInterval := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["expire_interval"] = 0
-			plugin.ExpireInterval = v
+			plugin.OptionExpireInterval = v
 		}
 	}
-	setExpireInterval(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
-	setExpireInterval(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_interval", template)))
-	setExpireInterval((*pluginConfig.Params)["expire_interval"])
-	showParam("expire_interval", plugin.ExpireInterval)
+	setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
+	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
+	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
+	showParam("expire_interval", plugin.OptionExpireInterval)
 
 	// file_max_size.
 	setFileMaxSize := func(p interface{}) {
 		if v, b := core.IsSize(p); b {
 			availableParams["file_max_size"] = 0
-			plugin.FileMaxSize = v
+			plugin.OptionFileMaxSize = v
 		}
 	}
 	setFileMaxSize(DEFAULT_FILE_MAX_SIZE)
-	setFileMaxSize(pluginConfig.Config.GetString(fmt.Sprintf("%s.file_max_size", template)))
-	setFileMaxSize((*pluginConfig.Params)["file_max_size"])
-	showParam("file_max_size", plugin.FileMaxSize)
+	setFileMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_max_size", template)))
+	setFileMaxSize((*pluginConfig.PluginParams)["file_max_size"])
+	showParam("file_max_size", plugin.OptionFileMaxSize)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["input"] = 0
-			plugin.Input = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionInput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// log_level.
 	setLogLevel := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["log_level"] = 0
-			plugin.LogLevel = v
+			plugin.OptionLogLevel = v
 		}
 	}
 	setLogLevel(DEFAULT_LOG_LEVEL)
-	setLogLevel(pluginConfig.Config.GetInt(fmt.Sprintf("%s.log_level", template)))
-	setLogLevel((*pluginConfig.Params)["log_level"])
+	setLogLevel(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.log_level", template)))
+	setLogLevel((*pluginConfig.PluginParams)["log_level"])
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
-	setTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// time_format.
 	setTimeFormat := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["time_format"] = 0
-			plugin.TimeFormat = v
+			plugin.OptionTimeFormat = v
 		}
 	}
-	setTimeFormat(pluginConfig.Config.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
-	setTimeFormat(pluginConfig.Config.GetString(fmt.Sprintf("%s.time_format", template)))
-	setTimeFormat((*pluginConfig.Params)["time_format"])
-	showParam("time_format", plugin.TimeFormat)
+	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
+	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
+	showParam("time_format", plugin.OptionTimeFormat)
 
 	// time_zone.
 	setTimeZone := func(p interface{}) {
 		if v, b := core.IsTimeZone(p); b {
 			availableParams["time_zone"] = 0
-			plugin.TimeZone = v
+			plugin.OptionTimeZone = v
 		}
 	}
-	setTimeZone(pluginConfig.Config.GetString(core.VIPER_DEFAULT_TIME_ZONE))
-	setTimeZone(pluginConfig.Config.GetString(fmt.Sprintf("%s.time_zone", template)))
-	setTimeZone((*pluginConfig.Params)["time_zone"])
-	showParam("time_zone", plugin.TimeZone)
+	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
+	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
+	showParam("time_zone", plugin.OptionTimeZone)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Telegram.
 
-	plugin.TgBaseDir = filepath.Join(plugin.PluginDir, plugin.Flow, plugin.Type, plugin.Name)
+	plugin.TgBaseDir = filepath.Join(plugin.PluginDir, plugin.Flow.FlowName, plugin.PluginType, plugin.PluginName)
 
 	plugin.TdlibParams = &client.TdlibParameters{
-		ApiHash:                plugin.ApiHash,
-		ApiId:                  int32(plugin.ApiId),
+		ApiHash:                plugin.OptionApiHash,
+		ApiId:                  int32(plugin.OptionApiId),
 		ApplicationVersion:     core.APP_VERSION,
 		DatabaseDirectory:      filepath.Join(plugin.TgBaseDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            core.APP_NAME,
@@ -804,7 +799,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		FilesDirectory:         filepath.Join(plugin.TgBaseDir, DEFAULT_FILES_DIR),
 		IgnoreFileNames:        true,
 		SystemLanguageCode:     "en",
-		SystemVersion:          plugin.Flow,
+		SystemVersion:          plugin.Flow.FlowName,
 		UseChatInfoDatabase:    true,
 		UseFileDatabase:        true,
 		UseMessageDatabase:     true,
@@ -831,7 +826,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Check if we known ids for all specified chats.
 	// We keep chats/user ids due api limits.
 	// We could be banned for 24 hours if limits were reached (~200 requests may be enough).
-	for _, chatName := range plugin.Input {
+	for _, chatName := range plugin.OptionInput {
 
 		if id, ok := chatsByName[chatName]; !ok {
 			chatId, err := getChatId(&plugin, chatName)

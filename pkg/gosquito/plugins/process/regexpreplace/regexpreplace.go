@@ -29,25 +29,23 @@ func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) (
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
 
-	File string
-	Name string
-	Type string
+	PluginName string
+	PluginType string
 
-	Include bool
-	Require []int
+	OptionInclude bool
+	OptionRequire []int
 
-	Input      []string
-	MatchCase  bool
-	Output     []string
-	Regexp     [][]*regexp.Regexp
-	Replace    []string
-	ReplaceAll bool
+	OptionInput      []string
+	OptionMatchCase  bool
+	OptionOutput     []string
+	OptionRegexp     [][]*regexp.Regexp
+	OptionReplace    []string
+	OptionReplaceAll bool
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -59,21 +57,21 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		replaced := make([]bool, len(p.Input))
+		replaced := make([]bool, len(p.OptionInput))
 
 		// Match pattern inside different data fields (Title, Content etc.).
-		for index, input := range p.Input {
+		for index, input := range p.OptionInput {
 			var ro reflect.Value
 
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
-			ro, _ = core.ReflectDataField(item, p.Output[index])
+			ro, _ = core.ReflectDataField(item, p.OptionOutput[index])
 
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if s, b := findAndReplace(p.Regexp[index], ri.String(), p.Replace[index]); b {
+				if s, b := findAndReplace(p.OptionRegexp[index], ri.String(), p.OptionReplace[index]); b {
 					replaced[index] = true
 					ro.SetString(s)
 				} else {
@@ -83,7 +81,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 				somethingWasReplaced := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if s, b := findAndReplace(p.Regexp[index], ri.Index(i).String(), p.Replace[index]); b {
+					if s, b := findAndReplace(p.OptionRegexp[index], ri.Index(i).String(), p.OptionReplace[index]); b {
 						somethingWasReplaced = true
 						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
 					} else {
@@ -107,7 +105,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			}
 		}
 
-		if (p.ReplaceAll && replacedInAllInputs) || (!p.ReplaceAll && replacedInSomeInputs) {
+		if (p.OptionReplaceAll && replacedInAllInputs) || (!p.OptionReplaceAll && replacedInSomeInputs) {
 			temp = append(temp, item)
 		}
 	}
@@ -116,46 +114,42 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetId() int {
-	return p.ID
+	return p.PluginID
 }
 
 func (p *Plugin) GetAlias() string {
-	return p.Alias
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) GetInclude() bool {
-	return p.Include
+	return p.OptionInclude
 }
 
 func (p *Plugin) GetRequire() []int {
-	return p.Require
+	return p.OptionRequire
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "regexpreplace",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "regexpreplace",
+		PluginType:  "process",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -180,11 +174,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
@@ -195,90 +189,90 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["input"] = 0
-			plugin.Input = v
+			plugin.OptionInput = v
 		}
 	}
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// match_case.
 	setMatchCase := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["match_case"] = 0
-			plugin.MatchCase = v
+			plugin.OptionMatchCase = v
 		}
 	}
 	setMatchCase(DEFAULT_MATCH_CASE)
-	setMatchCase((*pluginConfig.Params)["match_case"])
-	showParam("match_case", plugin.MatchCase)
+	setMatchCase((*pluginConfig.PluginParams)["match_case"])
+	showParam("match_case", plugin.OptionMatchCase)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["output"] = 0
-			plugin.Output = v
+			plugin.OptionOutput = v
 		}
 	}
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// regexp.
 	setRegexp := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["regexp"] = 0
-			plugin.Regexp = core.ExtractRegexpsIntoArrays(pluginConfig.Config, v, plugin.MatchCase)
+			plugin.OptionRegexp = core.ExtractRegexpsIntoArrays(pluginConfig.AppConfig, v, plugin.OptionMatchCase)
 		}
 	}
-	setRegexp((*pluginConfig.Params)["regexp"])
-	showParam("regexp", plugin.Regexp)
+	setRegexp((*pluginConfig.PluginParams)["regexp"])
+	showParam("regexp", plugin.OptionRegexp)
 
 	// replace.
 	setReplace := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["replace"] = 0
-			plugin.Replace = v
+			plugin.OptionReplace = v
 		}
 	}
-	setReplace((*pluginConfig.Params)["replace"])
-	showParam("replace", plugin.Replace)
+	setReplace((*pluginConfig.PluginParams)["replace"])
+	showParam("replace", plugin.OptionReplace)
 
 	// replace_all.
 	setReplaceAll := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["replace_all"] = 0
-			plugin.ReplaceAll = v
+			plugin.OptionReplaceAll = v
 		}
 	}
 	setReplaceAll(DEFAULT_REPLACE_ALL)
-	setReplaceAll((*pluginConfig.Params)["replace_all"])
-	showParam("replace_all", plugin.ReplaceAll)
+	setReplaceAll((*pluginConfig.PluginParams)["replace_all"])
+	showParam("replace_all", plugin.OptionReplaceAll)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -289,7 +283,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// 2. "input, output" values must have equal types.
 	minLength := 10000
 	maxLength := 0
-	lengths := []int{len(plugin.Input), len(plugin.Output), len(plugin.Regexp), len(plugin.Replace)}
+	lengths := []int{len(plugin.OptionInput), len(plugin.OptionOutput), len(plugin.OptionRegexp), len(plugin.OptionReplace)}
 
 	for _, length := range lengths {
 		if length > maxLength {
@@ -303,14 +297,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if minLength != maxLength {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v, %v",
-			core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Regexp, plugin.Replace)
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp, plugin.OptionReplace)
 
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
+	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

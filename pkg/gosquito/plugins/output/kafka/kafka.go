@@ -92,8 +92,8 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 	}
 
 	data := schemaData{
-		Name:      p.SchemaRecordName,
-		Namespace: p.SchemaRecordNamespace,
+		Name:      p.OptionSchemaRecordName,
+		Namespace: p.OptionSchemaRecordNamespace,
 		Fields:    fields,
 	}
 
@@ -141,14 +141,14 @@ func sendData(p *Plugin, messages []*kafka.Message) error {
 }
 
 func upsertSchema(p *Plugin, subject string) (*srclient.Schema, error) {
-	registrySchema, _ := p.SchemaRegistryClient.GetLatestSchema(subject, false)
+	registrySchema, _ := p.OptionSchemaRegistryClient.GetLatestSchema(subject, false)
 
 	if registrySchema == nil {
-		return p.SchemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
+		return p.OptionSchemaRegistryClient.CreateSchema(subject, p.OptionSchema, srclient.Avro, false)
 
 	} else {
-		if registrySchema.Codec().CanonicalSchema() != p.SchemaCodec.CanonicalSchema() {
-			return p.SchemaRegistryClient.CreateSchema(subject, p.Schema, srclient.Avro, false)
+		if registrySchema.Codec().CanonicalSchema() != p.OptionSchemaCodec.CanonicalSchema() {
+			return p.OptionSchemaRegistryClient.CreateSchema(subject, p.OptionSchema, srclient.Avro, false)
 		} else {
 			return registrySchema, nil
 		}
@@ -156,42 +156,40 @@ func upsertSchema(p *Plugin, subject string) (*srclient.Schema, error) {
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	File string
-	Name string
-	Type string
-
-	Brokers               string
-	ClientId              string
-	ConfluentAvro         bool
-	Compress              string
-	MessageKey            string
-	Output                []string
-	Schema                string
-	SchemaCodec           *goavro.Codec
-	SchemaRecordName      string
-	SchemaRecordNamespace string
-	SchemaNative          map[string]interface{}
-	SchemaRegistry        string
-	SchemaRegistryClient  *srclient.SchemaRegistryClient
-	SchemaSubjectStrategy string
-	Timeout               int
+	PluginName string
+	PluginType string
 
 	KafkaConfig *kafka.ConfigMap
+
+	OptionBrokers               string
+	OptionClientId              string
+	OptionConfluentAvro         bool
+	OptionCompress              string
+	OptionMessageKey            string
+	OptionOutput                []string
+	OptionSchema                string
+	OptionSchemaCodec           *goavro.Codec
+	OptionSchemaRecordName      string
+	OptionSchemaRecordNamespace string
+	OptionSchemaNative          map[string]interface{}
+	OptionSchemaRegistry        string
+	OptionSchemaRegistryClient  *srclient.SchemaRegistryClient
+	OptionSchemaSubjectStrategy string
+	OptionTimeout               int
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
 	// Generate and send messages for every provided topic.
-	for _, topic := range p.Output {
+	for _, topic := range p.OptionOutput {
 		messages := make([]*kafka.Message, 0)
 
 		for _, item := range data {
 			// Populate schema with data.
 			schema := make(map[string]interface{}, 0)
 
-			for k, v := range p.SchemaNative {
+			for k, v := range p.OptionSchemaNative {
 				// Try to detect/expand data fields and/or use value as string.
 				if rv, err := core.ReflectDataField(item, v); err == nil {
 					switch rv.Kind() {
@@ -209,7 +207,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			}
 
 			// Convert data into Avro binary.
-			avroBinary, err := p.SchemaCodec.BinaryFromNative(nil, schema)
+			avroBinary, err := p.OptionSchemaCodec.BinaryFromNative(nil, schema)
 			if err != nil {
 				return err
 			}
@@ -217,20 +215,20 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			// Assemble Kafka message.
 			message := kafka.Message{
 				TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-				Key:            []byte(p.MessageKey),
+				Key:            []byte(p.OptionMessageKey),
 			}
 
 			// Create confluent avro (magic + version + message) or vanilla avro message.
-			if p.ConfluentAvro {
+			if p.OptionConfluentAvro {
 				var subject string
 
-				switch p.SchemaSubjectStrategy {
+				switch p.OptionSchemaSubjectStrategy {
 				case "TOPICNAME":
 					subject = topic
 				case "RECORDNAME":
-					subject = p.SchemaRecordName
+					subject = p.OptionSchemaRecordName
 				case "TOPICRECORDNAME":
-					subject = fmt.Sprintf("%s-%s", topic, p.SchemaRecordName)
+					subject = fmt.Sprintf("%s-%s", topic, p.OptionSchemaRecordName)
 				}
 
 				registrySchema, err := upsertSchema(p, subject)
@@ -265,31 +263,28 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetOutput() []string {
-	return p.Output
+	return p.OptionOutput
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		File: pluginConfig.File,
-		Name: "kafka",
-		Type: "output",
+		Flow:       pluginConfig.Flow,
+		PluginName: "kafka",
+		PluginType: "output",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -319,140 +314,140 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// brokers.
 	setServer := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["brokers"] = 0
-			plugin.Brokers = v
+			plugin.OptionBrokers = v
 		}
 	}
-	setServer(pluginConfig.Config.GetString(fmt.Sprintf("%s.brokers", template)))
-	setServer((*pluginConfig.Params)["brokers"])
-	showParam("brokers", plugin.Brokers)
+	setServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.brokers", template)))
+	setServer((*pluginConfig.PluginParams)["brokers"])
+	showParam("brokers", plugin.OptionBrokers)
 
 	// compress.
 	setCompress := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["compress"] = 0
-			plugin.Compress = v
+			plugin.OptionCompress = v
 		}
 	}
 	setCompress(DEFAULT_COMPRESSION)
-	setCompress(pluginConfig.Config.GetString(fmt.Sprintf("%s.compress", template)))
-	setCompress((*pluginConfig.Params)["compress"])
-	showParam("compress", plugin.Compress)
+	setCompress(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.compress", template)))
+	setCompress((*pluginConfig.PluginParams)["compress"])
+	showParam("compress", plugin.OptionCompress)
 
 	// confluent_avro.
 	setConfluentAvro := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["confluent_avro"] = 0
-			plugin.ConfluentAvro = v
+			plugin.OptionConfluentAvro = v
 		}
 	}
 	setConfluentAvro(DEFAULT_CONFLUENT_AVRO)
-	setConfluentAvro(pluginConfig.Config.GetString(fmt.Sprintf("%s.confluent_avro", template)))
-	setConfluentAvro((*pluginConfig.Params)["confluent_avro"])
-	showParam("confluent_avro", plugin.ConfluentAvro)
+	setConfluentAvro(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.confluent_avro", template)))
+	setConfluentAvro((*pluginConfig.PluginParams)["confluent_avro"])
+	showParam("confluent_avro", plugin.OptionConfluentAvro)
 
 	// client_id.
 	setClientId := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["client_id"] = 0
-			plugin.ClientId = v
+			plugin.OptionClientId = v
 		}
 	}
-	setClientId(pluginConfig.Config.GetString(fmt.Sprintf("%s.client_id", template)))
-	setClientId((*pluginConfig.Params)["client_id"])
-	showParam("client_id", plugin.ClientId)
+	setClientId(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.client_id", template)))
+	setClientId((*pluginConfig.PluginParams)["client_id"])
+	showParam("client_id", plugin.OptionClientId)
 
 	// message_key.
 	setMessageKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["message_key"] = 0
-			plugin.MessageKey = v
+			plugin.OptionMessageKey = v
 		}
 	}
 	setMessageKey(DEFAULT_MESSAGE_KEY)
-	setMessageKey(pluginConfig.Config.GetString(fmt.Sprintf("%s.message_key", template)))
-	setMessageKey((*pluginConfig.Params)["message_key"])
-	showParam("message_key", plugin.MessageKey)
+	setMessageKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_key", template)))
+	setMessageKey((*pluginConfig.PluginParams)["message_key"])
+	showParam("message_key", plugin.OptionMessageKey)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["output"] = 0
-			plugin.Output = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionOutput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// schema_record_name.
 	setSchemaRecordName := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_record_name"] = 0
-			plugin.SchemaRecordName = v
+			plugin.OptionSchemaRecordName = v
 		}
 	}
 	setSchemaRecordName(DEFAULT_SCHEMA_RECORD_NAME)
-	setSchemaRecordName(pluginConfig.Config.GetString(fmt.Sprintf("%s.schema_record_name", template)))
-	setSchemaRecordName((*pluginConfig.Params)["schema_record_name"])
-	showParam("schema_record_name", plugin.SchemaRecordName)
+	setSchemaRecordName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_record_name", template)))
+	setSchemaRecordName((*pluginConfig.PluginParams)["schema_record_name"])
+	showParam("schema_record_name", plugin.OptionSchemaRecordName)
 
 	// schema_record_namespace.
 	setSchemaRecordNamespace := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_record_namespace"] = 0
-			plugin.SchemaRecordNamespace = v
+			plugin.OptionSchemaRecordNamespace = v
 		}
 	}
 	setSchemaRecordNamespace(DEFAULT_SCHEMA_RECORD_NAMESPACE)
-	setSchemaRecordNamespace(pluginConfig.Config.GetString(fmt.Sprintf("%s.schema_record_namespace", template)))
-	setSchemaRecordNamespace((*pluginConfig.Params)["schema_record_namespace"])
-	showParam("schema_record_namespace", plugin.SchemaRecordNamespace)
+	setSchemaRecordNamespace(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_record_namespace", template)))
+	setSchemaRecordNamespace((*pluginConfig.PluginParams)["schema_record_namespace"])
+	showParam("schema_record_namespace", plugin.OptionSchemaRecordNamespace)
 
 	// schema_registry.
 	setSchemaRegistry := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_registry"] = 0
-			plugin.SchemaRegistry = v
-			plugin.SchemaRegistryClient = srclient.CreateSchemaRegistryClient(v)
+			plugin.OptionSchemaRegistry = v
+			plugin.OptionSchemaRegistryClient = srclient.CreateSchemaRegistryClient(v)
 		}
 	}
 	setSchemaRegistry(DEFAULT_SCHEMA_REGISTRY)
-	setSchemaRegistry(pluginConfig.Config.GetString(fmt.Sprintf("%s.schema_registry", template)))
-	setSchemaRegistry((*pluginConfig.Params)["schema_registry"])
-	showParam("schema_registry", plugin.SchemaRegistry)
+	setSchemaRegistry(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_registry", template)))
+	setSchemaRegistry((*pluginConfig.PluginParams)["schema_registry"])
+	showParam("schema_registry", plugin.OptionSchemaRegistry)
 
 	// schema_subject_strategy.
 	setSchemaSubjectStrategy := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_subject_strategy"] = 0
-			plugin.SchemaSubjectStrategy = v
+			plugin.OptionSchemaSubjectStrategy = v
 		}
 	}
 	setSchemaSubjectStrategy(DEFAULT_SCHEMA_SUBJECT_STRATEGY)
-	setSchemaSubjectStrategy(pluginConfig.Config.GetString(fmt.Sprintf("%s.schema_subject_strategy", template)))
-	setSchemaSubjectStrategy((*pluginConfig.Params)["schema_subject_strategy"])
-	showParam("schema_subject_strategy", plugin.SchemaSubjectStrategy)
+	setSchemaSubjectStrategy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_subject_strategy", template)))
+	setSchemaSubjectStrategy((*pluginConfig.PluginParams)["schema_subject_strategy"])
+	showParam("schema_subject_strategy", plugin.OptionSchemaSubjectStrategy)
 
 	// schema.
-	templateSchema, _ := core.IsMapWithStringAsKey(pluginConfig.Config.GetStringMap(fmt.Sprintf("%s.schema", template)))
-	configSchema, _ := core.IsMapWithStringAsKey((*pluginConfig.Params)["schema"])
+	templateSchema, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.schema", template)))
+	configSchema, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["schema"])
 	mergedSchema := make(map[string]interface{}, 0)
 
 	// config schema has higher priority over template schema.
@@ -468,9 +463,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		if v, err := genSchema(&plugin, &mergedSchema); err == nil {
 			if c, err := goavro.NewCodec(v); err == nil {
 				availableParams["schema"] = 0
-				plugin.Schema = v
-				plugin.SchemaCodec = c
-				plugin.SchemaNative = mergedSchema
+				plugin.OptionSchema = v
+				plugin.OptionSchemaCodec = c
+				plugin.OptionSchemaNative = mergedSchema
 			} else {
 				return &Plugin{}, fmt.Errorf(ERROR_SCHEMA_ERROR.Error(), err)
 			}
@@ -481,24 +476,24 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, ERROR_SCHEMA_NOT_SET
 	}
 
-	showParam("schema", plugin.SchemaCodec.CanonicalSchema())
+	showParam("schema", plugin.OptionSchemaCodec.CanonicalSchema())
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -507,19 +502,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// Set client id for identification.
 	var clientId string
-	if plugin.ClientId == "" {
-		clientId = plugin.Flow
+	if plugin.OptionClientId == "" {
+		clientId = plugin.Flow.FlowName
 	} else {
-		clientId = plugin.ClientId
+		clientId = plugin.OptionClientId
 	}
 
 	kafkaConfig := kafka.ConfigMap{
-		"bootstrap.servers":           plugin.Brokers,
+		"bootstrap.servers":           plugin.OptionBrokers,
 		"client.id":                   clientId,
-		"compression.type":            plugin.Compress,
-		"message.timeout.ms":          plugin.Timeout * 1000,
-		"metadata.request.timeout.ms": plugin.Timeout * 1000,
-		"socket.timeout.ms":           plugin.Timeout * 1000,
+		"compression.type":            plugin.OptionCompress,
+		"message.timeout.ms":          plugin.OptionTimeout * 1000,
+		"metadata.request.timeout.ms": plugin.OptionTimeout * 1000,
+		"socket.timeout.ms":           plugin.OptionTimeout * 1000,
 	}
 
 	plugin.KafkaConfig = &kafkaConfig
@@ -527,10 +522,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if !core.IsValueInSlice(strings.ToUpper(plugin.SchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
-		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.SchemaSubjectStrategy)
+	if !core.IsValueInSlice(strings.ToUpper(plugin.OptionSchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
+		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.OptionSchemaSubjectStrategy)
 	} else {
-		plugin.SchemaSubjectStrategy = strings.ToUpper(plugin.SchemaSubjectStrategy)
+		plugin.OptionSchemaSubjectStrategy = strings.ToUpper(plugin.OptionSchemaSubjectStrategy)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

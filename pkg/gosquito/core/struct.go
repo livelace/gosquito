@@ -47,13 +47,13 @@ type OutputPlugin interface {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type PluginConfig struct {
-	Alias  string
-	Config *viper.Viper
-	File   string
-	Flow   string
-	Hash   string
-	ID     int
-	Params *map[string]interface{}
+	AppConfig *viper.Viper
+
+	Flow *Flow
+
+	PluginID     int
+	PluginAlias  string
+	PluginParams *map[string]interface{}
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -62,23 +62,27 @@ type Flow struct {
 	m      sync.Mutex
 	number int
 
-	Hash string
-	UUID uuid.UUID
+	FlowUUID uuid.UUID
+	FlowHash string
+	FlowName string
 
-	Name     string
-	Interval int64
-	Number   int
+	FlowFile    string
+	FlowDataDir string
+	FlowTempDir string
+
+	FlowInterval int64
+	FlowNumber   int
+
+	InputPlugin         InputPlugin
+	ProcessPlugins      map[int]ProcessPlugin
+	ProcessPluginsNames []string
+	OutputPlugin        OutputPlugin
 
 	MetricError   int32
 	MetricExpire  int32
 	MetricNoData  int32
 	MetricReceive int32
 	MetricSend    int32
-
-	InputPlugin         InputPlugin
-	ProcessPlugins      map[int]ProcessPlugin
-	ProcessPluginsNames []string
-	OutputPlugin        OutputPlugin
 }
 
 func (f *Flow) GetNumber() int {
@@ -97,7 +101,7 @@ func (f *Flow) Lock() bool {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	if f.number == 0 || f.number < f.Number {
+	if f.number == 0 || f.number < f.FlowNumber {
 		f.number += 1
 		return true
 	} else {

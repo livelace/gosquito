@@ -4,7 +4,7 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	APP_NAME    = "gosquito"
-	APP_VERSION = "v2.4.0"
+	APP_VERSION = "v3.0.0"
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -55,15 +55,13 @@ const (
 	VIPER_DEFAULT_EXPIRE_INTERVAL       = "default.expire_interval"
 	VIPER_DEFAULT_EXPORTER_LISTEN       = "default.exporter_listen"
 	VIPER_DEFAULT_FLOW_CONF             = "default.flow_conf"
+	VIPER_DEFAULT_FLOW_DATA             = "default.flow_data"
 	VIPER_DEFAULT_FLOW_DISABLE          = "default.flow_disable"
 	VIPER_DEFAULT_FLOW_ENABLE           = "default.flow_enable"
 	VIPER_DEFAULT_FLOW_INTERVAL         = "default.flow_interval"
 	VIPER_DEFAULT_FLOW_NUMBER           = "default.flow_number"
 	VIPER_DEFAULT_LOG_LEVEL             = "default.log_level"
-	VIPER_DEFAULT_PLUGIN_DATA           = "default.plugin_data"
 	VIPER_DEFAULT_PLUGIN_INCLUDE        = "default.plugin_include"
-	VIPER_DEFAULT_PLUGIN_STATE          = "default.plugin_state"
-	VIPER_DEFAULT_PLUGIN_TEMP           = "default.plugin_temp"
 	VIPER_DEFAULT_PLUGIN_TIMEOUT        = "default.plugin_timeout"
 	VIPER_DEFAULT_PROC_NUM              = "default.proc_num"
 	VIPER_DEFAULT_TIME_FORMAT           = "default.time_format"
@@ -99,7 +97,10 @@ const (
 #exporter_listen         = ":8080"
 
 # Path to flow configurations.
-#flow_conf               = "/path/to/config/flow/conf"
+#flow_conf               = "/path/to/conf"
+
+# Path to flow data.
+#flow_data               = "/path/to/data"
 
 # Disable/enable flow by names, mutually exclusive.
 #flow_disable            = ["flow1", "flow2", "flow3"]
@@ -112,16 +113,6 @@ const (
 
 # Process plugins results will be send by default.
 #plugin_include          = true
-
-# Some plugins have their own persistent data/settings for proper work (Telegram, for instance).
-#plugin_data             = "/path/to/config/plugin/data"
-
-# Directory where plugins save their states. 
-# States - it's about gosquito related features (as opposite to plugin_data).
-#plugin_state            = "/path/to/config/plugin/state"
-
-# Plugins use this dir for temporary data placing.
-#plugin_temp             = "/path/to/config/plugin/temp"
 
 # Maximum plugin execution time (seconds). Some plugins ignore this value and use their own timeout.
 #plugin_timeout          = 60

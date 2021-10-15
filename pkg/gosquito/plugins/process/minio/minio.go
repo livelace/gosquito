@@ -52,9 +52,9 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 	defer cancel()
 
 	// client.
-	client, err := minio.New(p.Server, &minio.Options{
-		Creds:  credentials.NewStaticV4(p.AccessKey, p.SecretKey, ""),
-		Secure: p.SSL,
+	client, err := minio.New(p.OptionServer, &minio.Options{
+		Creds:  credentials.NewStaticV4(p.OptionAccessKey, p.OptionSecretKey, ""),
+		Secure: p.OptionSSL,
 	})
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 
 	// background.
 	go func() {
-		_, err = client.FPutObject(ctx, p.Bucket, object, file, minio.PutObjectOptions{ContentType: "octet/stream"})
+		_, err = client.FPutObject(ctx, p.OptionBucket, object, file, minio.PutObjectOptions{ContentType: "octet/stream"})
 		c <- err
 	}()
 
@@ -81,29 +81,25 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	File    string
-	Name    string
-	TempDir string
-	Type    string
+	OptionInclude bool
+	OptionRequire []int
+	OptionTimeout int
 
-	Include bool
-	Require []int
-	Timeout int
-
-	AccessKey string
-	Action    string
-	Bucket    string
-	Input     []string
-	Output    []string
-	SSL       bool
-	SecretKey string
-	Server    string
+	OptionAccessKey string
+	OptionAction    string
+	OptionBucket    string
+	OptionInput     []string
+	OptionOutput    []string
+	OptionSSL       bool
+	OptionSecretKey string
+	OptionServer    string
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -116,18 +112,18 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	for _, item := range data {
 		performed := false
 
-		for index, input := range p.Input {
+		for index, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.Output[index])
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
 			for i := 0; i < ri.Len(); i++ {
 				// Upload all found files:
 				// 1. /local/path/to/file -> <bucket>/<item_uuid>/local/path/to/file
 				// 2. /gosquito/temp/dir/<flow_name>/<plugin_type>/<plugin_name>/uuid/file ->
 				// <bucket>/<item_uuid>/<plugin_name>/uuid/file
-				if p.Action == "put" {
+				if p.OptionAction == "put" {
 					files, err := getLocalFiles(ri.Index(i).String())
 
 					if err != nil {
@@ -135,21 +131,21 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 					}
 
 					for _, file := range files {
-						pluginTemp := filepath.Join(p.TempDir, p.Flow, p.Type)
+						pluginTemp := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
 						object := fmt.Sprintf("%s%s", item.UUID, strings.ReplaceAll(file, pluginTemp, ""))
 
-						if err := minioPut(p, file, object, p.Timeout); err != nil {
+						if err := minioPut(p, file, object, p.OptionTimeout); err != nil {
 							return temp, err
 						} else {
 							log.WithFields(log.Fields{
-								"hash":   p.Hash,
-								"flow":   p.Flow,
-								"file":   p.File,
-								"plugin": p.Name,
-								"type":   p.Type,
-								"id":     p.ID,
-								"alias":  p.Alias,
-								"data":   fmt.Sprintf("put: %s/%s/%s", p.Server, p.Bucket, object),
+								"hash":   p.Flow.FlowHash,
+								"flow":   p.Flow.FlowName,
+								"file":   p.Flow.FlowFile,
+								"plugin": p.PluginName,
+								"type":   p.PluginType,
+								"id":     p.PluginID,
+								"alias":  p.PluginAlias,
+								"data":   fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, object),
 							}).Debug(core.LOG_PLUGIN_DATA)
 							ro.Set(reflect.Append(ro, reflect.ValueOf(object)))
 						}
@@ -169,47 +165,42 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetId() int {
-	return p.ID
+	return p.PluginID
 }
 
 func (p *Plugin) GetAlias() string {
-	return p.Alias
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) GetInclude() bool {
-	return p.Include
+	return p.OptionInclude
 }
 
 func (p *Plugin) GetRequire() []int {
-	return p.Require
+	return p.OptionRequire
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File:    pluginConfig.File,
-		Name:    "minio",
-		TempDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP),
-		Type:    "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "minio",
+		PluginType:  "process",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -240,153 +231,153 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// access_key.
 	setAccessKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_key"] = 0
-			plugin.AccessKey = v
+			plugin.OptionAccessKey = v
 		}
 	}
-	setAccessKey(pluginConfig.Config.GetString(fmt.Sprintf("%s.access_key", cred)))
-	setAccessKey((*pluginConfig.Params)["access_key"])
+	setAccessKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_key", cred)))
+	setAccessKey((*pluginConfig.PluginParams)["access_key"])
 
 	// secret_key.
 	setSecretKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["secret_key"] = 0
-			plugin.SecretKey = v
+			plugin.OptionSecretKey = v
 		}
 	}
-	setSecretKey(pluginConfig.Config.GetString(fmt.Sprintf("%s.secret_key", cred)))
-	setSecretKey((*pluginConfig.Params)["secret_key"])
+	setSecretKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.secret_key", cred)))
+	setSecretKey((*pluginConfig.PluginParams)["secret_key"])
 
 	// server.
 	setServer := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["server"] = 0
-			plugin.Server = v
+			plugin.OptionServer = v
 		}
 	}
-	setServer(pluginConfig.Config.GetString(fmt.Sprintf("%s.server", cred)))
-	setServer((*pluginConfig.Params)["server"])
+	setServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.server", cred)))
+	setServer((*pluginConfig.PluginParams)["server"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// action.
 	setAction := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["action"] = 0
-			plugin.Action = v
+			plugin.OptionAction = v
 		}
 	}
-	setAction(pluginConfig.Config.GetString(fmt.Sprintf("%s.action", template)))
-	setAction((*pluginConfig.Params)["action"])
-	showParam("action", plugin.Action)
+	setAction(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.action", template)))
+	setAction((*pluginConfig.PluginParams)["action"])
+	showParam("action", plugin.OptionAction)
 
 	// bucket.
 	setBucket := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["bucket"] = 0
-			plugin.Bucket = v
+			plugin.OptionBucket = v
 		}
 	}
-	setBucket(pluginConfig.Config.GetString(fmt.Sprintf("%s.bucket", template)))
-	setBucket((*pluginConfig.Params)["bucket"])
-	showParam("bucket", plugin.Bucket)
+	setBucket(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.bucket", template)))
+	setBucket((*pluginConfig.PluginParams)["bucket"])
+	showParam("bucket", plugin.OptionBucket)
 
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude(pluginConfig.Config.GetString(fmt.Sprintf("%s.include", template)))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.include", template)))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
-				plugin.Input = v
+				plugin.OptionInput = v
 			}
 		}
 	}
-	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire(pluginConfig.Config.GetIntSlice(fmt.Sprintf("%s.require", template)))
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.require", template)))
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// ssl.
 	setSSL := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["ssl"] = 0
-			plugin.SSL = v
+			plugin.OptionSSL = v
 		}
 	}
 	setSSL(DEFAULT_SSL_ENABLE)
-	setSSL(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl", template)))
-	setSSL((*pluginConfig.Params)["ssl"])
-	showParam("ssl", plugin.SSL)
+	setSSL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ssl", template)))
+	setSSL((*pluginConfig.PluginParams)["ssl"])
+	showParam("ssl", plugin.OptionSSL)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
-	setTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -394,15 +385,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// input and output must have equal size.
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 
-	} else if plugin.Action != "put" {
-		return &Plugin{}, fmt.Errorf(ERROR_ACTION_UNKNOWN.Error(), plugin.Action)
+	} else if plugin.OptionAction != "put" {
+		return &Plugin{}, fmt.Errorf(ERROR_ACTION_UNKNOWN.Error(), plugin.OptionAction)
 
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

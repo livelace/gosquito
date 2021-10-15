@@ -43,21 +43,21 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	// Debug logging.
 	logDebug := func(field, message string) {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
-			"id":     p.ID,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"id":     p.PluginID,
 			field:    message,
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
-	connectTimeout := time.Duration(p.ServerTimeout) * time.Second
-	requestTimeout := time.Duration(p.RequestTimeout) * time.Second
+	connectTimeout := time.Duration(p.OptionServerTimeout) * time.Second
+	requestTimeout := time.Duration(p.OptionRequestTimeout) * time.Second
 
 	// Gather servers load scores.
-	for _, server := range p.Server {
+	for _, server := range p.OptionServer {
 		// Try to connect to server.
 		dialCtx, dialCancel := context.WithTimeout(context.Background(), connectTimeout)
 		defer dialCancel()
@@ -90,7 +90,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 			continue
 		}
 
-		if load.CpuLoad <= p.CpuLoad && load.MemFree >= p.MemFree {
+		if load.CpuLoad <= p.OptionCpuLoad && load.MemFree >= p.OptionMemFree {
 			serverLoad[server] = load.Score
 		} else {
 			logDebug("data", fmt.Sprintf(
@@ -136,15 +136,15 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 	// Quick fail.
 	logAndSetFail := func(msg string) {
 		batchTask.Status = "fail"
-		p.BatchChannel <- batchTask
+		p.OptionBatchChannel <- batchTask
 
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
-			"id":     p.ID,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"id":     p.PluginID,
 			"error":  msg,
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
@@ -160,39 +160,39 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 
 	// Form and run webchela task.
 	webchelaTaskBrowser := pb.Task_Browser{
-		Type:          p.BrowserType,
-		Argument:      p.BrowserArgument,
-		Extension:     p.BrowserExtension,
-		Geometry:      p.BrowserGeometry,
-		Instance:      int32(p.BrowserInstance),
-		InstanceTab:   int32(p.BrowserInstanceTab),
-		PageSize:      p.BrowserPageSize,
-		PageTimeout:   int32(p.BrowserPageTimeout),
-		Proxy:         p.BrowserProxy,
-		ScriptTimeout: int32(p.BrowserScriptTimeout),
+		Type:          p.OptionBrowserType,
+		Argument:      p.OptionBrowserArgument,
+		Extension:     p.OptionBrowserExtension,
+		Geometry:      p.OptionBrowserGeometry,
+		Instance:      int32(p.OptionBrowserInstance),
+		InstanceTab:   int32(p.OptionBrowserInstanceTab),
+		PageSize:      p.OptionBrowserPageSize,
+		PageTimeout:   int32(p.OptionBrowserPageTimeout),
+		Proxy:         p.OptionBrowserProxy,
+		ScriptTimeout: int32(p.OptionBrowserScriptTimeout),
 	}
 
 	// Set client id for identification.
 	var clientId string
-	if p.ClientId == "" {
-		clientId = p.Flow
+	if p.OptionClientId == "" {
+		clientId = p.Flow.FlowName
 	} else {
-		clientId = p.ClientId
+		clientId = p.OptionClientId
 	}
 
 	webchelaTask := pb.Task{
 		ClientId:  clientId,
 		Urls:      batchTask.Input,
-		Scripts:   p.Script,
-		ChunkSize: p.ChunkSize,
-		CpuLoad:   p.CpuLoad,
-		MemFree:   p.MemFree,
-		Timeout:   int32(p.Timeout),
+		Scripts:   p.OptionScript,
+		ChunkSize: p.OptionChunkSize,
+		CpuLoad:   p.OptionCpuLoad,
+		MemFree:   p.OptionMemFree,
+		Timeout:   int32(p.OptionTimeout),
 		Browser:   &webchelaTaskBrowser,
 	}
 
 	client := pb.NewServerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(p.Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(p.OptionTimeout)*time.Second)
 	defer cancel()
 
 	stream, err := client.RunTask(ctx, &webchelaTask)
@@ -240,7 +240,7 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 
 	if err := saveData(p, batchTask, results); err == nil {
 		batchTask.Status = "success"
-		p.BatchChannel <- batchTask
+		p.OptionBatchChannel <- batchTask
 	} else {
 		batchTask.Status = "fail"
 		logAndSetFail(fmt.Sprintf("batch: %d, cannot save results: %s", batchTask.ID, err))
@@ -251,7 +251,7 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 	for _, result := range results {
 		// Create output directory in plugin temporary directory.
-		outputDir := filepath.Join(p.TempDir, p.Flow, p.Type, p.Name, result.UUID)
+		outputDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName, result.UUID)
 		err := core.CreateDirIfNotExist(outputDir)
 		if err != nil {
 			return err
@@ -284,12 +284,12 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 		}
 
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
-			"id":     p.ID,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"id":     p.PluginID,
 			"data":   fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir),
 		}).Debug(core.LOG_PLUGIN_DATA)
 
@@ -308,44 +308,40 @@ type BatchTask struct {
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	File    string
-	Name    string
-	TempDir string
-	Type    string
+	OptionInclude bool
+	OptionRequire []int
+	OptionTimeout int
 
-	Include bool
-	Require []int
-	Timeout int
-
-	BatchChannel         chan *BatchTask
-	BatchRetry           int
-	BatchSize            int
-	BrowserType          string
-	BrowserArgument      []string
-	BrowserExtension     []string
-	BrowserGeometry      string
-	BrowserInstance      int
-	BrowserInstanceTab   int
-	BrowserPageSize      int64
-	BrowserPageTimeout   int
-	BrowserProxy         string
-	BrowserScriptTimeout int
-	ChunkSize            int64
-	ClientId             string
-	CpuLoad              int32
-	Input                []string
-	MemFree              int64
-	Output               []string
-	RequestTimeout       int
-	Script               []string
-	Server               []string
-	ServerTimeout        int
+	OptionBatchChannel         chan *BatchTask
+	OptionBatchRetry           int
+	OptionBatchSize            int
+	OptionBrowserType          string
+	OptionBrowserArgument      []string
+	OptionBrowserExtension     []string
+	OptionBrowserGeometry      string
+	OptionBrowserInstance      int
+	OptionBrowserInstanceTab   int
+	OptionBrowserPageSize      int64
+	OptionBrowserPageTimeout   int
+	OptionBrowserProxy         string
+	OptionBrowserScriptTimeout int
+	OptionChunkSize            int64
+	OptionClientId             string
+	OptionCpuLoad              int32
+	OptionInput                []string
+	OptionMemFree              int64
+	OptionOutput               []string
+	OptionRequestTimeout       int
+	OptionScript               []string
+	OptionServer               []string
+	OptionServerTimeout        int
 }
 
 func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -357,12 +353,12 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	logError := func(msg string) {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
-			"id":     p.ID,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"id":     p.PluginID,
 			"error":  msg,
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
@@ -378,9 +374,9 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	inputMeta := make(map[int][]int, 0)
 
 	for itemIndex, itemData := range data {
-		inputMeta[itemIndex] = make([]int, len(p.Input))
+		inputMeta[itemIndex] = make([]int, len(p.OptionInput))
 
-		for inputIndex, inputField := range p.Input {
+		for inputIndex, inputField := range p.OptionInput {
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(itemData, inputField)
@@ -398,8 +394,8 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	// Split input data into batches.
 	batches := make([][]string, 0)
 
-	for i := 0; i < len(inputData); i += p.BatchSize {
-		end := i + p.BatchSize
+	for i := 0; i < len(inputData); i += p.OptionBatchSize {
+		end := i + p.OptionBatchSize
 		if end > len(inputData) {
 			end = len(inputData)
 		}
@@ -410,14 +406,14 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	batchStatus := make(map[int]string, len(batches))
 	batchResult := make(map[int]*BatchTask, len(batches))
 	batchRetryStat := make(map[int]int, len(batches))
-	serverFailStat := make(map[string]int, len(p.Server))
+	serverFailStat := make(map[string]int, len(p.OptionServer))
 
 	timeoutCounter := 0
 
 	for {
-		if timeoutCounter > p.Timeout {
+		if timeoutCounter > p.OptionTimeout {
 			logError(fmt.Sprintf("main loop: timeout reached: total batches: %d, timeout: %d",
-				len(batches), p.Timeout))
+				len(batches), p.OptionTimeout))
 			return temp, nil
 		}
 
@@ -437,7 +433,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 				}
 				completed = false
 			case "fail":
-				if batchRetryStat[batchId] < p.BatchRetry {
+				if batchRetryStat[batchId] < p.OptionBatchRetry {
 					batchRetryStat[batchId] += 1
 					batchStatus[batchId] = ""
 					completed = false
@@ -451,8 +447,8 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 		// Get completed batches and update statuses.
 		// Update stat for servers where fails appeared somehow.
-		for i := 0; i < len(p.BatchChannel); i++ {
-			b := <-p.BatchChannel
+		for i := 0; i < len(p.OptionBatchChannel); i++ {
+			b := <-p.OptionBatchChannel
 
 			batchStatus[b.ID] = b.Status
 			batchResult[b.ID] = b
@@ -500,7 +496,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 				grabbed = true
 			}
 
-			ro, _ := core.ReflectDataField(data[itemIndex], p.Output[index])
+			ro, _ := core.ReflectDataField(data[itemIndex], p.OptionOutput[index])
 
 			for offset := outputOffset; offset < outputOffset+value; offset++ {
 				ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
@@ -518,47 +514,42 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetId() int {
-	return p.ID
+	return p.PluginID
 }
 
 func (p *Plugin) GetAlias() string {
-	return p.Alias
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) GetInclude() bool {
-	return p.Include
+	return p.OptionInclude
 }
 
 func (p *Plugin) GetRequire() []int {
-	return p.Require
+	return p.OptionRequire
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File:    pluginConfig.File,
-		Name:    "webchela",
-		TempDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP),
-		Type:    "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "webchela",
+		PluginType:  "process",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -602,335 +593,335 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// batch_retry.
 	setBatchRetry := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["batch_retry"] = 0
-			plugin.BatchRetry = v
+			plugin.OptionBatchRetry = v
 		}
 	}
 	setBatchRetry(DEFAULT_BATCH_RETRY)
-	setBatchRetry(pluginConfig.Config.GetInt(fmt.Sprintf("%s.batch_retry", template)))
-	setBatchRetry((*pluginConfig.Params)["batch_retry"])
-	showParam("batch_retry", plugin.BatchRetry)
+	setBatchRetry(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.batch_retry", template)))
+	setBatchRetry((*pluginConfig.PluginParams)["batch_retry"])
+	showParam("batch_retry", plugin.OptionBatchRetry)
 
 	// batch_size.
 	setBatchSize := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["batch_size"] = 0
-			plugin.BatchSize = v
+			plugin.OptionBatchSize = v
 		}
 	}
 	setBatchSize(DEFAULT_BATCH_SIZE)
-	setBatchSize(pluginConfig.Config.GetInt(fmt.Sprintf("%s.batch_size", template)))
-	setBatchSize((*pluginConfig.Params)["batch_size"])
-	showParam("batch_size", plugin.BatchSize)
+	setBatchSize(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.batch_size", template)))
+	setBatchSize((*pluginConfig.PluginParams)["batch_size"])
+	showParam("batch_size", plugin.OptionBatchSize)
 
 	// browser_type.
 	setBrowserType := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["browser_type"] = 0
-			plugin.BrowserType = v
+			plugin.OptionBrowserType = v
 		}
 	}
 	setBrowserType(DEFAULT_BROWSER_TYPE)
-	setBrowserType(pluginConfig.Config.GetString(fmt.Sprintf("%s.browser_type", template)))
-	setBrowserType((*pluginConfig.Params)["browser_type"])
-	showParam("browser_type", plugin.BrowserType)
+	setBrowserType(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_type", template)))
+	setBrowserType((*pluginConfig.PluginParams)["browser_type"])
+	showParam("browser_type", plugin.OptionBrowserType)
 
 	// browser_argument.
 	setBrowserArgument := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["browser_argument"] = 0
-			plugin.BrowserArgument = v
+			plugin.OptionBrowserArgument = v
 		}
 	}
-	setBrowserArgument(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.browser_argument", template)))
-	setBrowserArgument((*pluginConfig.Params)["browser_argument"])
-	showParam("browser_argument", plugin.BrowserArgument)
+	setBrowserArgument(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.browser_argument", template)))
+	setBrowserArgument((*pluginConfig.PluginParams)["browser_argument"])
+	showParam("browser_argument", plugin.OptionBrowserArgument)
 
 	// browser_extension.
 	setBrowserExtensions := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["browser_extension"] = 0
-			plugin.BrowserExtension = v
+			plugin.OptionBrowserExtension = v
 		}
 	}
-	setBrowserExtensions(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.browser_extension", template)))
-	setBrowserExtensions((*pluginConfig.Params)["browser_extension"])
-	showParam("browser_extension", plugin.BrowserExtension)
+	setBrowserExtensions(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.browser_extension", template)))
+	setBrowserExtensions((*pluginConfig.PluginParams)["browser_extension"])
+	showParam("browser_extension", plugin.OptionBrowserExtension)
 
 	// browser_geometry.
 	setBrowserGeometry := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["browser_geometry"] = 0
-			plugin.BrowserGeometry = v
+			plugin.OptionBrowserGeometry = v
 		}
 	}
 	setBrowserGeometry(DEFAULT_BROWSER_GEOMETRY)
-	setBrowserGeometry(pluginConfig.Config.GetString(fmt.Sprintf("%s.browser_geometry", template)))
-	setBrowserGeometry((*pluginConfig.Params)["browser_geometry"])
-	showParam("browser_geometry", plugin.BrowserGeometry)
+	setBrowserGeometry(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_geometry", template)))
+	setBrowserGeometry((*pluginConfig.PluginParams)["browser_geometry"])
+	showParam("browser_geometry", plugin.OptionBrowserGeometry)
 
 	// browser_instance.
 	setBrowserInstance := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["browser_instance"] = 0
-			plugin.BrowserInstance = v
+			plugin.OptionBrowserInstance = v
 		}
 	}
 	setBrowserInstance(DEFAULT_BROWSER_INSTANCE)
-	setBrowserInstance(pluginConfig.Config.GetInt(fmt.Sprintf("%s.browser_instance", template)))
-	setBrowserInstance((*pluginConfig.Params)["browser_instance"])
-	showParam("browser_instance", plugin.BrowserInstance)
+	setBrowserInstance(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_instance", template)))
+	setBrowserInstance((*pluginConfig.PluginParams)["browser_instance"])
+	showParam("browser_instance", plugin.OptionBrowserInstance)
 
 	// browser_instance_tab.
 	setBrowserInstanceTab := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["browser_instance_tab"] = 0
-			plugin.BrowserInstanceTab = v
+			plugin.OptionBrowserInstanceTab = v
 		}
 	}
 	setBrowserInstanceTab(DEFAULT_BROWSER_INSTANCE_TAB)
-	setBrowserInstanceTab(pluginConfig.Config.GetInt(fmt.Sprintf("%s.browser_instance_tab", template)))
-	setBrowserInstanceTab((*pluginConfig.Params)["browser_instance_tab"])
-	showParam("browser_instance_tab", plugin.BrowserInstanceTab)
+	setBrowserInstanceTab(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_instance_tab", template)))
+	setBrowserInstanceTab((*pluginConfig.PluginParams)["browser_instance_tab"])
+	showParam("browser_instance_tab", plugin.OptionBrowserInstanceTab)
 
 	// browser_page_size.
 	setBrowserPageSize := func(p interface{}) {
 		if v, b := core.IsSize(p); b {
 			availableParams["browser_page_size"] = 0
-			plugin.BrowserPageSize = v
+			plugin.OptionBrowserPageSize = v
 		}
 	}
 	setBrowserPageSize(DEFAULT_BROWSER_PAGE_SIZE)
-	setBrowserPageSize(pluginConfig.Config.GetString(fmt.Sprintf("%s.browser_page_size", template)))
-	setBrowserPageSize((*pluginConfig.Params)["browser_page_size"])
-	showParam("browser_page_size", plugin.BrowserPageSize)
+	setBrowserPageSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_page_size", template)))
+	setBrowserPageSize((*pluginConfig.PluginParams)["browser_page_size"])
+	showParam("browser_page_size", plugin.OptionBrowserPageSize)
 
 	// browser_page_timeout.
 	setBrowserPageTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["browser_page_timeout"] = 0
-			plugin.BrowserPageTimeout = v
+			plugin.OptionBrowserPageTimeout = v
 		}
 	}
 	setBrowserPageTimeout(DEFAULT_BROWSER_PAGE_TIMEOUT)
-	setBrowserPageTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.browser_page_timeout", template)))
-	setBrowserPageTimeout((*pluginConfig.Params)["browser_page_timeout"])
-	showParam("browser_page_timeout", plugin.BrowserPageTimeout)
+	setBrowserPageTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_page_timeout", template)))
+	setBrowserPageTimeout((*pluginConfig.PluginParams)["browser_page_timeout"])
+	showParam("browser_page_timeout", plugin.OptionBrowserPageTimeout)
 
 	// browser_proxy.
 	setBrowserProxy := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["browser_proxy"] = 0
-			plugin.BrowserProxy = v
+			plugin.OptionBrowserProxy = v
 		}
 	}
 	setBrowserProxy(DEFAULT_BROWSER_PROXY)
-	setBrowserProxy(pluginConfig.Config.GetString(fmt.Sprintf("%s.browser_proxy", template)))
-	setBrowserProxy((*pluginConfig.Params)["browser_proxy"])
-	showParam("browser_proxy", plugin.BrowserProxy)
+	setBrowserProxy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_proxy", template)))
+	setBrowserProxy((*pluginConfig.PluginParams)["browser_proxy"])
+	showParam("browser_proxy", plugin.OptionBrowserProxy)
 
 	// browser_script_timeout.
 	setBrowserScriptTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["browser_script_timeout"] = 0
-			plugin.BrowserScriptTimeout = v
+			plugin.OptionBrowserScriptTimeout = v
 		}
 	}
 	setBrowserScriptTimeout(DEFAULT_BROWSER_SCRIPT_TIMEOUT)
-	setBrowserScriptTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.browser_script_timeout", template)))
-	setBrowserScriptTimeout((*pluginConfig.Params)["browser_script_timeout"])
-	showParam("browser_script_timeout", plugin.BrowserScriptTimeout)
+	setBrowserScriptTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_script_timeout", template)))
+	setBrowserScriptTimeout((*pluginConfig.PluginParams)["browser_script_timeout"])
+	showParam("browser_script_timeout", plugin.OptionBrowserScriptTimeout)
 
 	// chunk_size.
 	setChunkSize := func(p interface{}) {
 		if v, b := core.IsSize(p); b {
 			availableParams["chunk_size"] = 0
-			plugin.ChunkSize = v
+			plugin.OptionChunkSize = v
 		}
 	}
 	setChunkSize(DEFAULT_CHUNK_SIZE)
-	setChunkSize(pluginConfig.Config.GetString(fmt.Sprintf("%s.chunk_size", template)))
-	setChunkSize((*pluginConfig.Params)["chunk_size"])
-	showParam("chunk_size", plugin.ChunkSize)
+	setChunkSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chunk_size", template)))
+	setChunkSize((*pluginConfig.PluginParams)["chunk_size"])
+	showParam("chunk_size", plugin.OptionChunkSize)
 
 	// client_id.
 	setClientId := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["client_id"] = 0
-			plugin.ClientId = v
+			plugin.OptionClientId = v
 		}
 	}
-	setClientId(pluginConfig.Config.GetString(fmt.Sprintf("%s.client_id", template)))
-	setClientId((*pluginConfig.Params)["client_id"])
-	showParam("client_id", plugin.ClientId)
+	setClientId(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.client_id", template)))
+	setClientId((*pluginConfig.PluginParams)["client_id"])
+	showParam("client_id", plugin.OptionClientId)
 
 	// cpu_load.
 	setBrowserCpuLoad := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["cpu_load"] = 0
-			plugin.CpuLoad = int32(v)
+			plugin.OptionCpuLoad = int32(v)
 		}
 	}
 	setBrowserCpuLoad(DEFAULT_CPU_LOAD)
-	setBrowserCpuLoad(pluginConfig.Config.GetInt(fmt.Sprintf("%s.cpu_load", template)))
-	setBrowserCpuLoad((*pluginConfig.Params)["cpu_load"])
-	showParam("cpu_load", plugin.CpuLoad)
+	setBrowserCpuLoad(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.cpu_load", template)))
+	setBrowserCpuLoad((*pluginConfig.PluginParams)["cpu_load"])
+	showParam("cpu_load", plugin.OptionCpuLoad)
 
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude(pluginConfig.Config.GetString(fmt.Sprintf("%s.include", template)))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.include", template)))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
-				plugin.Input = v
+				plugin.OptionInput = v
 			}
 		}
 	}
-	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// mem_free.
 	setBrowserMemFree := func(p interface{}) {
 		if v, b := core.IsSize(p); b {
 			availableParams["mem_free"] = 0
-			plugin.MemFree = v
+			plugin.OptionMemFree = v
 		}
 	}
 	setBrowserMemFree(DEFAULT_MEM_FREE)
-	setBrowserMemFree(pluginConfig.Config.GetString(fmt.Sprintf("%s.mem_free", template)))
-	setBrowserMemFree((*pluginConfig.Params)["mem_free"])
-	showParam("mem_free", plugin.MemFree)
+	setBrowserMemFree(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.mem_free", template)))
+	setBrowserMemFree((*pluginConfig.PluginParams)["mem_free"])
+	showParam("mem_free", plugin.OptionMemFree)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// request_timeout.
 	setRequestTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["request_timeout"] = 0
-			plugin.RequestTimeout = v
+			plugin.OptionRequestTimeout = v
 		}
 	}
 	setRequestTimeout(DEFAULT_SERVER_REQUEST_TIMEOUT)
-	setRequestTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.request_timeout", template)))
-	setRequestTimeout((*pluginConfig.Params)["request_timeout"])
-	showParam("request_timeout", plugin.RequestTimeout)
+	setRequestTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.request_timeout", template)))
+	setRequestTimeout((*pluginConfig.PluginParams)["request_timeout"])
+	showParam("request_timeout", plugin.OptionRequestTimeout)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// script.
 	setScript := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["script"] = 0
-			plugin.Script = core.ExtractScripts(pluginConfig.Config, v)
+			plugin.OptionScript = core.ExtractScripts(pluginConfig.AppConfig, v)
 		}
 	}
-	setScript(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.script", template)))
-	setScript((*pluginConfig.Params)["script"])
-	showParam("script", plugin.Script)
+	setScript(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.script", template)))
+	setScript((*pluginConfig.PluginParams)["script"])
+	showParam("script", plugin.OptionScript)
 
 	// server.
 	setServer := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["server"] = 0
-			plugin.Server = v
+			plugin.OptionServer = v
 		}
 	}
-	setServer(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.server", template)))
-	setServer((*pluginConfig.Params)["server"])
-	showParam("server", plugin.Server)
+	setServer(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.server", template)))
+	setServer((*pluginConfig.PluginParams)["server"])
+	showParam("server", plugin.OptionServer)
 
 	// server_timeout.
 	setServerTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["server_timeout"] = 0
-			plugin.ServerTimeout = v
+			plugin.OptionServerTimeout = v
 		}
 	}
 	setServerTimeout(DEFAULT_SERVER_CONNECT_TIMEOUT)
-	setServerTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.server_timeout", template)))
-	setServerTimeout((*pluginConfig.Params)["server_timeout"])
-	showParam("server_timeout", plugin.ServerTimeout)
+	setServerTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.server_timeout", template)))
+	setServerTimeout((*pluginConfig.PluginParams)["server_timeout"])
+	showParam("server_timeout", plugin.OptionServerTimeout)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	plugin.BatchChannel = make(chan *BatchTask, DEFAULT_BUFFER_LENGHT)
+	plugin.OptionBatchChannel = make(chan *BatchTask, DEFAULT_BUFFER_LENGHT)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

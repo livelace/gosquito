@@ -51,7 +51,7 @@ func uploadFile(p *Plugin, channel string, file string) (string, error) {
 	data := buf.Bytes()
 
 	// Upload file.
-	fileUploadResponse, response := p.Api.UploadFile(data, channel, fileName)
+	fileUploadResponse, response := p.MattermostApi.UploadFile(data, channel, fileName)
 	if response.Error != nil {
 		return "", response.Error
 	}
@@ -69,11 +69,11 @@ func uploadFiles(p *Plugin, channel string, files *[]string) []string {
 			filesId = append(filesId, id)
 		} else {
 			log.WithFields(log.Fields{
-				"hash":   p.Hash,
-				"flow":   p.Flow,
-				"file":   p.File,
-				"plugin": p.Name,
-				"type":   p.Type,
+				"hash":   p.Flow.FlowHash,
+				"flow":   p.Flow.FlowName,
+				"file":   p.Flow.FlowFile,
+				"plugin": p.PluginName,
+				"type":   p.PluginType,
 				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
 			}).Error(core.LOG_PLUGIN_DATA)
 			continue
@@ -84,37 +84,35 @@ func uploadFiles(p *Plugin, channel string, files *[]string) []string {
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	File string
-	Name string
-	Type string
+	PluginName string
+	PluginType string
 
-	Api  *mattermost.Client4
-	User *mattermost.User
+	MattermostApi  *mattermost.Client4
+	MattermostUser *mattermost.User
 
-	Channels        []string
-	Files           []string
-	Message         string
-	MessageTemplate *tmpl.Template
-	Output          []string
-	Password        string
-	Team            string
-	Timeout         int
-	Username        string
-	Users           []string
-	URL             string
+	OptionChannels        []string
+	OptionFiles           []string
+	OptionMessage         string
+	OptionMessageTemplate *tmpl.Template
+	OptionOutput          []string
+	OptionPassword        string
+	OptionTeam            string
+	OptionTimeout         int
+	OptionUsername        string
+	OptionUsers           []string
+	OptionURL             string
 
-	Attachments     bool
-	Color           string
-	Pretext         string
-	PretextTemplate *tmpl.Template
-	Title           string
-	TitleTemplate   *tmpl.Template
-	TitleLink       []string
-	Text            string
-	TextTemplate    *tmpl.Template
+	OptionAttachments     bool
+	OptionColor           string
+	OptionPretext         string
+	OptionPretextTemplate *tmpl.Template
+	OptionTitle           string
+	OptionTitleTemplate   *tmpl.Template
+	OptionTitleLink       []string
+	OptionText            string
+	OptionTextTemplate    *tmpl.Template
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -123,11 +121,11 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	// Logging.
 	logError := func(msg string) {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
 			"error":  msg,
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
@@ -136,37 +134,37 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	for _, item := range data {
 		// files.
 		files := make([]string, 0)
-		for _, v := range p.Files {
+		for _, v := range p.OptionFiles {
 			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
 		}
 
 		// attachments.
-		message, err := core.ExtractTemplateIntoString(item, p.MessageTemplate)
+		message, err := core.ExtractTemplateIntoString(item, p.OptionMessageTemplate)
 		if err != nil {
 			return err
 		}
 
 		props := make(map[string]interface{}, 0)
 
-		if p.Attachments {
-			color := p.Color
+		if p.OptionAttachments {
+			color := p.OptionColor
 
-			pretext, err := core.ExtractTemplateIntoString(item, p.PretextTemplate)
+			pretext, err := core.ExtractTemplateIntoString(item, p.OptionPretextTemplate)
 			if err != nil {
 				return err
 			}
 
-			text, err := core.ExtractTemplateIntoString(item, p.TextTemplate)
+			text, err := core.ExtractTemplateIntoString(item, p.OptionTextTemplate)
 			if err != nil {
 				return err
 			}
 
-			title, err := core.ExtractTemplateIntoString(item, p.TitleTemplate)
+			title, err := core.ExtractTemplateIntoString(item, p.OptionTitleTemplate)
 			if err != nil {
 				return err
 			}
 
-			titleLink := core.ExtractDataFieldIntoString(item, p.TitleLink)
+			titleLink := core.ExtractDataFieldIntoString(item, p.OptionTitleLink)
 
 			props["attachments"] = []interface{}{
 				map[string]string{
@@ -180,18 +178,18 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}
 
 		// Send to channels.
-		for _, channel := range p.Channels {
+		for _, channel := range p.OptionChannels {
 			filesId := uploadFiles(p, channel, &files)
 
 			post := mattermost.Post{
-				UserId:    p.User.Id,
+				UserId:    p.MattermostUser.Id,
 				ChannelId: channel,
 				Message:   message,
 				FileIds:   filesId,
 				Props:     props,
 			}
 
-			_, res := p.Api.CreatePost(&post)
+			_, res := p.MattermostApi.CreatePost(&post)
 			if res.Error != nil {
 				logError(fmt.Sprintf("cannot send message to channel: %s, %v", channel, res.Error))
 				sendFail = true
@@ -200,8 +198,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}
 
 		// Send to users.
-		for _, user := range p.Users {
-			ch, res := p.Api.CreateDirectChannel(p.User.Id, user)
+		for _, user := range p.OptionUsers {
+			ch, res := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
 			if res.Error != nil {
 				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, res.Error))
 				sendFail = true
@@ -211,14 +209,14 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			filesId := uploadFiles(p, ch.Id, &files)
 
 			post := mattermost.Post{
-				UserId:    p.User.Id,
+				UserId:    p.MattermostUser.Id,
 				ChannelId: ch.Id,
 				Message:   message,
 				FileIds:   filesId,
 				Props:     props,
 			}
 
-			_, res = p.Api.CreatePost(&post)
+			_, res = p.MattermostApi.CreatePost(&post)
 			if res.Error != nil {
 				logError(fmt.Sprintf("cannot send message to user: %s, %v", user, res.Error))
 				sendFail = true
@@ -235,31 +233,28 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetOutput() []string {
-	return p.Output
+	return p.OptionOutput
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		File: pluginConfig.File,
-		Name: "mattermost",
-		Type: "output",
+		Flow:       pluginConfig.Flow,
+		PluginName: "mattermost",
+		PluginType: "output",
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -296,109 +291,109 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// username.
 	setUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["username"] = 0
-			plugin.Username = v
+			plugin.OptionUsername = v
 		}
 	}
-	setUsername(pluginConfig.Config.GetString(fmt.Sprintf("%s.username", cred)))
-	setUsername((*pluginConfig.Params)["username"])
+	setUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.username", cred)))
+	setUsername((*pluginConfig.PluginParams)["username"])
 
 	// password.
 	setPassword := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["password"] = 0
-			plugin.Password = v
+			plugin.OptionPassword = v
 		}
 	}
-	setPassword(pluginConfig.Config.GetString(fmt.Sprintf("%s.password", cred)))
-	setPassword((*pluginConfig.Params)["password"])
+	setPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.password", cred)))
+	setPassword((*pluginConfig.PluginParams)["password"])
 
 	// team.
 	setTeam := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["team"] = 0
-			plugin.Team = v
+			plugin.OptionTeam = v
 		}
 	}
-	setTeam(pluginConfig.Config.GetString(fmt.Sprintf("%s.team", cred)))
-	setTeam((*pluginConfig.Params)["team"])
+	setTeam(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.team", cred)))
+	setTeam((*pluginConfig.PluginParams)["team"])
 
 	// url.
 	setURL := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["url"] = 0
-			plugin.URL = v
+			plugin.OptionURL = v
 		}
 	}
-	setURL(pluginConfig.Config.GetString(fmt.Sprintf("%s.url", cred)))
-	setURL((*pluginConfig.Params)["url"])
-	showParam("url", plugin.URL)
+	setURL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.url", cred)))
+	setURL((*pluginConfig.PluginParams)["url"])
+	showParam("url", plugin.OptionURL)
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// files.
 	setFiles := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["files"] = 0
-			plugin.Files = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionFiles = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setFiles(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.files", template)))
-	setFiles((*pluginConfig.Params)["files"])
-	showParam("files", plugin.Files)
+	setFiles(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.files", template)))
+	setFiles((*pluginConfig.PluginParams)["files"])
+	showParam("files", plugin.OptionFiles)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["output"] = 0
-			plugin.Output = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionOutput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
-	for _, v := range plugin.Output {
+	for _, v := range plugin.OptionOutput {
 		if t, b := core.IsChatUsername(v); b {
-			plugin.Users = append(plugin.Users, t)
+			plugin.OptionUsers = append(plugin.OptionUsers, t)
 		} else {
-			plugin.Channels = append(plugin.Channels, t)
+			plugin.OptionChannels = append(plugin.OptionChannels, t)
 		}
 	}
-	showParam("channels", plugin.Channels)
-	showParam("users", plugin.Users)
+	showParam("channels", plugin.OptionChannels)
+	showParam("users", plugin.OptionUsers)
 
 	// message.
 	setMessage := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["message"] = 0
-			plugin.Message = v
+			plugin.OptionMessage = v
 		}
 	}
-	setMessage(pluginConfig.Config.GetString(fmt.Sprintf("%s.message", template)))
-	setMessage((*pluginConfig.Params)["message"])
-	showParam("message", plugin.Message)
+	setMessage(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message", template)))
+	setMessage((*pluginConfig.PluginParams)["message"])
+	showParam("message", plugin.OptionMessage)
 
 	// message template.
-	plugin.MessageTemplate, err = tmpl.New("message").Funcs(core.TemplateFuncMap).Parse(plugin.Message)
+	plugin.OptionMessageTemplate, err = tmpl.New("message").Funcs(core.TemplateFuncMap).Parse(plugin.OptionMessage)
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -407,44 +402,44 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// attachments.
-	attachments, _ := core.IsMapWithStringAsKey((*pluginConfig.Params)["attachments"])
+	attachments, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["attachments"])
 
 	// color.
 	setColor := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["color"] = 0
-			plugin.Color = v
+			plugin.OptionColor = v
 		}
 	}
 	setColor(DEFAULT_ATTACHMENTS_COLOR)
-	setColor(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.color", template)))
+	setColor(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.color", template)))
 	setColor(attachments["color"])
-	showParam("attachments.color", plugin.Color)
+	showParam("attachments.color", plugin.OptionColor)
 
 	// pretext.
 	setPretext := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["pretext"] = 0
-			plugin.Attachments = true
-			plugin.Pretext = v
+			plugin.OptionAttachments = true
+			plugin.OptionPretext = v
 		}
 	}
-	setPretext(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.pretext", template)))
+	setPretext(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.pretext", template)))
 	setPretext(attachments["pretext"])
-	showParam("attachments.pretext", plugin.Pretext)
+	showParam("attachments.pretext", plugin.OptionPretext)
 
 	// pretext template.
-	plugin.PretextTemplate, err = tmpl.New("pretext").Funcs(core.TemplateFuncMap).Parse(plugin.Pretext)
+	plugin.OptionPretextTemplate, err = tmpl.New("pretext").Funcs(core.TemplateFuncMap).Parse(plugin.OptionPretext)
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -453,16 +448,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setText := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["text"] = 0
-			plugin.Attachments = true
-			plugin.Text = v
+			plugin.OptionAttachments = true
+			plugin.OptionText = v
 		}
 	}
-	setText(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.text", template)))
+	setText(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.text", template)))
 	setText(attachments["text"])
-	showParam("attachments.text", plugin.Text)
+	showParam("attachments.text", plugin.OptionText)
 
 	// text template.
-	if plugin.TextTemplate, err = tmpl.New("text").Funcs(core.TemplateFuncMap).Parse(plugin.Text); err != nil {
+	if plugin.OptionTextTemplate, err = tmpl.New("text").Funcs(core.TemplateFuncMap).Parse(plugin.OptionText); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -470,16 +465,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTitle := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["title"] = 0
-			plugin.Attachments = true
-			plugin.Title = v
+			plugin.OptionAttachments = true
+			plugin.OptionTitle = v
 		}
 	}
-	setTitle(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.title", template)))
+	setTitle(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.title", template)))
 	setText(attachments["title"])
-	showParam("attachments.title", plugin.Title)
+	showParam("attachments.title", plugin.OptionTitle)
 
 	// title template.
-	if plugin.TitleTemplate, err = tmpl.New("title").Funcs(core.TemplateFuncMap).Parse(plugin.Title); err != nil {
+	if plugin.OptionTitleTemplate, err = tmpl.New("title").Funcs(core.TemplateFuncMap).Parse(plugin.OptionTitle); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -487,18 +482,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTitleLink := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["title_link"] = 0
-			plugin.Attachments = true
-			plugin.TitleLink = v
+			plugin.OptionAttachments = true
+			plugin.OptionTitleLink = v
 		}
 	}
-	setTitleLink(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.attachments.title_link", template)))
+	setTitleLink(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.attachments.title_link", template)))
 	setTitleLink(attachments["title_link"])
-	showParam("attachments.title_link", plugin.TitleLink)
+	showParam("attachments.title_link", plugin.OptionTitleLink)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -506,27 +501,27 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Mattermost.
 
 	// Login.
-	plugin.Api = mattermost.NewAPIv4Client(plugin.URL)
-	plugin.Api.HttpClient = &http.Client{
-		Timeout: time.Duration(plugin.Timeout) * time.Second,
+	plugin.MattermostApi = mattermost.NewAPIv4Client(plugin.OptionURL)
+	plugin.MattermostApi.HttpClient = &http.Client{
+		Timeout: time.Duration(plugin.OptionTimeout) * time.Second,
 	}
 
-	user, res := plugin.Api.Login(plugin.Username, plugin.Password)
+	user, res := plugin.MattermostApi.Login(plugin.OptionUsername, plugin.OptionPassword)
 	if res.Error != nil {
 		return &Plugin{}, res.Error
 	}
-	plugin.User = user
+	plugin.MattermostUser = user
 
 	// Team.
-	team, res := plugin.Api.GetTeamByName(plugin.Team, "")
+	team, res := plugin.MattermostApi.GetTeamByName(plugin.OptionTeam, "")
 	if res.Error != nil {
 		return &Plugin{}, res.Error
 	}
 
 	// Resolve channels ids.
 	channelsId := make([]string, 0)
-	for _, channel := range plugin.Channels {
-		ch, res := plugin.Api.GetChannelByName(channel, team.Id, "")
+	for _, channel := range plugin.OptionChannels {
+		ch, res := plugin.MattermostApi.GetChannelByName(channel, team.Id, "")
 		if res.Error == nil {
 			channelsId = append(channelsId, ch.Id)
 		} else {
@@ -534,12 +529,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 
-	plugin.Channels = channelsId
+	plugin.OptionChannels = channelsId
 
 	// Resolve users ids.
 	usersId := make([]string, 0)
-	for _, user := range plugin.Users {
-		u, res := plugin.Api.GetUserByUsername(user, "")
+	for _, user := range plugin.OptionUsers {
+		u, res := plugin.MattermostApi.GetUserByUsername(user, "")
 		if res.Error == nil {
 			usersId = append(usersId, u.Id)
 		} else {
@@ -547,13 +542,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 
-	plugin.Users = usersId
+	plugin.OptionUsers = usersId
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
 	// channels or users must be set.
-	if len(plugin.Channels) == 0 && len(plugin.Users) == 0 {
+	if len(plugin.OptionChannels) == 0 && len(plugin.OptionUsers) == 0 {
 		return &Plugin{}, ERROR_OUTPUT_NOT_SET
 	}
 
