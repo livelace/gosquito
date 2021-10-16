@@ -103,6 +103,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
+		// ---------------------------------------------------------------------------------------------------------
 		// Every flow consists of:
 		// 1. Flow parameters.
 		// 2. Input plugin.
@@ -119,6 +120,9 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}).Error(msg)
 		}
 
+		// ---------------------------------------------------------------------------------------------------------
+		// Flow members.
+
 		var flowUUID, _ = uuid.NewRandom()
 		var flowHash = core.GenFlowHash()
 		var flowName string
@@ -132,6 +136,9 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		var processPlugins = make(map[int]core.ProcessPlugin, 0)
 		var processPluginsNames = make([]string, 0)
 		var outputPlugin core.OutputPlugin
+
+		// ---------------------------------------------------------------------------------------------------------
+		// Parse and check flow body.
 
 		// Read flow body into structure.
 		flowBody := core.FlowUnmarshal{}
@@ -174,8 +181,24 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			continue
 		}
 
+		// ---------------------------------------------------------------------------------------------------------
+		// Create flow.
+
 		flowName = flowBody.Flow.Name
 		flowsNames[flowName] = fileName
+
+		flow := &core.Flow{
+			FlowUUID: flowUUID,
+			FlowHash: flowHash,
+			FlowName: flowName,
+
+			FlowFile:    fileName,
+			FlowDataDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "data"),
+			FlowTempDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "temp"),
+
+			FlowInterval: flowInterval,
+			FlowNumber:   flowNumber,
+		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Logging.
@@ -242,27 +265,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
-		// Create "flow".
-
-		flow := &core.Flow{
-			FlowUUID: flowUUID,
-			FlowHash: flowHash,
-			FlowName: flowName,
-
-			FlowFile:    fileName,
-			FlowDataDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "data"),
-			FlowTempDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "temp"),
-
-			FlowInterval: flowInterval,
-			FlowNumber:   flowNumber,
-
-			InputPlugin:         inputPlugin,
-			ProcessPlugins:      processPlugins,
-			ProcessPluginsNames: processPluginsNames,
-			OutputPlugin:        outputPlugin,
-		}
-
-		// ---------------------------------------------------------------------------------------------------------
 		// Map "input" plugin.
 
 		inputParams, b := core.IsMapWithStringAsKey(flowBody.Flow.Input.Params)
@@ -282,7 +284,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		// Available "input" plugins.
 		switch flowBody.Flow.Input.Plugin {
 		case "rss":
-			flow.InputPlugin, err = rssIn.Init(&inputPluginConfig)
+			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
 			if telegramInPluginTotal < telegramIn.MAX_INSTANCE_PER_APP {
 				inputPlugin, err = telegramIn.Init(&inputPluginConfig)
@@ -347,10 +349,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 			// Assemble plugin configuration.
 			processPluginConfig := core.PluginConfig{
-				AppConfig: appConfig,
-
-				Flow: flow,
-
+				AppConfig:    appConfig,
+				Flow:         flow,
 				PluginID:     pluginId,
 				PluginAlias:  pluginAlias,
 				PluginParams: &pluginParams,
@@ -413,10 +413,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		if b {
 			// Assemble plugin configuration.
 			outputPluginConfig := core.PluginConfig{
-				AppConfig: appConfig,
-
-				Flow: flow,
-
+				AppConfig:    appConfig,
+				Flow:         flow,
 				PluginParams: &outputParams,
 			}
 
@@ -441,13 +439,21 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}
 		}
 
+		// ---------------------------------------------------------------------------------------------------------
+		// Finish flow creation.
+
+		flow.InputPlugin = inputPlugin
+		flow.ProcessPlugins = processPlugins
+		flow.ProcessPluginsNames = processPluginsNames
+		flow.OutputPlugin = outputPlugin
+
 		flows = append(flows, flow)
 	}
 
 	return flows
 }
 
-func runFlow(config *viper.Viper, flow *core.Flow) {
+func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Let's get started :)
 
@@ -521,7 +527,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	inputData, err := flow.InputPlugin.Recv()
 	logFlowStat(len(inputData))
 
-	// Process data if some of flow sources are expired/failed.
+	// Process data if flow sources are expired/failed.
 	// Skip flow if we have other problems.
 	if err == core.ERROR_FLOW_EXPIRE {
 		atomic.AddInt32(&flow.MetricExpire, 1)

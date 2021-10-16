@@ -114,7 +114,7 @@ func RunApp() {
 
 				if (currentTime.Unix()-lastTime.Unix()) > flow.FlowInterval && flow.GetNumber() < flow.FlowNumber {
 					flowsStates[flow.FlowUUID] = currentTime
-					go runFlow(appConfig, flow)
+					go runFlow(flow)
 
 				} else if flow.GetNumber() == 0 {
 					// Process plugins might not be set.
