@@ -3,8 +3,8 @@ package core
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/spf13/viper"
 	"math/rand"
@@ -416,7 +416,7 @@ func IsChatUsername(i interface{}) (string, bool) {
 func IsDir(path string) bool {
 	info, err := os.Stat(path)
 
-	if os.IsNotExist(err) {
+	if err != nil {
 		return false
 	}
 
@@ -667,69 +667,71 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(path string, file string, output interface{}) error {
-	if IsFile(path, file) {
-		// read file.
-		f, err := os.OpenFile(filepath.Join(path, file), os.O_RDONLY, 0644)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
-		}
+func PluginLoadState(database string, data *map[string]time.Time) error {
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
 
-		fs, err := f.Stat()
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
-		}
-
-		data := make([]byte, fs.Size())
-		_, err = f.Read(data)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
-		}
-
-		// decode data.
-		decoder := gob.NewDecoder(bytes.NewReader(data))
-		err = decoder.Decode(output)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
-		}
-
-		err = f.Close()
-
+	// Open database.
+	db, err := badger.Open(opts)
+	if err != nil {
 		return err
 	}
+	defer db.Close()
 
-	return nil
+	// Read database.
+	err = db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+
+			err := item.Value(func(value []byte) error {
+				signature := fmt.Sprintf("%s", item.Key())
+				timestamp, err := time.Parse(time.RFC3339, fmt.Sprintf("%s", value))
+				(*data)[signature] = timestamp
+
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
 }
 
-// TODO: Sources' state time has to be truly last despite of concurrency.
-// TODO: proc1 may have time 11111.
-// TODO: proc2 may have time 22222.
-// TODO: proc2 may save state time as 22222 first.
-// TODO: proc1 may save state time as 11111 last.
-// TODO: "Last time" 11111 isn't what we expect.
-// TODO: Should be atomic operation.
-func PluginSaveData(path string, file string, data interface{}) error {
-	buffer := new(bytes.Buffer)
+func PluginSaveState(database string, data *map[string]time.Time) error {
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
 
-	//gob.Register(time.Time{})
-	encoder := gob.NewEncoder(buffer)
-
-	err := encoder.Encode(data)
+	// Open database.
+	db, err := badger.Open(opts)
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
+		return err
 	}
+	defer db.Close()
 
-	f, err := os.OpenFile(filepath.Join(path, file), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
-	}
+	// Save data.
+	err = db.Update(func(txn *badger.Txn) error {
+		for signature, timestamp := range *data {
+			err := txn.Set([]byte(signature), []byte(timestamp.Format(time.RFC3339)))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 
-	_, err = f.Write(buffer.Bytes())
-	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
-	}
-
-	return nil
+	return err
 }
 
 func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {

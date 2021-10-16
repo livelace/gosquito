@@ -121,7 +121,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
-		// Flow members.
+		// Parse and check flow body.
 
 		var flowUUID, _ = uuid.NewRandom()
 		var flowHash = core.GenFlowHash()
@@ -136,9 +136,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		var processPlugins = make(map[int]core.ProcessPlugin, 0)
 		var processPluginsNames = make([]string, 0)
 		var outputPlugin core.OutputPlugin
-
-		// ---------------------------------------------------------------------------------------------------------
-		// Parse and check flow body.
 
 		// Read flow body into structure.
 		flowBody := core.FlowUnmarshal{}
@@ -181,29 +178,29 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			continue
 		}
 
-		// ---------------------------------------------------------------------------------------------------------
-		// Create flow.
-
 		flowName = flowBody.Flow.Name
 		flowsNames[flowName] = fileName
-
-		flow := &core.Flow{
-			FlowUUID: flowUUID,
-			FlowHash: flowHash,
-			FlowName: flowName,
-
-			FlowFile:    fileName,
-			FlowDataDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "data"),
-			FlowTempDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, "temp"),
-
-			FlowInterval: flowInterval,
-			FlowNumber:   flowNumber,
-		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Logging.
 
-		LogParam := func(p string, v interface{}) {
+		logFlowValid := func(p string) {
+			log.WithFields(log.Fields{
+				"hash": flowHash,
+				"flow": flowName,
+				"file": fileName,
+			}).Info(core.LOG_FLOW_VALID)
+		}
+
+		logFlowInvalid := func(p string) {
+			log.WithFields(log.Fields{
+				"hash": flowHash,
+				"flow": flowName,
+				"file": fileName,
+			}).Error(core.LOG_FLOW_INVALID)
+		}
+
+		logFlowParam := func(p string, v interface{}) {
 			log.WithFields(log.Fields{
 				"hash":  flowHash,
 				"flow":  flowName,
@@ -213,7 +210,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}).Debug(core.LOG_SET_VALUE)
 		}
 
-		LogPluginError := func(plugin string, pluginType string, msg string, err error) {
+		logInputOutputPluginError := func(plugin string, pluginType string, msg string, err error) {
 			log.WithFields(log.Fields{
 				"hash":   flowHash,
 				"flow":   flowName,
@@ -243,25 +240,43 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				"file":  fileName,
 				"error": err,
 			}).Error(core.ERROR_PARAM_ERROR)
+			logFlowInvalid(flowName)
 			continue
 		}
 
 		// Set flow interval.
 		if v, b := core.IsInterval(flowParams["interval"]); b {
 			flowInterval = v
-			LogParam("interval", v)
+			logFlowParam("interval", v)
 		} else {
 			flowInterval, _ = core.IsInterval(appConfig.GetString(core.VIPER_DEFAULT_FLOW_INTERVAL))
-			LogParam("interval", flowInterval)
+			logFlowParam("interval", flowInterval)
 		}
 
 		// Set flow number limit.
 		if v, b := core.IsInt(flowParams["number"]); b {
 			flowNumber = v
-			LogParam("number", v)
+			logFlowParam("number", v)
 		} else {
 			flowNumber = appConfig.GetInt(core.VIPER_DEFAULT_FLOW_NUMBER)
-			LogParam("number", flowNumber)
+			logFlowParam("number", flowNumber)
+		}
+
+		// ---------------------------------------------------------------------------------------------------------
+		// Create flow.
+
+		flow := &core.Flow{
+			FlowUUID: flowUUID,
+			FlowHash: flowHash,
+			FlowName: flowName,
+
+			FlowFile:     fileName,
+			FlowDataDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_DATA_DIR),
+			FlowStateDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_STATE_DIR),
+			FlowTempDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_TEMP_DIR),
+
+			FlowInterval: flowInterval,
+			FlowNumber:   flowNumber,
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
@@ -269,8 +284,9 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		inputParams, b := core.IsMapWithStringAsKey(flowBody.Flow.Input.Params)
 		if !b {
-			LogPluginError(flowBody.Flow.Input.Plugin, "input", core.ERROR_PARAM_ERROR.Error(),
+			logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.ERROR_PARAM_ERROR.Error(),
 				core.ERROR_PARAM_KEY_MUST_STRING)
+			logFlowInvalid(flowName)
 			continue
 		}
 
@@ -290,7 +306,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				inputPlugin, err = telegramIn.Init(&inputPluginConfig)
 				telegramInPluginTotal += 1
 			} else {
-				LogPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
+				logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
 					fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramInPluginTotal))
 				continue
 			}
@@ -302,7 +318,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		// Skip flow if we cannot initialize "input" plugin.
 		if err != nil {
-			LogPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT, err)
+			logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT, err)
+			logFlowInvalid(flowName)
 			continue
 		}
 
@@ -320,30 +337,28 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			pluginId, a := core.IsPluginId(item["id"])
 			pluginName, b := core.IsString(item["plugin"])
 			pluginParams, c := core.IsMapWithStringAsKey(item["params"])
-
 			pluginAlias, _ := core.IsString(item["alias"])
 
-			// Every plugin must have: id, plugin, params.
-			if !a || !b || !c {
+			// Logging.
+			logProcessPluginError := func(err error) {
 				log.WithFields(log.Fields{
 					"flow":   flowName,
 					"file":   fileName,
 					"plugin": pluginName,
 					"id":     pluginId,
-					"error":  core.ERROR_PLUGIN_PROCESS_PARAMS,
+					"error":  err,
 				}).Error(core.LOG_PLUGIN_INIT)
+			}
+
+			// Every plugin must have: id, plugin, params.
+			if !a || !b || !c {
+				logProcessPluginError(core.ERROR_PLUGIN_PROCESS_PARAMS)
 				break
 			}
 
 			// All "process" plugins ids must be ordered.
 			if pluginId != index {
-				log.WithFields(log.Fields{
-					"flow":   flowName,
-					"file":   fileName,
-					"plugin": pluginName,
-					"id":     pluginId,
-					"error":  core.ERROR_PLUGIN_PROCESS_ORDER,
-				}).Error(core.LOG_PLUGIN_INIT)
+				logProcessPluginError(fmt.Errorf("%s: %d", core.ERROR_PLUGIN_PROCESS_ORDER, pluginId))
 				break
 			}
 
@@ -383,17 +398,11 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			case "xpath":
 				plugin, err = xpath.Init(&processPluginConfig)
 			default:
-				err = core.ERROR_PLUGIN_UNKNOWN
+				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, pluginName)
 			}
 
 			if err != nil {
-				log.WithFields(log.Fields{
-					"flow":   flowName,
-					"file":   fileName,
-					"plugin": pluginName,
-					"id":     pluginId,
-					"error":  err,
-				}).Error(core.LOG_PLUGIN_INIT)
+				logProcessPluginError(err)
 
 			} else {
 				processPlugins[pluginId] = plugin
@@ -403,6 +412,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		// Skip flow if some "process" plugins weren't initialized.
 		if len(processPlugins) != len(flowBody.Flow.Process) {
+			logFlowInvalid(flowName)
 			continue
 		}
 
@@ -429,12 +439,13 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
 			default:
-				err = core.ERROR_PLUGIN_UNKNOWN
+				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, flowBody.Flow.Output.Plugin)
 			}
 
 			// Skip flow if we cannot initialize "output" plugin.
 			if err != nil {
-				LogPluginError(flowBody.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
+				logInputOutputPluginError(flowBody.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
+				logFlowInvalid(flowName)
 				continue
 			}
 		}
@@ -448,6 +459,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		flow.OutputPlugin = outputPlugin
 
 		flows = append(flows, flow)
+
+		logFlowValid(flowName)
 	}
 
 	return flows

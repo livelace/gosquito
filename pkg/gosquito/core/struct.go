@@ -47,10 +47,8 @@ type OutputPlugin interface {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type PluginConfig struct {
-	AppConfig *viper.Viper
-
-	Flow *Flow
-
+	AppConfig    *viper.Viper
+	Flow         *Flow
 	PluginID     int
 	PluginAlias  string
 	PluginParams *map[string]interface{}
@@ -66,9 +64,10 @@ type Flow struct {
 	FlowHash string
 	FlowName string
 
-	FlowFile    string
-	FlowDataDir string
-	FlowTempDir string
+	FlowFile     string
+	FlowDataDir  string
+	FlowStateDir string
+	FlowTempDir  string
 
 	FlowInterval int64
 	FlowNumber   int

@@ -151,10 +151,10 @@ func joinToChat(p *Plugin, name string, id int64) error {
 func loadChats(p *Plugin) (map[string]int64, error) {
 	temp := make(map[string]int64, 0)
 
-	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, &temp)
+	/*err := core.PluginLoadState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, &temp)
 	if err != nil {
 		return temp, err
-	}
+	}*/
 
 	return temp, nil
 }
@@ -162,10 +162,10 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 func loadUsers(p *Plugin) (map[int32][]string, error) {
 	temp := make(map[int32][]string, 0)
 
-	err := core.PluginLoadData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, &temp)
-	if err != nil {
+	//err := core.PluginLoadState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, &temp)
+	/*if err != nil {
 		return temp, err
-	}
+	}*/
 
 	return temp, nil
 }
@@ -380,11 +380,13 @@ func receiveMessages(p *Plugin) {
 }
 
 func saveChats(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, p.ChatsByName)
+	//return core.PluginSaveState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, p.ChatsByName)
+	return nil
 }
 
 func saveUsers(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, p.UsersById)
+	//return core.PluginSaveState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, p.UsersById)
+	return nil
 }
 
 type clientAuthorizer struct {
@@ -403,10 +405,9 @@ type Plugin struct {
 	PluginName string
 	PluginType string
 
-	PluginDir string
-	StateDir  string
-	TempDir   string
-	TgBaseDir string
+	PluginDataDir string
+	PluginTempDir string
+	TgBaseDir     string
 
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
@@ -564,9 +565,9 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 
 	temp := make(map[string]time.Time, 0)
 
-	if err := core.PluginLoadData(p.StateDir, p.Flow.FlowName, &temp); err != nil {
+	/*if err := core.PluginLoadState(p.StateDir, p.Flow.FlowName, &temp); err != nil {
 		return temp, err
-	}
+	}*/
 
 	return temp, nil
 }
@@ -575,21 +576,19 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveData(p.StateDir, p.Flow.FlowName, data)
+	//return core.PluginSaveState(p.StateDir, p.Flow.FlowName, data)
+	return nil
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:       pluginConfig.Flow,
-		PluginName: "telegram",
-		PluginType: "input",
-
-		PluginDir: pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
-		StateDir:  pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
-		TempDir:   pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
-
+		Flow:             pluginConfig.Flow,
+		PluginName:       "telegram",
+		PluginType:       "input",
+		PluginDataDir:    filepath.Join(pluginConfig.Flow.FlowDataDir, "input", "telegram"),
+		PluginTempDir:    filepath.Join(pluginConfig.Flow.FlowTempDir, "input", "telegram"),
 		OptionExpireLast: 0,
 	}
 
@@ -787,7 +786,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Telegram.
 
-	plugin.TgBaseDir = filepath.Join(plugin.PluginDir, plugin.Flow.FlowName, plugin.PluginType, plugin.PluginName)
+	plugin.TgBaseDir = filepath.Join(plugin.PluginDataDir, plugin.Flow.FlowName, plugin.PluginType, plugin.PluginName)
 
 	plugin.TdlibParams = &client.TdlibParameters{
 		ApiHash:                plugin.OptionApiHash,

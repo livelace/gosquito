@@ -89,8 +89,6 @@ type Plugin struct {
 	PluginName string
 	PluginType string
 
-	StateDir string
-
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
@@ -295,32 +293,29 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	temp := make(map[string]time.Time, 0)
+	data := make(map[string]time.Time, 0)
 
-	if err := core.PluginLoadData(p.StateDir, p.Flow.FlowName, &temp); err != nil {
-		return temp, err
+	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
+		return data, err
 	}
 
-	return temp, nil
+	return data, nil
 }
 
 func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveData(p.StateDir, p.Flow.FlowName, data)
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:       pluginConfig.Flow,
-		PluginName: "rss",
-		PluginType: "input",
-
-		StateDir: pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA),
-
+		Flow:             pluginConfig.Flow,
+		PluginName:       "rss",
+		PluginType:       "input",
 		OptionExpireLast: 0,
 	}
 
@@ -352,6 +347,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
+			"hash":   plugin.Flow.FlowHash,
 			"flow":   plugin.Flow.FlowName,
 			"file":   plugin.Flow.FlowFile,
 			"plugin": plugin.PluginName,

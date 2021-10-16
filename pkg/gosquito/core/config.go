@@ -9,11 +9,6 @@ import (
 	"runtime"
 )
 
-var (
-	FLOW_CONF_DIR = filepath.Join("flow", "conf")
-	FLOW_DATA_DIR = filepath.Join("flow", "data")
-)
-
 func initAppConfig() (string, error) {
 	// Get current user info.
 	userAccount, err := user.Current()
@@ -25,7 +20,10 @@ func initAppConfig() (string, error) {
 	userDir := filepath.Join(userAccount.HomeDir, ".gosquito")
 	configFile := "config.toml"
 
-	// Return existing config path.
+	// Path priority order.
+	// 1. /etc/gosquito/
+	// 2. ~/.gosquito
+	// 3. .gosquito
 	if IsFile(DEFAULT_ETC_PATH, configFile) {
 		return DEFAULT_ETC_PATH, nil
 
@@ -63,7 +61,7 @@ func GetAppConfig() *viper.Viper {
 	if configPath != "" {
 		log.WithFields(log.Fields{
 			"path": configPath,
-		}).Info(LOG_CONFIG_INIT)
+		}).Info(LOG_CONFIG_APPLY)
 	}
 
 	// Read generated/existed configuration.
@@ -85,8 +83,8 @@ func GetAppConfig() *viper.Viper {
 	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT, DEFAULT_EXPIRE_ACTION_TIMEOUT)
 	v.SetDefault(VIPER_DEFAULT_EXPIRE_INTERVAL, DEFAULT_EXPIRE_INTERVAL)
 	v.SetDefault(VIPER_DEFAULT_EXPORTER_LISTEN, DEFAULT_EXPORTER_LISTEN)
-	v.SetDefault(VIPER_DEFAULT_FLOW_CONF, filepath.Join(configPath, FLOW_CONF_DIR))
-	v.SetDefault(VIPER_DEFAULT_FLOW_DATA, filepath.Join(configPath, FLOW_DATA_DIR))
+	v.SetDefault(VIPER_DEFAULT_FLOW_CONF, filepath.Join(configPath, DEFAULT_FLOW_CONF_DIR))
+	v.SetDefault(VIPER_DEFAULT_FLOW_DATA, filepath.Join(configPath, DEFAULT_FLOW_DATA_DIR))
 	v.SetDefault(VIPER_DEFAULT_FLOW_ENABLE, make([]string, 0))
 	v.SetDefault(VIPER_DEFAULT_FLOW_INTERVAL, DEFAULT_FLOW_INTERVAL)
 	v.SetDefault(VIPER_DEFAULT_FLOW_NUMBER, DEFAULT_FLOW_NUMBER)

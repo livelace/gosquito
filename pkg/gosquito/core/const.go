@@ -9,11 +9,14 @@ const (
 	// -----------------------------------------------------------------------------------------------------------------
 
 	DEFAULT_CURRENT_PATH          = "."
+	DEFAULT_DATA_DIR              = "data"
 	DEFAULT_ETC_PATH              = "/etc/gosquito"
 	DEFAULT_EXPIRE_ACTION_DELAY   = "1d"
 	DEFAULT_EXPIRE_ACTION_TIMEOUT = 30
 	DEFAULT_EXPIRE_INTERVAL       = "7d"
 	DEFAULT_EXPORTER_LISTEN       = ":8080"
+	DEFAULT_FLOW_CONF_DIR         = "conf"
+	DEFAULT_FLOW_DATA_DIR         = "data"
 	DEFAULT_FLOW_INTERVAL         = "5m"
 	DEFAULT_FLOW_NUMBER           = 1
 	DEFAULT_FORCE_INPUT           = false
@@ -23,15 +26,18 @@ const (
 	DEFAULT_LOOP_SLEEP            = 300
 	DEFAULT_PLUGIN_INCLUDE        = true
 	DEFAULT_PLUGIN_TIMEOUT        = 60
+	DEFAULT_STATE_DIR             = "state"
+	DEFAULT_TEMP_DIR              = "temp"
 	DEFAULT_TIME_FORMAT           = "15:04:05 02.01.2006"
 	DEFAULT_TIME_ZONE             = "UTC"
 	DEFAULT_USER_AGENT            = APP_NAME + " " + APP_VERSION
 
 	// -----------------------------------------------------------------------------------------------------------------
 
+	LOG_CONFIG_APPLY               = "config apply"
 	LOG_CONFIG_ERROR               = "config error"
-	LOG_CONFIG_INIT                = "config init"
 	LOG_FLOW_IGNORE                = "flow ignore"
+	LOG_FLOW_INVALID               = "flow invalid"
 	LOG_FLOW_LOCK_WARNING          = "--- flow lock warning"
 	LOG_FLOW_SEND_NO_DATA          = "no data for sending"
 	LOG_FLOW_SEND_NO_DATA_INCLUDED = "no data included for sending"
@@ -42,6 +48,7 @@ const (
 	LOG_FLOW_START                 = "--- flow start"
 	LOG_FLOW_STAT                  = "flow stat"
 	LOG_FLOW_STOP                  = "--- flow stop"
+	LOG_FLOW_VALID                 = "flow valid"
 	LOG_FLOW_WARN                  = "--- flow warn"
 	LOG_PLUGIN_DATA                = "plugin data"
 	LOG_PLUGIN_INIT                = "plugin init"

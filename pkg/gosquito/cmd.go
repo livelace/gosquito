@@ -112,18 +112,21 @@ func RunApp() {
 			for _, flow := range flows {
 				lastTime := flowsStates[flow.FlowUUID]
 
+				// 1. run flow if conditions (time, instance number) are met.
+				// 2. update metrics if there are no running flow instances.
 				if (currentTime.Unix()-lastTime.Unix()) > flow.FlowInterval && flow.GetNumber() < flow.FlowNumber {
 					flowsStates[flow.FlowUUID] = currentTime
 					go runFlow(flow)
 
 				} else if flow.GetNumber() == 0 {
-					// Process plugins might not be set.
+
+					// Input plugin is strictly mandatory.
+					// Process/output plugins might not be set.
 					processPlugins := make([]string, 0)
 					if len(flow.ProcessPlugins) > 0 {
 						processPlugins = flow.ProcessPluginsNames
 					}
 
-					// Output plugin might not be set.
 					outputPlugin := ""
 					outputValues := make([]string, 0)
 					if flow.OutputPlugin != nil {
@@ -131,6 +134,7 @@ func RunApp() {
 						outputValues = flow.OutputPlugin.GetOutput()
 					}
 
+					// Update flow metrics.
 					labels := prometheus.Labels{
 						"flow":            flow.FlowName,
 						"hash":            flow.FlowHash,

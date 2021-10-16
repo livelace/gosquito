@@ -9,6 +9,7 @@ require (
 	github.com/confluentinc/confluent-kafka-go v1.4.2 // indirect
 	github.com/dghubble/go-twitter v0.0.0-20200725221434-4bc8ad7ad1b4
 	github.com/dghubble/oauth1 v0.6.0
+	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dyatlov/go-opengraph v0.0.0-20180429202543-816b6608b3c8 // indirect
 	github.com/gabriel-vasile/mimetype v1.1.2
 	github.com/go-gorp/gorp v2.2.0+incompatible // indirect
