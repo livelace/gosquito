@@ -6,12 +6,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
+	"github.com/zelenin/go-tdlib/client"
 	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
-
-	"github.com/zelenin/go-tdlib/client"
 )
 
 const (
