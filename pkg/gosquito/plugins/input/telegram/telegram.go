@@ -407,7 +407,6 @@ type Plugin struct {
 
 	PluginDataDir string
 	PluginTempDir string
-	TgBaseDir     string
 
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
@@ -785,16 +784,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Telegram.
 
-	plugin.TgBaseDir = filepath.Join(plugin.PluginDataDir, plugin.Flow.FlowName, plugin.PluginType, plugin.PluginName)
-
 	plugin.TdlibParams = &client.TdlibParameters{
 		ApiHash:                plugin.OptionApiHash,
 		ApiId:                  int32(plugin.OptionApiId),
 		ApplicationVersion:     core.APP_VERSION,
-		DatabaseDirectory:      filepath.Join(plugin.TgBaseDir, DEFAULT_DATABASE_DIR),
+		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            core.APP_NAME,
 		EnableStorageOptimizer: true,
-		FilesDirectory:         filepath.Join(plugin.TgBaseDir, DEFAULT_FILES_DIR),
+		FilesDirectory:         filepath.Join(plugin.PluginDataDir, DEFAULT_FILES_DIR),
 		IgnoreFileNames:        true,
 		SystemLanguageCode:     "en",
 		SystemVersion:          plugin.Flow.FlowName,
