@@ -235,8 +235,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				}
 			}
 
+			// Add item to result.
 			if itemNew {
-				// Derive various data.
 				media := expandMedia(&item.Entities.Media)
 				if item.ExtendedEntities != nil {
 					media = append(media, expandMedia(&item.ExtendedEntities.Media)...)

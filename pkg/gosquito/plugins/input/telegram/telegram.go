@@ -445,15 +445,19 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Count fetched data from source.
+	// Stat fetched data for source.
 	sourceStat := make(map[string]int32)
 
-	// Save channel length.
-	// It will be recalculated in loop, if use directly. what?
+	// Fixate channel length (channel changes length size in the loop).
 	length := len(p.DataChannel)
 
 	for i := 1; i <= length; i++ {
+		var itemNew = false
+		var itemSignature string
+		var itemSignatureHash string
+		var itemTime time.Time
 		var sourceLastTime time.Time
+
 		item := <-p.DataChannel
 
 		// Check if we work with source first time.
@@ -463,9 +467,52 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			sourceLastTime = time.Unix(0, 0)
 		}
 
-		// Append to results if data is new.
-		if item.TIME.Unix() > sourceLastTime.Unix() {
-			sourceLastTime = item.TIME
+		// Process only new items. Two methods:
+		// 1. Match item by user provided signature.
+		// 2. Compare item timestamp with source timestamp.
+		if len(p.OptionMatchSignature) > 0 {
+			itemSignature = item.SOURCE
+			itemTime = item.TIME
+
+			for _, v := range p.OptionMatchSignature {
+				switch v {
+				case "username":
+					itemSignature += item.TELEGRAM.USERNAME
+					break
+				case "usertype":
+					itemSignature += item.TELEGRAM.USERTYPE
+					break
+				}
+			}
+
+			// set default value for signature if user provided wrong values.
+			if itemSignature == item.SOURCE {
+				itemSignature += item.TELEGRAM.TEXT + itemTime.String()
+			}
+
+			itemSignatureHash = core.HashString(&itemSignature)
+
+			if _, ok := flowStates[itemSignatureHash]; !ok {
+				// save item signature hash to state.
+				flowStates[itemSignatureHash] = currentTime
+
+				// update source timestamp.
+				if itemTime.Unix() > sourceLastTime.Unix() {
+					sourceLastTime = itemTime
+				}
+
+				itemNew = true
+			}
+
+		} else {
+			if itemTime.Unix() > sourceLastTime.Unix() {
+				sourceLastTime = itemTime
+				itemNew = true
+			}
+		}
+
+		// Add item to result.
+		if itemNew {
 			temp = append(temp, item)
 		}
 
