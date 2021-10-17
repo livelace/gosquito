@@ -7,13 +7,15 @@
 ```go
 type RssData struct {
 	CATEGORIES  []string
-	CONTENT     string
-	DESCRIPTION string
-	GUID        string
-	LINK        string
-	TITLE       string
+	CONTENT*     string
+	DESCRIPTION* string
+	GUID*        string
+	LINK*        string
+	TITLE*       string
 }
 ```
+
+&ast; - may be used with **match_signature** parameter.
 
 ### Generic parameters:
 
