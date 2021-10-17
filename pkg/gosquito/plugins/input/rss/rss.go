@@ -186,8 +186,14 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 				for _, v := range p.OptionMatchSignature {
 					switch v {
+					case "content":
+						itemSignature += item.Content
+						break
 					case "description":
 						itemSignature += item.Description
+						break
+					case "guid":
+						itemSignature += item.GUID
 						break
 					case "link":
 						itemSignature += item.Link
