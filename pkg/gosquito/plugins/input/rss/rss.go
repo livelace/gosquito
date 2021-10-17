@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	DEFAULT_MATCH_TTL  = "1d"
 	DEFAULT_SSL_VERIFY = true
 )
 
@@ -95,12 +96,14 @@ type Plugin struct {
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
 	OptionForce               bool
-	OptionInput               []string
 	OptionForceCount          int
+	OptionInput               []string
+	OptionMatchSignature      []string
+	OptionMatchTTL            time.Duration
 	OptionSSLVerify           bool
-	OptionTimeout             int
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
+	OptionTimeout             int
 	OptionUserAgent           string
 }
 
@@ -115,22 +118,15 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Delete irrelevant/obsolete sources.
-	for source := range flowStates {
-		if !core.IsValueInSlice(source, &p.OptionInput) {
-			delete(flowStates, source)
-		}
-	}
-
 	// Fetch data from sources.
 	for _, source := range p.OptionInput {
-		var lastTime time.Time
+		var sourceLastTime time.Time
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[source]; ok {
-			lastTime = v
+			sourceLastTime = v
 		} else {
-			lastTime = time.Unix(0, 0)
+			sourceLastTime = time.Unix(0, 0)
 		}
 
 		// Try to fetch new articles.
@@ -151,8 +147,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			continue
 		}
 
-		// Grab only specific amount of articles from
-		// every source, if p.Force = true.
+		// Process only specific amount of articles from every source if force = true.
 		var start = 0
 		var end = len(feeds.Items) - 1
 
@@ -164,6 +159,9 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 		// Process fetched data.
 		for i := start; i <= end; i++ {
+			var itemNew = false
+			var itemSignature string
+			var itemSignatureHash string
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
 
@@ -176,14 +174,59 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				if item.PublishedParsed != nil {
 					itemTime = *item.PublishedParsed
 				} else {
-					itemTime = time.Now().UTC()
+					itemTime = currentTime
 				}
 			}
 
-			// Process only new items.
-			if itemTime.Unix() > lastTime.Unix() || p.OptionForce {
-				lastTime = itemTime
+			// Process only new items. Two methods:
+			// 1. Match item by user provided signature.
+			// 2. Compare item timestamp with source timestamp.
+			if len(p.OptionMatchSignature) > 0 || p.OptionForce {
+				itemSignature = source
 
+				for _, v := range p.OptionMatchSignature {
+					switch v {
+					case "description":
+						itemSignature += item.Description
+						break
+					case "link":
+						itemSignature += item.Link
+						break
+					case "time":
+						itemSignature += itemTime.String()
+						break
+					case "title":
+						itemSignature += item.Title
+						break
+					default:
+						itemSignature += item.Title + itemTime.String()
+						break
+					}
+				}
+
+				itemSignatureHash = core.HashString(&itemSignature)
+
+				if _, ok := flowStates[itemSignatureHash]; !ok || p.OptionForce {
+					// save item signature hash to state.
+					flowStates[itemSignatureHash] = currentTime
+
+					// update source timestamp.
+					if itemTime.Unix() > sourceLastTime.Unix() {
+						sourceLastTime = itemTime
+					}
+
+					itemNew = true
+				}
+
+			} else {
+				if itemTime.Unix() > sourceLastTime.Unix() || p.OptionForce {
+					sourceLastTime = itemTime
+					itemNew = true
+				}
+			}
+
+			// Add item to result.
+			if itemNew {
 				temp = append(temp, &core.DataItem{
 					FLOW:       p.Flow.FlowName,
 					PLUGIN:     p.PluginName,
@@ -204,7 +247,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			}
 		}
 
-		flowStates[source] = lastTime
+		// always update source timestamp.
+		flowStates[source] = sourceLastTime
 
 		log.WithFields(log.Fields{
 			"hash":   p.Flow.FlowHash,
@@ -213,7 +257,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.PluginName,
 			"type":   p.PluginType,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(feeds.Items)),
+			"data":   fmt.Sprintf("last update: %s, fetched data: %d", sourceLastTime, len(feeds.Items)),
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
@@ -306,7 +350,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveState(p.Flow.FlowStateDir, &data)
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
@@ -338,8 +382,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
-		"input":      1,
-		"user_agent": -1,
+		"input":           1,
+		"match_signature": -1,
+		"match_ttl":       -1,
+		"user_agent":      -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -441,6 +487,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.PluginParams)["input"])
 	showParam("input", plugin.OptionInput)
+
+	// match_signature.
+	setMatchSignature := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["match_signature"] = 0
+			plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+	showParam("match_signature", plugin.OptionMatchSignature)
+
+	// match_ttl.
+	setMatchTTL := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["match_ttl"] = 0
+			plugin.OptionMatchTTL = time.Duration(v) * time.Second
+		}
+	}
+	setMatchTTL(DEFAULT_MATCH_TTL)
+	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+	showParam("match_ttl", plugin.OptionMatchTTL)
 
 	// ssl_verify.
 	setSSLVerify := func(p interface{}) {

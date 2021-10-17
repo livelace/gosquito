@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
@@ -353,6 +354,10 @@ func GetDataFieldType(field interface{}) (reflect.Kind, error) {
 	} else {
 		return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
 	}
+}
+
+func HashString(s *string) string {
+	return fmt.Sprintf("%x", sha1.Sum([]byte(*s)))
 }
 
 func IntervalToSeconds(s string) (int64, error) {
@@ -708,7 +713,7 @@ func PluginLoadState(database string, data *map[string]time.Time) error {
 	return err
 }
 
-func PluginSaveState(database string, data *map[string]time.Time) error {
+func PluginSaveState(database string, data *map[string]time.Time, ttl time.Duration) error {
 	// Disable logging.
 	opts := badger.DefaultOptions(database)
 	opts.Logger = nil
@@ -723,7 +728,8 @@ func PluginSaveState(database string, data *map[string]time.Time) error {
 	// Save data.
 	err = db.Update(func(txn *badger.Txn) error {
 		for signature, timestamp := range *data {
-			err := txn.Set([]byte(signature), []byte(timestamp.Format(time.RFC3339)))
+			e := badger.NewEntry([]byte(signature), []byte(timestamp.Format(time.RFC3339))).WithTTL(ttl)
+			err := txn.SetEntry(e)
 			if err != nil {
 				return err
 			}

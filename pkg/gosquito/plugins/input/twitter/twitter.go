@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	DEFAULT_MATCH_TTL = "1d"
+)
+
 func expandMedia(s *[]twitter.MediaEntity) []string {
 	temp := make([]string, 0)
 
@@ -103,6 +107,10 @@ type Plugin struct {
 	PluginName string
 	PluginType string
 
+	OptionAccessSecret        string
+	OptionAccessToken         string
+	OptionConsumerKey         string
+	OptionConsumerSecret      string
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
@@ -110,16 +118,13 @@ type Plugin struct {
 	OptionExpireLast          int64
 	OptionForce               bool
 	OptionForceCount          int
-
-	OptionAccessToken    string
-	OptionAccessSecret   string
-	OptionConsumerKey    string
-	OptionConsumerSecret string
-	OptionInput          []string
-	OptionTimeout        int
-	OptionTimeFormat     string
-	OptionTimeZone       *time.Location
-	OptionUserAgent      string
+	OptionInput               []string
+	OptionMatchSignature      []string
+	OptionMatchTTL            time.Duration
+	OptionTimeFormat          string
+	OptionTimeZone            *time.Location
+	OptionTimeout             int
+	OptionUserAgent           string
 }
 
 func (p *Plugin) Recv() ([]*core.DataItem, error) {
@@ -330,7 +335,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveState(p.Flow.FlowStateDir, &data)
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

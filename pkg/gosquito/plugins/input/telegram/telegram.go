@@ -17,9 +17,10 @@ const (
 	DEFAULT_BUFFER_LENGHT = 1000
 	DEFAULT_CHATS_DB      = "chats.db"
 	DEFAULT_DATABASE_DIR  = "database"
-	DEFAULT_FILE_MAX_SIZE = "10m"
 	DEFAULT_FILES_DIR     = "files"
+	DEFAULT_FILE_MAX_SIZE = "10m"
 	DEFAULT_LOG_LEVEL     = 0
+	DEFAULT_MATCH_TTL     = "1d"
 	DEFAULT_USERS_DB      = "users.db"
 	MAX_INSTANCE_PER_APP  = 1
 )
@@ -417,20 +418,21 @@ type Plugin struct {
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
 
+	OptionApiHash             string
+	OptionApiId               int
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
-
-	OptionApiId       int
-	OptionApiHash     string
-	OptionFileMaxSize int64
-	OptionInput       []string
-	OptionLogLevel    int
-	OptionTimeout     int
-	OptionTimeFormat  string
-	OptionTimeZone    *time.Location
+	OptionFileMaxSize         int64
+	OptionInput               []string
+	OptionLogLevel            int
+	OptionMatchSignature      []string
+	OptionMatchTTL            time.Duration
+	OptionTimeFormat          string
+	OptionTimeZone            *time.Location
+	OptionTimeout             int
 }
 
 func (p *Plugin) Recv() ([]*core.DataItem, error) {
@@ -574,7 +576,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveState(p.Flow.FlowStateDir, &data)
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
