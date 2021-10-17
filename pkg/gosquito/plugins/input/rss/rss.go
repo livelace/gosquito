@@ -204,10 +204,12 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 					case "title":
 						itemSignature += item.Title
 						break
-					default:
-						itemSignature += item.Title + itemTime.String()
-						break
 					}
+				}
+
+				// set default value for signature if user provided wrong values.
+				if itemSignature == source {
+					itemSignature += item.Title + itemTime.String()
 				}
 
 				itemSignatureHash = core.HashString(&itemSignature)

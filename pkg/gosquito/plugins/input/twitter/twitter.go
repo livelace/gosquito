@@ -138,22 +138,15 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Delete irrelevant/obsolete sources.
-	for source := range flowStates {
-		if !core.IsValueInSlice(source, &p.OptionInput) {
-			delete(flowStates, source)
-		}
-	}
-
 	// Fetch data from sources.
 	for _, source := range p.OptionInput {
-		var lastTime time.Time
+		var sourceLastTime time.Time
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[source]; ok {
-			lastTime = v
+			sourceLastTime = v
 		} else {
-			lastTime = time.Unix(0, 0)
+			sourceLastTime = time.Unix(0, 0)
 		}
 
 		// Try to fetch new tweets.
@@ -174,23 +167,21 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			continue
 		}
 
-		// Grab only specific amount of tweets from
-		// every source, if p.Force = true.
+		// Process only specific amount of tweets from every source if force = true.
 		var start = len(*tweets) - 1
-		var end int
+		var end = 0
 
 		if p.OptionForce {
 			if len(*tweets) > p.OptionForceCount {
 				end = start - p.OptionForceCount + 1
-			} else {
-				end = 0
 			}
-		} else {
-			end = 0
 		}
 
 		// Process fetched data in reverse order.
 		for i := start; i >= end; i-- {
+			var itemNew = false
+			var itemSignature string
+			var itemSignatureHash string
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
 
@@ -201,10 +192,50 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				return temp, err
 			}
 
-			// Process only new items.
-			if itemTime.Unix() > lastTime.Unix() || p.OptionForce {
-				lastTime = itemTime
+			// Process only new items. Two methods:
+			// 1. Match item by user provided signature.
+			// 2. Compare item timestamp with source timestamp.
+			if len(p.OptionMatchSignature) > 0 || p.OptionForce {
+				itemSignature = source
 
+				for _, v := range p.OptionMatchSignature {
+					switch v {
+					case "lang":
+						itemSignature += item.Lang
+						break
+					case "text":
+						itemSignature += item.Text
+						break
+					}
+				}
+
+				// set default value for signature if user provided wrong values.
+				if itemSignature == source {
+					itemSignature += item.Text + itemTime.String()
+				}
+
+				itemSignatureHash = core.HashString(&itemSignature)
+
+				if _, ok := flowStates[itemSignatureHash]; !ok || p.OptionForce {
+					// save item signature hash to state.
+					flowStates[itemSignatureHash] = currentTime
+
+					// update source timestamp.
+					if itemTime.Unix() > sourceLastTime.Unix() {
+						sourceLastTime = itemTime
+					}
+
+					itemNew = true
+				}
+
+			} else {
+				if itemTime.Unix() > sourceLastTime.Unix() || p.OptionForce {
+					sourceLastTime = itemTime
+					itemNew = true
+				}
+			}
+
+			if itemNew {
 				// Derive various data.
 				media := expandMedia(&item.Entities.Media)
 				if item.ExtendedEntities != nil {
@@ -233,7 +264,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			}
 		}
 
-		flowStates[source] = lastTime
+		flowStates[source] = sourceLastTime
 
 		log.WithFields(log.Fields{
 			"hash":   p.Flow.FlowHash,
@@ -242,7 +273,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.PluginName,
 			"type":   p.PluginType,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(*tweets)),
+			"data":   fmt.Sprintf("last update: %s, fetched data: %d", sourceLastTime, len(*tweets)),
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
@@ -372,6 +403,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"consumer_secret": 1,
 		"cred":            -1,
 		"input":           1,
+		"match_signature": -1,
+		"match_ttl":       -1,
 		"user_agent":      -1,
 	}
 
@@ -519,6 +552,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.PluginParams)["input"])
 	showParam("input", plugin.OptionInput)
+
+	// match_signature.
+	setMatchSignature := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["match_signature"] = 0
+			plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+	showParam("match_signature", plugin.OptionMatchSignature)
+
+	// match_ttl.
+	setMatchTTL := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["match_ttl"] = 0
+			plugin.OptionMatchTTL = time.Duration(v) * time.Second
+		}
+	}
+	setMatchTTL(DEFAULT_MATCH_TTL)
+	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+	showParam("match_ttl", plugin.OptionMatchTTL)
 
 	// timeout.
 	setTimeout := func(p interface{}) {

@@ -445,38 +445,31 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Delete irrelevant/obsolete sources.
-	for source := range flowStates {
-		if !core.IsValueInSlice(source, &p.OptionInput) {
-			delete(flowStates, source)
-		}
-	}
-
 	// Count fetched data from source.
 	sourceStat := make(map[string]int32)
 
 	// Save channel length.
-	// It will be recalculated in loop, if use directly.
+	// It will be recalculated in loop, if use directly. what?
 	length := len(p.DataChannel)
 
 	for i := 1; i <= length; i++ {
-		var lastTime time.Time
+		var sourceLastTime time.Time
 		item := <-p.DataChannel
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[item.SOURCE]; ok {
-			lastTime = v
+			sourceLastTime = v
 		} else {
-			lastTime = time.Unix(0, 0)
+			sourceLastTime = time.Unix(0, 0)
 		}
 
 		// Append to results if data is new.
-		if item.TIME.Unix() > lastTime.Unix() {
-			lastTime = item.TIME
+		if item.TIME.Unix() > sourceLastTime.Unix() {
+			sourceLastTime = item.TIME
 			temp = append(temp, item)
 		}
 
-		flowStates[item.SOURCE] = lastTime
+		flowStates[item.SOURCE] = sourceLastTime
 		sourceStat[item.SOURCE] += 1
 	}
 
@@ -607,12 +600,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
-		"api_id":        1,
-		"api_hash":      1,
-		"cred":          -1,
-		"file_max_size": -1,
-		"input":         1,
-		"log_level":     -1,
+		"api_id":          1,
+		"api_hash":        1,
+		"cred":            -1,
+		"file_max_size":   -1,
+		"input":           1,
+		"log_level":       -1,
+		"match_signature": -1,
+		"match_ttl":       -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -738,6 +733,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setLogLevel(DEFAULT_LOG_LEVEL)
 	setLogLevel(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.log_level", template)))
 	setLogLevel((*pluginConfig.PluginParams)["log_level"])
+
+	// match_signature.
+	setMatchSignature := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["match_signature"] = 0
+			plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+	showParam("match_signature", plugin.OptionMatchSignature)
+
+	// match_ttl.
+	setMatchTTL := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["match_ttl"] = 0
+			plugin.OptionMatchTTL = time.Duration(v) * time.Second
+		}
+	}
+	setMatchTTL(DEFAULT_MATCH_TTL)
+	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+	showParam("match_ttl", plugin.OptionMatchTTL)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
