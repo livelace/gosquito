@@ -8,10 +8,10 @@
 ```go
 type TwitterData struct {
 	LANG*  string
-	MEDIA []string
-	TAGS  []string
+	MEDIA  []string
+	TAGS   []string
 	TEXT*  string
-	URLS  []string
+	URLS   []string
 }
 ```
 

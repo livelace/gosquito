@@ -6,7 +6,7 @@
 
 ```go
 type RssData struct {
-	CATEGORIES  []string
+	CATEGORIES   []string
 	CONTENT*     string
 	DESCRIPTION* string
 	GUID*        string
