@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"encoding/gob"
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
@@ -672,6 +673,60 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
+func PluginLoadData(database string) (map[interface{}]interface{}, error) {
+	data := make(map[interface{}]interface{}, 0)
+
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
+
+	// Open database.
+	db, err := badger.Open(opts)
+	if err != nil {
+		return data, err
+	}
+	defer db.Close()
+
+	// Read database.
+	err = db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+
+			err := item.Value(func(v []byte) error {
+				var key interface{}
+				var value interface{}
+
+				keyDecoder := gob.NewDecoder(bytes.NewReader(item.Key()))
+				err = keyDecoder.Decode(&key)
+
+				if err != nil {
+					return err
+				}
+
+				valueDecoder := gob.NewDecoder(bytes.NewReader(v))
+				err = valueDecoder.Decode(&value)
+
+				data[key] = value
+
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return data, err
+}
+
 func PluginLoadState(database string, data *map[string]time.Time) error {
 	// Disable logging.
 	opts := badger.DefaultOptions(database)
@@ -703,6 +758,48 @@ func PluginLoadState(database string, data *map[string]time.Time) error {
 				return err
 			})
 
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func PluginSaveData(database string, data *map[interface{}]interface{}) error {
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
+
+	// Open database.
+	db, err := badger.Open(opts)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Save data.
+	err = db.Update(func(txn *badger.Txn) error {
+		for k, v := range *data {
+			keyBuffer := new(bytes.Buffer)
+			keyEncoder := gob.NewEncoder(keyBuffer)
+			err := keyEncoder.Encode(k)
+
+			if err != nil {
+				return err
+			}
+
+			valueBuffer := new(bytes.Buffer)
+			valueEncoder := gob.NewEncoder(valueBuffer)
+			err = valueEncoder.Encode(v)
+
+			if err != nil {
+				return err
+			}
+
+			err = txn.Set(keyBuffer.Bytes(), valueBuffer.Bytes())
 			if err != nil {
 				return err
 			}

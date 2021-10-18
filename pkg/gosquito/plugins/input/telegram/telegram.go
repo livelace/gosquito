@@ -9,19 +9,20 @@ import (
 	"github.com/zelenin/go-tdlib/client"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 )
 
 const (
 	DEFAULT_BUFFER_LENGHT = 1000
-	DEFAULT_CHATS_DB      = "chats.db"
+	DEFAULT_CHATS_DB      = "chats"
 	DEFAULT_DATABASE_DIR  = "database"
 	DEFAULT_FILES_DIR     = "files"
 	DEFAULT_FILE_MAX_SIZE = "10m"
 	DEFAULT_LOG_LEVEL     = 0
 	DEFAULT_MATCH_TTL     = "1d"
-	DEFAULT_USERS_DB      = "users.db"
+	DEFAULT_USERS_DB      = "users"
 	MAX_INSTANCE_PER_APP  = 1
 )
 
@@ -149,25 +150,49 @@ func joinToChat(p *Plugin, name string, id int64) error {
 }
 
 func loadChats(p *Plugin) (map[string]int64, error) {
-	temp := make(map[string]int64, 0)
+	data := make(map[string]int64, 0)
 
-	/*err := core.PluginLoadState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, &temp)
+	temp, err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB))
 	if err != nil {
-		return temp, err
-	}*/
+		return data, fmt.Errorf("cannot load chats: %s", err)
+	}
 
-	return temp, nil
+	for k, v := range temp {
+		chat := fmt.Sprintf("%s", k)
+		chatId, err := strconv.ParseInt(fmt.Sprintf("%s", v), 10, 64)
+		if err != nil {
+			return data, fmt.Errorf("cannot get chat id: %s, %s", chat, err)
+		}
+
+		data[chat] = chatId
+	}
+
+	return data, nil
 }
 
 func loadUsers(p *Plugin) (map[int32][]string, error) {
-	temp := make(map[int32][]string, 0)
+	data := make(map[int32][]string, 0)
 
-	//err := core.PluginLoadState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, &temp)
-	/*if err != nil {
-		return temp, err
-	}*/
+	temp, err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB))
+	if err != nil {
+		return data, fmt.Errorf("cannot load users: %s", err)
+	}
 
-	return temp, nil
+	for k, v := range temp {
+		userId, err := strconv.ParseInt(fmt.Sprintf("%s", k), 10, 32)
+		if err != nil {
+			return data, fmt.Errorf("cannot get user id: %s", err)
+		}
+
+		userData, ok := v.([]string)
+		if !ok {
+			return data, fmt.Errorf("cannot parse user data: %d", userId)
+		}
+
+		data[int32(userId)] = userData
+	}
+
+	return data, nil
 }
 
 func receiveFiles(p *Plugin) {
@@ -380,13 +405,33 @@ func receiveMessages(p *Plugin) {
 }
 
 func saveChats(p *Plugin) error {
-	//return core.PluginSaveState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_CHATS_DB, p.ChatsByName)
-	return nil
+	temp := make(map[interface{}]interface{}, 0)
+
+	for k, v := range p.ChatsByName {
+		temp[k] = v
+	}
+
+	err := core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB), &temp)
+	if err != nil {
+		return fmt.Errorf("cannot save chats: %s", err)
+	}
+
+	return err
 }
 
 func saveUsers(p *Plugin) error {
-	//return core.PluginSaveState(filepath.Join(p.PluginDataDir, p.Flow.FlowName, p.PluginType, p.PluginName), DEFAULT_USERS_DB, p.UsersById)
-	return nil
+	temp := make(map[interface{}]interface{}, 0)
+
+	for k, v := range p.UsersById {
+		temp[k] = v
+	}
+
+	err := core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB), &temp)
+	if err != nil {
+		return fmt.Errorf("cannot save users: %s", err)
+	}
+
+	return err
 }
 
 type clientAuthorizer struct {
@@ -899,24 +944,28 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// interfax_ru = -1001019826615
 	chatsById := make(map[int64]string, 0)
 	chatsByName, err := loadChats(&plugin)
+	for i, v := range chatsByName {
+		fmt.Printf("AAAAAAAAAAAAAAA: %s -> %s\n", i, v)
+	}
+
 	if err != nil {
 		return &Plugin{}, err
 	}
 
-	// Check if we known ids for all specified chats.
-	// We keep chats/user ids due api limits.
-	// We could be banned for 24 hours if limits were reached (~200 requests may be enough).
+	// Check if we know ids for all specified chats.
+	// We keep chats/user IDs due Telegram API limits.
+	// We may be banned for 24 hours if limits were reached (~200 requests may be enough).
 	for _, chatName := range plugin.OptionInput {
 
 		if id, ok := chatsByName[chatName]; !ok {
 			chatId, err := getChatId(&plugin, chatName)
 
 			if err == nil {
-				// Add found chat to chats databases.
+				// Add found chat to chat database.
 				chatsByName[chatName] = chatId
 				chatsById[chatId] = chatName
 
-				// Force join to chat.
+				// Always join to chat.
 				err = joinToChat(&plugin, chatName, chatId)
 				if err != nil {
 					return &Plugin{}, err
@@ -928,10 +977,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			}
 
 		} else {
-			// Force join to known chat.
+			// Always join to chat.
 			err = joinToChat(&plugin, chatName, id)
 
-			// Handle changed id for known chat (it might be changed "silently").
+			// Recheck chat ID (it might be changed "silently").
 			if err != nil {
 				chatId, _ := getChatId(&plugin, chatName)
 				err = joinToChat(&plugin, chatName, chatId)
