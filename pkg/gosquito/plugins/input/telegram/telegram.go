@@ -9,20 +9,19 @@ import (
 	"github.com/zelenin/go-tdlib/client"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"sync"
 	"time"
 )
 
 const (
 	DEFAULT_BUFFER_LENGHT = 1000
-	DEFAULT_CHATS_DB      = "chats"
+	DEFAULT_CHATS_DATA    = "chats.data"
 	DEFAULT_DATABASE_DIR  = "database"
 	DEFAULT_FILES_DIR     = "files"
 	DEFAULT_FILE_MAX_SIZE = "10m"
 	DEFAULT_LOG_LEVEL     = 0
 	DEFAULT_MATCH_TTL     = "1d"
-	DEFAULT_USERS_DB      = "users"
+	DEFAULT_USERS_DATA    = "users.data"
 	MAX_INSTANCE_PER_APP  = 1
 )
 
@@ -152,19 +151,9 @@ func joinToChat(p *Plugin, name string, id int64) error {
 func loadChats(p *Plugin) (map[string]int64, error) {
 	data := make(map[string]int64, 0)
 
-	temp, err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB))
+	err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DATA), &data)
 	if err != nil {
-		return data, fmt.Errorf("cannot load chats: %s", err)
-	}
-
-	for k, v := range temp {
-		chat := fmt.Sprintf("%s", k)
-		chatId, err := strconv.ParseInt(fmt.Sprintf("%s", v), 10, 64)
-		if err != nil {
-			return data, fmt.Errorf("cannot get chat id: %s, %s", chat, err)
-		}
-
-		data[chat] = chatId
+		return data, err
 	}
 
 	return data, nil
@@ -173,23 +162,9 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 func loadUsers(p *Plugin) (map[int32][]string, error) {
 	data := make(map[int32][]string, 0)
 
-	temp, err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB))
+	err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), &data)
 	if err != nil {
-		return data, fmt.Errorf("cannot load users: %s", err)
-	}
-
-	for k, v := range temp {
-		userId, err := strconv.ParseInt(fmt.Sprintf("%s", k), 10, 32)
-		if err != nil {
-			return data, fmt.Errorf("cannot get user id: %s", err)
-		}
-
-		userData, ok := v.([]string)
-		if !ok {
-			return data, fmt.Errorf("cannot parse user data: %d", userId)
-		}
-
-		data[int32(userId)] = userData
+		return data, err
 	}
 
 	return data, nil
@@ -405,33 +380,11 @@ func receiveMessages(p *Plugin) {
 }
 
 func saveChats(p *Plugin) error {
-	temp := make(map[interface{}]interface{}, 0)
-
-	for k, v := range p.ChatsByName {
-		temp[k] = v
-	}
-
-	err := core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB), &temp)
-	if err != nil {
-		return fmt.Errorf("cannot save chats: %s", err)
-	}
-
-	return err
+	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DATA), p.ChatsByName)
 }
 
 func saveUsers(p *Plugin) error {
-	temp := make(map[interface{}]interface{}, 0)
-
-	for k, v := range p.UsersById {
-		temp[k] = v
-	}
-
-	err := core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB), &temp)
-	if err != nil {
-		return fmt.Errorf("cannot save users: %s", err)
-	}
-
-	return err
+	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), p.UsersById)
 }
 
 type clientAuthorizer struct {
@@ -944,9 +897,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// interfax_ru = -1001019826615
 	chatsById := make(map[int64]string, 0)
 	chatsByName, err := loadChats(&plugin)
-	for i, v := range chatsByName {
-		fmt.Printf("AAAAAAAAAAAAAAA: %s -> %s\n", i, v)
-	}
 
 	if err != nil {
 		return &Plugin{}, err
@@ -1013,8 +963,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, fmt.Errorf(ERROR_LOAD_USERS_ERROR.Error(), err)
 	}
 
-	//showParam("chats amount", len(plugin.ChatsByName))
-	//showParam("users amount", len(plugin.UsersById))
+	showParam("chats records", len(plugin.ChatsByName))
+	showParam("users records", len(plugin.UsersById))
 
 	// Get messages and files in background.
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)

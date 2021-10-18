@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/google/renameio"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
@@ -120,7 +121,7 @@ func ExtractDataFieldIntoArray(data *DataItem, field interface{}) []string {
 	// "qwerty" - regular string.
 	// "rss.title" - string representation of data field.
 	//
-	// Every data field might be expanded (reflect) into string, int, slice etc.
+	// All data field might be expanded (reflect) into string, int, slice etc.
 	// All expanded data appended to []string.
 
 	// Try to reflect string into data field.
@@ -471,11 +472,7 @@ func IsDataFieldsTypesEqual(a *[]string, b *[]string) error {
 func IsFile(path string, file string) bool {
 	info, err := os.Stat(filepath.Join(path, file))
 
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	if info.IsDir() || !info.Mode().IsRegular() {
+	if err != nil || info.IsDir() || !info.Mode().IsRegular() {
 		return false
 	}
 
@@ -673,58 +670,40 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(database string) (map[interface{}]interface{}, error) {
-	data := make(map[interface{}]interface{}, 0)
-
-	// Disable logging.
-	opts := badger.DefaultOptions(database)
-	opts.Logger = nil
-
-	// Open database.
-	db, err := badger.Open(opts)
-	if err != nil {
-		return data, err
-	}
-	defer db.Close()
-
-	// Read database.
-	err = db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
-
-		it := txn.NewIterator(opts)
-		defer it.Close()
-
-		for it.Rewind(); it.Valid(); it.Next() {
-			item := it.Item()
-
-			err := item.Value(func(v []byte) error {
-				var key interface{}
-				var value interface{}
-
-				keyDecoder := gob.NewDecoder(bytes.NewReader(item.Key()))
-				err = keyDecoder.Decode(&key)
-
-				if err != nil {
-					return err
-				}
-
-				valueDecoder := gob.NewDecoder(bytes.NewReader(v))
-				err = valueDecoder.Decode(&value)
-
-				data[key] = value
-
-				return err
-			})
-
-			if err != nil {
-				return err
-			}
+func PluginLoadData(database string, data interface{}) error {
+	if IsFile(database, "") {
+		// open file.
+		f, err := os.OpenFile(database, os.O_RDONLY, 0644)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
 		}
-		return nil
-	})
 
-	return data, err
+		// get file size.
+		fs, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		// read file.
+		content := make([]byte, fs.Size())
+		_, err = f.Read(content)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		// decode data.
+		decoder := gob.NewDecoder(bytes.NewReader(content))
+		err = decoder.Decode(data)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		err = f.Close()
+
+		return err
+	}
+
+	return nil
 }
 
 func PluginLoadState(database string, data *map[string]time.Time) error {
@@ -768,46 +747,21 @@ func PluginLoadState(database string, data *map[string]time.Time) error {
 	return err
 }
 
-func PluginSaveData(database string, data *map[interface{}]interface{}) error {
-	// Disable logging.
-	opts := badger.DefaultOptions(database)
-	opts.Logger = nil
+func PluginSaveData(database string, data interface{}) error {
+	buffer := new(bytes.Buffer)
+	encoder := gob.NewEncoder(buffer)
 
-	// Open database.
-	db, err := badger.Open(opts)
+	err := encoder.Encode(data)
 	if err != nil {
-		return err
+		return fmt.Errorf(ERROR_PLUGIN_SAVE_DATA.Error(), err)
 	}
-	defer db.Close()
 
-	// Save data.
-	err = db.Update(func(txn *badger.Txn) error {
-		for k, v := range *data {
-			keyBuffer := new(bytes.Buffer)
-			keyEncoder := gob.NewEncoder(keyBuffer)
-			err := keyEncoder.Encode(k)
+	err = renameio.WriteFile(database, buffer.Bytes(), 0644)
+	if err != nil {
+		return fmt.Errorf(ERROR_PLUGIN_SAVE_DATA.Error(), err)
+	}
 
-			if err != nil {
-				return err
-			}
-
-			valueBuffer := new(bytes.Buffer)
-			valueEncoder := gob.NewEncoder(valueBuffer)
-			err = valueEncoder.Encode(v)
-
-			if err != nil {
-				return err
-			}
-
-			err = txn.Set(keyBuffer.Bytes(), valueBuffer.Bytes())
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-
-	return err
+	return nil
 }
 
 func PluginSaveState(database string, data *map[string]time.Time, ttl time.Duration) error {
