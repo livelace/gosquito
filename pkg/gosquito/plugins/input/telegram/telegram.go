@@ -445,8 +445,9 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Stat fetched data for source.
-	sourceStat := make(map[string]int32)
+	// Source stat.
+	sourceNewStat := make(map[string]int32)
+	sourceReceivedStat := make(map[string]int32)
 
 	// Fixate channel length (channel changes length size in the loop).
 	length := len(p.DataChannel)
@@ -455,7 +456,6 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		var itemNew = false
 		var itemSignature string
 		var itemSignatureHash string
-		var itemTime time.Time
 		var sourceLastTime time.Time
 
 		item := <-p.DataChannel
@@ -472,10 +472,27 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		// 2. Compare item timestamp with source timestamp.
 		if len(p.OptionMatchSignature) > 0 {
 			itemSignature = item.SOURCE
-			itemTime = item.TIME
 
 			for _, v := range p.OptionMatchSignature {
 				switch v {
+				case "firstname":
+					itemSignature += item.TELEGRAM.FIRSTNAME
+					break
+				case "lastname":
+					itemSignature += item.TELEGRAM.LASTNAME
+					break
+				case "phone":
+					itemSignature += item.TELEGRAM.PHONE
+					break
+				case "text":
+					itemSignature += item.TELEGRAM.TEXT
+					break
+				case "time":
+					itemSignature += item.TIME.String()
+					break
+				case "url":
+					itemSignature += item.TELEGRAM.URL
+					break
 				case "username":
 					itemSignature += item.TELEGRAM.USERNAME
 					break
@@ -487,7 +504,7 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 			// set default value for signature if user provided wrong values.
 			if itemSignature == item.SOURCE {
-				itemSignature += item.TELEGRAM.TEXT + itemTime.String()
+				itemSignature += item.TELEGRAM.TEXT + item.TIME.String()
 			}
 
 			itemSignatureHash = core.HashString(&itemSignature)
@@ -497,16 +514,16 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				flowStates[itemSignatureHash] = currentTime
 
 				// update source timestamp.
-				if itemTime.Unix() > sourceLastTime.Unix() {
-					sourceLastTime = itemTime
+				if item.TIME.Unix() > sourceLastTime.Unix() {
+					sourceLastTime = item.TIME
 				}
 
 				itemNew = true
 			}
 
 		} else {
-			if itemTime.Unix() > sourceLastTime.Unix() {
-				sourceLastTime = itemTime
+			if item.TIME.Unix() > sourceLastTime.Unix() {
+				sourceLastTime = item.TIME
 				itemNew = true
 			}
 		}
@@ -514,10 +531,11 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		// Add item to result.
 		if itemNew {
 			temp = append(temp, item)
+			sourceNewStat[item.SOURCE] += 1
 		}
 
 		flowStates[item.SOURCE] = sourceLastTime
-		sourceStat[item.SOURCE] += 1
+		sourceReceivedStat[item.SOURCE] += 1
 	}
 
 	for _, source := range p.OptionInput {
@@ -528,7 +546,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.PluginName,
 			"type":   p.PluginType,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %v, fetched data: %d", flowStates[source], sourceStat[source]),
+			"data": fmt.Sprintf("last update: %v, received data: %d, new data: %d",
+				flowStates[source], sourceReceivedStat[source], sourceNewStat[source]),
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 

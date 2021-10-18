@@ -118,6 +118,9 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
+	// Source stat.
+	sourceNewStat := make(map[string]int32)
+
 	// Fetch data from sources.
 	for _, source := range p.OptionInput {
 		var sourceLastTime time.Time
@@ -252,6 +255,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 						TITLE:       item.Title,
 					},
 				})
+
+				sourceNewStat[source] += 1
 			}
 		}
 
@@ -265,7 +270,8 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			"plugin": p.PluginName,
 			"type":   p.PluginType,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", sourceLastTime, len(feeds.Items)),
+			"data": fmt.Sprintf("last update: %s, received data: %d, new data: %d",
+				sourceLastTime, len(feeds.Items), sourceNewStat[source]),
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
