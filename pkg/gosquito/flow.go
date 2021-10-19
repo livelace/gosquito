@@ -547,7 +547,7 @@ func runFlow(flow *core.Flow) {
 	}).Info(core.LOG_FLOW_RECEIVE)
 
 	// Get data.
-	inputData, err := flow.InputPlugin.Recv()
+	inputData, err := flow.InputPlugin.Receive()
 	logFlowStat(len(inputData))
 
 	// Process data if flow sources are expired/failed.
@@ -602,7 +602,7 @@ func runFlow(flow *core.Flow) {
 			// 1. It's the first "process" plugin on the list.
 			// 2 "require" is not set for plugin.
 			if index == 0 || len(require) == 0 {
-				result, err = plugin.Do(inputData)
+				result, err = plugin.Process(inputData)
 			} else {
 				// Combine datasets from required process plugins.
 				var combined = make([]*core.DataItem, 0)
@@ -617,7 +617,7 @@ func runFlow(flow *core.Flow) {
 					}
 				}
 
-				result, err = plugin.Do(combined)
+				result, err = plugin.Process(combined)
 			}
 
 			// Skip flow if we have problems with data processing.

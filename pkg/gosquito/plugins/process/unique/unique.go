@@ -27,7 +27,7 @@ type Plugin struct {
 	OptionOutput []string
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 
 	if len(data) == 0 {

@@ -7,8 +7,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
+	"reflect"
 	"strings"
 	"sync"
+	tmpl "text/template"
 	"time"
 )
 
@@ -81,6 +83,7 @@ type Plugin struct {
 	OptionAuth                string
 	OptionBearerToken         string
 	OptionBody                string
+	OptionBodyTemplate        *tmpl.Template
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
@@ -99,6 +102,7 @@ type Plugin struct {
 	OptionRedirect            bool
 	OptionRequire             []int
 	OptionSSLVerify           bool
+	OptionTarget              string
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
@@ -106,8 +110,72 @@ type Plugin struct {
 	OptionUsername            string
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
-	return data, nil
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
+	temp := make([]*core.DataItem, 0)
+
+	if len(data) == 0 {
+		return temp, nil
+	}
+
+	var resp *resty.Response
+
+	// Iterate over data items (articles, tweets etc.).
+	for _, item := range data {
+		// format body.
+		body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
+		if err != nil {
+			return temp, err
+		}
+
+		// format headers.
+
+		// format params.
+
+		for index, input := range p.OptionInput {
+			ri, _ := core.ReflectDataField(item, input)
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+
+			switch ri.Kind() {
+			case reflect.String:
+				switch p.OptionMethod {
+				case "GET":
+					resp, err = p.RestyClient.R().SetBody(body).Get(p.OptionTarget)
+					break
+				case "POST":
+					resp, err = p.RestyClient.R().SetBody(body).Post(p.OptionTarget)
+					break
+				}
+
+				if err == nil {
+					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
+				} else {
+					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
+				}
+
+			case reflect.Slice:
+				for i := 0; i < ri.Len(); i++ {
+					switch p.OptionMethod {
+					case "GET":
+						resp, err = p.RestyClient.R().SetBody(body).Get(p.OptionTarget)
+						break
+					case "POST":
+						resp, err = p.RestyClient.R().SetBody(body).Post(p.OptionTarget)
+						break
+					}
+
+					if err == nil {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
+					} else {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
+					}
+				}
+			}
+		}
+
+		temp = append(temp, item)
+	}
+
+	return temp, nil
 }
 
 func (p *Plugin) GetAlias() string {
@@ -159,7 +227,7 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	return data, nil
 }
 
-func (p *Plugin) Recv() ([]*core.DataItem, error) {
+func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
@@ -398,14 +466,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	case "process":
 		availableParams["input"] = 1
 		availableParams["output"] = 1
+		availableParams["target"] = 1
 		break
 	case "output":
 		availableParams["output"] = 1
+		availableParams["target"] = 1
 		break
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
+
+	var err error
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
@@ -566,6 +638,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOutput((*pluginConfig.PluginParams)["output"])
 		showParam("output", plugin.OptionOutput)
 
+		// target.
+		setTarget := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["target"] = 0
+				plugin.OptionTarget = v
+			}
+		}
+		setTarget(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.target", template)))
+		setTarget((*pluginConfig.PluginParams)["target"])
+
 		break
 
 	case "output":
@@ -579,6 +661,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 		setOutput((*pluginConfig.PluginParams)["output"])
 		showParam("output", plugin.OptionOutput)
+
+		// target.
+		setTarget := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["target"] = 0
+				plugin.OptionTarget = v
+			}
+		}
+		setOutput(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.target", template)))
+		setTarget((*pluginConfig.PluginParams)["target"])
 
 		break
 	}
@@ -604,6 +696,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBody(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.body", template)))
 	setBody((*pluginConfig.PluginParams)["body"])
 	showParam("body", plugin.OptionBody)
+
+	// body template.
+	if plugin.OptionBodyTemplate, err = tmpl.New("body").Funcs(core.TemplateFuncMap).Parse(plugin.OptionBody); err != nil {
+		return &Plugin{}, err
+	}
 
 	// headers.
 	templateHeaders, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.headers", template)))

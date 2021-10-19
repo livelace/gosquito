@@ -127,7 +127,7 @@ type Plugin struct {
 	OptionUserAgent           string
 }
 
-func (p *Plugin) Recv() ([]*core.DataItem, error) {
+func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)

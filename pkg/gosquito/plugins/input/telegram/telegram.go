@@ -433,7 +433,7 @@ type Plugin struct {
 	OptionTimeout             int
 }
 
-func (p *Plugin) Recv() ([]*core.DataItem, error) {
+func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 	currentTime := time.Now().UTC()
 

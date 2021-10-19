@@ -18,7 +18,7 @@ type InputPlugin interface {
 	LoadState() (map[string]time.Time, error)
 	SaveState(map[string]time.Time) error
 
-	Recv() ([]*DataItem, error)
+	Receive() ([]*DataItem, error)
 }
 
 type ProcessPlugin interface {
@@ -32,7 +32,7 @@ type ProcessPlugin interface {
 	GetInclude() bool
 	GetRequire() []int
 
-	Do(d []*DataItem) ([]*DataItem, error)
+	Process(d []*DataItem) ([]*DataItem, error)
 }
 
 type OutputPlugin interface {
