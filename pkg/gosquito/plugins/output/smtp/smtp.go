@@ -158,7 +158,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin := Plugin{
 		Flow:       pluginConfig.Flow,
 		PluginName: "smtp",
-		PluginType: "output",
+		PluginType: pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -307,6 +307,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	plugin.OptionHeaders = mergedHeaders
+
+	showParam("headers", plugin.OptionHeaders)
 
 	// output.
 	setOutput := func(p interface{}) {

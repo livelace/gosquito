@@ -1,4 +1,4 @@
-package unique
+package uniqueProcess
 
 import (
 	"errors"
@@ -90,7 +90,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "unique",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

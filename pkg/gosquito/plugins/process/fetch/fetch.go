@@ -1,4 +1,4 @@
-package fetch
+package fetchProcess
 
 import (
 	"context"
@@ -172,7 +172,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "fetch",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

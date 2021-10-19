@@ -7,6 +7,7 @@ import (
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
 	telegramIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/telegram"
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
+	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
 	kafkaOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/kafka"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
@@ -295,10 +296,13 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			AppConfig:    appConfig,
 			Flow:         flow,
 			PluginParams: &inputParams,
+			PluginType:   "input",
 		}
 
 		// Available "input" plugins.
 		switch flowBody.Flow.Input.Plugin {
+		case "resty":
+			inputPlugin, err = restyMulti.Init(&inputPluginConfig)
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
@@ -369,34 +373,37 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				PluginID:     pluginId,
 				PluginAlias:  pluginAlias,
 				PluginParams: &pluginParams,
+				PluginType:   "process",
 			}
 
 			// Available "process" plugins.
 			switch pluginName {
 			case "dedup":
-				plugin, err = dedup.Init(&processPluginConfig)
+				plugin, err = dedupProcess.Init(&processPluginConfig)
 			case "dirname":
-				plugin, err = dirname.Init(&processPluginConfig)
+				plugin, err = dirnameProcess.Init(&processPluginConfig)
 			case "expandurl":
-				plugin, err = expandurl.Init(&processPluginConfig)
+				plugin, err = expandurlProcess.Init(&processPluginConfig)
 			case "fetch":
-				plugin, err = fetch.Init(&processPluginConfig)
+				plugin, err = fetchProcess.Init(&processPluginConfig)
 			case "minio":
-				plugin, err = minio.Init(&processPluginConfig)
+				plugin, err = minioProcess.Init(&processPluginConfig)
 			case "echo":
-				plugin, err = echo.Init(&processPluginConfig)
+				plugin, err = echoProcess.Init(&processPluginConfig)
 			case "regexpfind":
-				plugin, err = regexpfind.Init(&processPluginConfig)
+				plugin, err = regexpfindProcess.Init(&processPluginConfig)
 			case "regexpmatch":
-				plugin, err = regexpmatch.Init(&processPluginConfig)
+				plugin, err = regexpmatchProcess.Init(&processPluginConfig)
 			case "regexpreplace":
-				plugin, err = regexpreplace.Init(&processPluginConfig)
+				plugin, err = regexpreplaceProcess.Init(&processPluginConfig)
+			case "resty":
+				plugin, err = restyMulti.Init(&processPluginConfig)
 			case "unique":
-				plugin, err = unique.Init(&processPluginConfig)
+				plugin, err = uniqueProcess.Init(&processPluginConfig)
 			case "webchela":
-				plugin, err = webchela.Init(&processPluginConfig)
+				plugin, err = webchelaProcess.Init(&processPluginConfig)
 			case "xpath":
-				plugin, err = xpath.Init(&processPluginConfig)
+				plugin, err = xpathProcess.Init(&processPluginConfig)
 			default:
 				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, pluginName)
 			}
@@ -426,6 +433,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				AppConfig:    appConfig,
 				Flow:         flow,
 				PluginParams: &outputParams,
+				PluginType:   "output",
 			}
 
 			// Available "output" plugins.
@@ -434,6 +442,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
 			case "mattermost":
 				outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
+			case "resty":
+				outputPlugin, err = restyMulti.Init(&outputPluginConfig)
 			case "slack":
 				outputPlugin, err = slackOut.Init(&outputPluginConfig)
 			case "smtp":

@@ -1,4 +1,4 @@
-package dedup
+package dedupProcess
 
 import (
 	"fmt"
@@ -77,7 +77,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "dedup",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

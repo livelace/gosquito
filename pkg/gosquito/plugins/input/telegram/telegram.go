@@ -642,7 +642,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin := Plugin{
 		Flow:             pluginConfig.Flow,
 		PluginName:       "telegram",
-		PluginType:       "input",
+		PluginType:       pluginConfig.PluginType,
 		PluginDataDir:    filepath.Join(pluginConfig.Flow.FlowDataDir, "input", "telegram"),
 		PluginTempDir:    filepath.Join(pluginConfig.Flow.FlowTempDir, "input", "telegram"),
 		OptionExpireLast: 0,

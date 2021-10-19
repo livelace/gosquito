@@ -284,7 +284,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin := Plugin{
 		Flow:       pluginConfig.Flow,
 		PluginName: "kafka",
-		PluginType: "output",
+		PluginType: pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

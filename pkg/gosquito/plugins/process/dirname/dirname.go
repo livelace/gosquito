@@ -1,4 +1,4 @@
-package dirname
+package dirnameProcess
 
 import (
 	"fmt"
@@ -98,7 +98,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "dirname",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

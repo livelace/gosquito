@@ -1,4 +1,4 @@
-package echo
+package echoProcess
 
 import (
 	"fmt"
@@ -108,7 +108,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "echo",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

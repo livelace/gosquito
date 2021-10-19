@@ -1,4 +1,4 @@
-package regexpreplace
+package regexpreplaceProcess
 
 import (
 	"fmt"
@@ -149,7 +149,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
 		PluginName:  "regexpreplace",
-		PluginType:  "process",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

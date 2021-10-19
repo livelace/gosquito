@@ -216,7 +216,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin := Plugin{
 		Flow:       pluginConfig.Flow,
 		PluginName: "slack",
-		PluginType: "output",
+		PluginType: pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

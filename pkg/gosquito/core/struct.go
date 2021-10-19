@@ -52,6 +52,7 @@ type PluginConfig struct {
 	PluginID     int
 	PluginAlias  string
 	PluginParams *map[string]interface{}
+	PluginType   string
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

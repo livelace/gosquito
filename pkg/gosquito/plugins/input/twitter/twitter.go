@@ -384,7 +384,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin := Plugin{
 		Flow:             pluginConfig.Flow,
 		PluginName:       "twitter",
-		PluginType:       "input",
+		PluginType:       pluginConfig.PluginType,
 		OptionExpireLast: 0,
 	}
 
