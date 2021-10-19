@@ -106,7 +106,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			var ro reflect.Value
 
 			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
+			// Error ignored because we always check fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ = core.ReflectDataField(item, p.OptionOutput[index])
 
