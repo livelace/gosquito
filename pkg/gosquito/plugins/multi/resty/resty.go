@@ -1,24 +1,77 @@
 package restyMulti
 
 import (
+	"crypto/tls"
 	"fmt"
+	"github.com/go-resty/resty/v2"
+	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
+	"strings"
+	"sync"
 	"time"
-	//log "github.com/livelace/logrus"
-	//tmpl "text/template"
 )
 
 const (
+	DEFAULT_MATCH_TTL  = "1d"
 	DEFAULT_METHOD     = "GET"
 	DEFAULT_REDIRECT   = true
 	DEFAULT_SSL_VERIFY = true
 )
 
-var ()
+func restyClient(p *Plugin) *resty.Client {
+	client := resty.New()
+
+	// auth = basic.
+	if p.OptionAuth == "basic" && p.OptionUsername != "" && p.OptionPassword != "" {
+		client.SetBasicAuth(p.OptionUsername, p.OptionPassword)
+	}
+
+	// auth = bearer.
+	if p.OptionAuth == "bearer" && p.OptionBearerToken != "" {
+		client.SetAuthToken(p.OptionBearerToken)
+	}
+
+	// set headers.
+	client.SetHeaders(p.OptionHeaders)
+
+	// set params.
+	client.SetQueryParams(p.OptionParams)
+
+	// set proxy.
+	if p.OptionProxy != "" {
+		client.SetProxy(p.OptionProxy)
+	}
+
+	// set redirect.
+	if p.OptionRedirect {
+		client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(15))
+	} else {
+		client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(0))
+	}
+
+	// set ssl_verify.
+	if p.OptionSSLVerify {
+		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: false})
+	} else {
+		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
+	}
+
+	// set timeout.
+	client.SetTimeout(time.Duration(p.OptionTimeout) * time.Second)
+
+	// set user_agent.
+	client.SetHeader("User-Agent", p.OptionUserAgent)
+
+	return client
+}
 
 type Plugin struct {
+	m sync.Mutex
+
 	Flow *core.Flow
+
+	RestyClient *resty.Client
 
 	PluginID    int
 	PluginAlias string
@@ -33,17 +86,21 @@ type Plugin struct {
 	OptionExpireActionTimeout int
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
-	OptionHeaders             map[string]interface{}
+	OptionHeaders             map[string]string
 	OptionInclude             bool
 	OptionInput               []string
+	OptionMatchSignature      []string
+	OptionMatchTTL            time.Duration
 	OptionMethod              string
 	OptionOutput              []string
-	OptionParams              map[string]interface{}
+	OptionParams              map[string]string
 	OptionPassword            string
 	OptionProxy               string
 	OptionRedirect            bool
 	OptionRequire             []int
 	OptionSSLVerify           bool
+	OptionTimeFormat          string
+	OptionTimeZone            *time.Location
 	OptionTimeout             int
 	OptionUserAgent           string
 	OptionUsername            string
@@ -54,7 +111,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 }
 
 func (p *Plugin) GetAlias() string {
-	return "asd"
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
@@ -62,15 +119,15 @@ func (p *Plugin) GetFile() string {
 }
 
 func (p *Plugin) GetId() int {
-	return 42
+	return p.PluginID
 }
 
 func (p *Plugin) GetInclude() bool {
-	return true
+	return p.OptionInclude
 }
 
 func (p *Plugin) GetInput() []string {
-	return []string{}
+	return p.OptionInput
 }
 
 func (p *Plugin) GetName() string {
@@ -78,12 +135,11 @@ func (p *Plugin) GetName() string {
 }
 
 func (p *Plugin) GetOutput() []string {
-	//return p.OptionOutput
-	return []string{}
+	return p.OptionOutput
 }
 
 func (p *Plugin) GetRequire() []int {
-	return []int{}
+	return p.OptionRequire
 }
 
 func (p *Plugin) GetType() string {
@@ -91,15 +147,202 @@ func (p *Plugin) GetType() string {
 }
 
 func (p *Plugin) LoadState() (map[string]time.Time, error) {
-	return make(map[string]time.Time, 0), nil
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	data := make(map[string]time.Time, 0)
+
+	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
+		return data, err
+	}
+
+	return data, nil
 }
 
 func (p *Plugin) Recv() ([]*core.DataItem, error) {
-	return []*core.DataItem{}, nil
+	currentTime := time.Now().UTC()
+	failedSources := make([]string, 0)
+	temp := make([]*core.DataItem, 0)
+
+	// Load flow sources' states.
+	flowStates, err := p.LoadState()
+	if err != nil {
+		return temp, err
+	}
+
+	for _, source := range p.OptionInput {
+		var itemNew = false
+		var itemSignature string
+		var itemSignatureHash string
+		var itemTime = currentTime
+		var sourceLastTime time.Time
+		var u, _ = uuid.NewRandom()
+
+		var resp *resty.Response
+
+		// Check if we work with source first time.
+		if v, ok := flowStates[source]; ok {
+			sourceLastTime = v
+		} else {
+			sourceLastTime = time.Unix(0, 0)
+		}
+
+		switch p.OptionMethod {
+		case "GET":
+			resp, err = p.RestyClient.R().SetBody(p.OptionBody).Get(source)
+			break
+		case "POST":
+			resp, err = p.RestyClient.R().SetBody(p.OptionBody).Post(source)
+			break
+		}
+
+		if err == nil {
+			itemBody := fmt.Sprintf("%s", resp.Body())
+
+			// Process only new items. Two methods:
+			// 1. Match item by user provided signature.
+			// 2. Pass items as is.
+			if len(p.OptionMatchSignature) > 0 {
+				itemSignature = source
+
+				for _, v := range p.OptionMatchSignature {
+					switch v {
+					case "body":
+						itemSignature += itemBody
+						break
+					}
+				}
+
+				// set default value for signature if user provided wrong values.
+				if itemSignature == source {
+					itemSignature += itemBody
+				}
+
+				itemSignatureHash = core.HashString(&itemSignature)
+
+				if _, ok := flowStates[itemSignatureHash]; !ok {
+					// save item signature hash to state.
+					flowStates[itemSignatureHash] = currentTime
+
+					// update source timestamp.
+					if itemTime.Unix() > sourceLastTime.Unix() {
+						sourceLastTime = itemTime
+					}
+
+					itemNew = true
+				}
+			} else {
+				sourceLastTime = itemTime
+				itemNew = true
+			}
+
+			// Add item to result.
+			if itemNew {
+				temp = append(temp, &core.DataItem{
+					FLOW:       p.Flow.FlowName,
+					PLUGIN:     p.PluginName,
+					SOURCE:     source,
+					TIME:       itemTime,
+					TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+					UUID:       u,
+
+					RESTY: core.RestyData{
+						BODY: fmt.Sprintf("%s", resp.Body()),
+					},
+				})
+			}
+
+			flowStates[source] = sourceLastTime
+
+			log.WithFields(log.Fields{
+				"hash":   p.Flow.FlowHash,
+				"flow":   p.Flow.FlowName,
+				"file":   p.Flow.FlowFile,
+				"plugin": p.PluginName,
+				"type":   p.PluginType,
+				"source": source,
+				"data": fmt.Sprintf("last update: %s, received data: %d, new data: %v",
+					sourceLastTime, 1, itemNew),
+			}).Debug(core.LOG_PLUGIN_DATA)
+
+		} else {
+			failedSources = append(failedSources, source)
+
+			log.WithFields(log.Fields{
+				"hash":   p.Flow.FlowHash,
+				"flow":   p.Flow.FlowName,
+				"file":   p.Flow.FlowFile,
+				"plugin": p.PluginName,
+				"type":   p.PluginType,
+				"source": source,
+				"error":  err,
+			}).Error(core.LOG_PLUGIN_DATA)
+
+			continue
+		}
+	}
+
+	// Save updated flow states.
+	if err := p.SaveState(flowStates); err != nil {
+		return temp, err
+	}
+
+	// Check every source for expiration.
+	sourcesExpired := false
+
+	// Check if any source is expired.
+	for source, sourceTime := range flowStates {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
+			sourcesExpired = true
+
+			// Execute command if expire delay exceeded.
+			// ExpireLast keeps last execution timestamp.
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+				p.OptionExpireLast = currentTime.Unix()
+
+				// Execute command with args.
+				// We don't worry about command return code.
+				if len(p.OptionExpireAction) > 0 {
+					cmd := p.OptionExpireAction[0]
+					args := []string{p.Flow.FlowName, source, fmt.Sprintf("%v", sourceTime.Unix())}
+					args = append(args, p.OptionExpireAction[1:]...)
+
+					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
+
+					log.WithFields(log.Fields{
+						"hash":   p.Flow.FlowHash,
+						"flow":   p.Flow.FlowName,
+						"file":   p.Flow.FlowFile,
+						"plugin": p.PluginName,
+						"type":   p.PluginType,
+						"source": source,
+						"data": fmt.Sprintf(
+							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+							cmd, args, output, err),
+					}).Debug(core.LOG_PLUGIN_DATA)
+				}
+			}
+		}
+	}
+
+	// Inform about expiration.
+	if sourcesExpired {
+		return temp, core.ERROR_FLOW_EXPIRE
+	}
+
+	// Inform about sources failures.
+	if len(failedSources) > 0 {
+		return temp, core.ERROR_FLOW_SOURCE_FAIL
+	}
+
+	return temp, nil
 }
 
 func (p *Plugin) SaveState(data map[string]time.Time) error {
-	return nil
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -123,11 +366,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// "1" - strictly required.
 	// "0" - will be set if parameter is set somehow (defaults, template, config etc.).
 	availableParams := map[string]int{
-		"cred":     -1,
-		"include":  -1,
-		"require":  -1,
-		"template": -1,
-		"timeout":  -1,
+		"cred":        -1,
+		"include":     -1,
+		"require":     -1,
+		"template":    -1,
+		"timeout":     -1,
+		"time_format": -1,
+		"time_zone":   -1,
 
 		"auth":       -1,
 		"body":       -1,
@@ -147,6 +392,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["expire_delay"] = -1
 		availableParams["expire_interval"] = -1
 		availableParams["input"] = 1
+		availableParams["match_signature"] = -1
+		availableParams["match_ttl"] = -1
 		break
 	case "process":
 		availableParams["input"] = 1
@@ -271,6 +518,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setInput((*pluginConfig.PluginParams)["input"])
 		showParam("input", plugin.OptionInput)
 
+		// match_signature.
+		setMatchSignature := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["match_signature"] = 0
+				plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+		showParam("match_signature", plugin.OptionMatchSignature)
+
+		// match_ttl.
+		setMatchTTL := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["match_ttl"] = 0
+				plugin.OptionMatchTTL = time.Duration(v) * time.Second
+			}
+		}
+		setMatchTTL(DEFAULT_MATCH_TTL)
+		setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+		showParam("match_ttl", plugin.OptionMatchTTL)
+
 		break
 
 	case "process":
@@ -338,14 +608,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// headers.
 	templateHeaders, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.headers", template)))
 	configHeaders, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["headers"])
-	mergedHeaders := make(map[string]interface{}, 0)
+	mergedHeaders := make(map[string]string, 0)
 
 	for k, v := range templateHeaders {
-		mergedHeaders[k] = v
+		mergedHeaders[k] = fmt.Sprintf("%s", v)
 	}
 
 	for k, v := range configHeaders {
-		mergedHeaders[k] = v
+		mergedHeaders[k] = fmt.Sprintf("%s", v)
 	}
 
 	plugin.OptionHeaders = mergedHeaders
@@ -356,7 +626,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMethod := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["method"] = 0
-			plugin.OptionMethod = v
+			plugin.OptionMethod = strings.ToUpper(v)
 		}
 	}
 	setMethod(DEFAULT_METHOD)
@@ -367,14 +637,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// params.
 	templateParams, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.params", template)))
 	configParams, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["params"])
-	mergedParams := make(map[string]interface{}, 0)
+	mergedParams := make(map[string]string, 0)
 
 	for k, v := range templateParams {
-		mergedParams[k] = v
+		mergedParams[k] = fmt.Sprintf("%s", v)
 	}
 
 	for k, v := range configParams {
-		mergedParams[k] = v
+		mergedParams[k] = fmt.Sprintf("%s", v)
 	}
 
 	plugin.OptionParams = mergedParams
@@ -428,6 +698,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
 	showParam("timeout", plugin.OptionTimeout)
 
+	// time_format.
+	setTimeFormat := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["time_format"] = 0
+			plugin.OptionTimeFormat = v
+		}
+	}
+	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
+	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
+	showParam("time_format", plugin.OptionTimeFormat)
+
+	// time_zone.
+	setTimeZone := func(p interface{}) {
+		if v, b := core.IsTimeZone(p); b {
+			availableParams["time_zone"] = 0
+			plugin.OptionTimeZone = v
+		}
+	}
+	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
+	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
+	showParam("time_zone", plugin.OptionTimeZone)
+
 	// user_agent.
 	setUserAgent := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -446,6 +740,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+
+	// Create resty client.
+	plugin.RestyClient = restyClient(&plugin)
 
 	// -----------------------------------------------------------------------------------------------------------------
 

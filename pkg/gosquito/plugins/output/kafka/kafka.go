@@ -158,10 +158,10 @@ func upsertSchema(p *Plugin, subject string) (*srclient.Schema, error) {
 type Plugin struct {
 	Flow *core.Flow
 
+	KafkaConfig *kafka.ConfigMap
+
 	PluginName string
 	PluginType string
-
-	KafkaConfig *kafka.ConfigMap
 
 	OptionBrokers               string
 	OptionClientId              string

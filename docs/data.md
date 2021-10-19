@@ -24,6 +24,7 @@ type DataItem struct {
 	UUID       uuid.UUID        // "Unique" id of data item.
 
 	DATA     Data               // Temporary structure for keeping process plugins results.
+	RESTY    RestyData          // Contains nested Resty plugin structure.
 	RSS      RssData            // Contains nested RSS plugin structure.
 	TELEGRAM TelegramData       // Contains nested Telegram plugin structure.
 	TWITTER  TwitterData        // Contains nested Twitter plugin structure.
@@ -45,6 +46,7 @@ type Data struct {
 ```
 
 Plugin specific data structures:
+[Resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md),
 [RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md),
 [Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md),
 [Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)

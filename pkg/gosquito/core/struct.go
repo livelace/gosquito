@@ -166,6 +166,10 @@ type Data struct {
 	TEXT9  string
 }
 
+type RestyData struct {
+	BODY string
+}
+
 type RssData struct {
 	CATEGORIES  []string
 	CONTENT     string
@@ -207,6 +211,7 @@ type DataItem struct {
 	UUID       uuid.UUID
 
 	DATA     Data
+	RESTY    RestyData
 	RSS      RssData
 	TELEGRAM TelegramData
 	TWITTER  TwitterData
