@@ -34,12 +34,6 @@ func restyClient(p *Plugin) *resty.Client {
 		client.SetAuthToken(p.OptionBearerToken)
 	}
 
-	// set headers.
-	client.SetHeaders(p.OptionHeaders)
-
-	// set params.
-	client.SetQueryParams(p.OptionParams)
-
 	// set proxy.
 	if p.OptionProxy != "" {
 		client.SetProxy(p.OptionProxy)
@@ -90,6 +84,7 @@ type Plugin struct {
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
 	OptionHeaders             map[string]string
+	OptionHeadersTemplate     map[string]*tmpl.Template
 	OptionInclude             bool
 	OptionInput               []string
 	OptionMatchSignature      []string
@@ -97,6 +92,7 @@ type Plugin struct {
 	OptionMethod              string
 	OptionOutput              []string
 	OptionParams              map[string]string
+	OptionParamsTemplate      map[string]*tmpl.Template
 	OptionPassword            string
 	OptionProxy               string
 	OptionRedirect            bool
@@ -128,9 +124,28 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		}
 
 		// format headers.
+		headers := make(map[string]string, len(p.OptionHeadersTemplate))
+		for header, template := range p.OptionHeadersTemplate {
+			value, err := core.ExtractTemplateIntoString(item, template)
+			if err != nil {
+				return temp, err
+			}
+			headers[header] = value
+		}
+		p.RestyClient.SetHeaders(headers)
 
 		// format params.
+		params := make(map[string]string, len(p.OptionParamsTemplate))
+		for param, template := range p.OptionParamsTemplate {
+			value, err := core.ExtractTemplateIntoString(item, template)
+			if err != nil {
+				return temp, err
+			}
+			params[param] = value
+		}
+		p.RestyClient.SetQueryParams(params)
 
+		//
 		for index, input := range p.OptionInput {
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
@@ -706,6 +721,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	templateHeaders, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.headers", template)))
 	configHeaders, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["headers"])
 	mergedHeaders := make(map[string]string, 0)
+	mergedHeadersTemplate := make(map[string]*tmpl.Template, 0)
 
 	for k, v := range templateHeaders {
 		mergedHeaders[k] = fmt.Sprintf("%s", v)
@@ -715,7 +731,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		mergedHeaders[k] = fmt.Sprintf("%s", v)
 	}
 
+	for k, v := range mergedHeaders {
+		template, err := tmpl.New(k).Funcs(core.TemplateFuncMap).Parse(v)
+		if err != nil {
+			return &Plugin{}, err
+		}
+		mergedHeadersTemplate[k] = template
+	}
+
 	plugin.OptionHeaders = mergedHeaders
+	plugin.OptionHeadersTemplate = mergedHeadersTemplate
 
 	showParam("headers", plugin.OptionHeaders)
 
@@ -735,6 +760,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	templateParams, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.params", template)))
 	configParams, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["params"])
 	mergedParams := make(map[string]string, 0)
+	mergedParamsTemplate := make(map[string]*tmpl.Template, 0)
 
 	for k, v := range templateParams {
 		mergedParams[k] = fmt.Sprintf("%s", v)
@@ -744,7 +770,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		mergedParams[k] = fmt.Sprintf("%s", v)
 	}
 
+	for k, v := range mergedParams {
+		template, err := tmpl.New(k).Funcs(core.TemplateFuncMap).Parse(v)
+		if err != nil {
+			return &Plugin{}, err
+		}
+		mergedParamsTemplate[k] = template
+	}
+
 	plugin.OptionParams = mergedParams
+	plugin.OptionParamsTemplate = mergedParamsTemplate
 
 	showParam("params", plugin.OptionParams)
 
