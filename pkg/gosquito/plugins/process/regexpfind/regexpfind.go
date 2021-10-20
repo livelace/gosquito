@@ -31,14 +31,13 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude bool
-	OptionRequire []int
-
 	OptionFindAll   bool
+	OptionInclude   bool
 	OptionInput     []string
 	OptionMatchCase bool
 	OptionOutput    []string
 	OptionRegexp    [][]*regexp.Regexp
+	OptionRequire   []int
 }
 
 func (p *Plugin) GetID() int {

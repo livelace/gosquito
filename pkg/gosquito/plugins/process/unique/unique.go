@@ -21,10 +21,9 @@ type Plugin struct {
 	PluginType  string
 
 	OptionInclude bool
+	OptionInput   []string
+	OptionOutput  []string
 	OptionRequire []int
-
-	OptionInput  []string
-	OptionOutput []string
 }
 
 func (p *Plugin) GetID() int {

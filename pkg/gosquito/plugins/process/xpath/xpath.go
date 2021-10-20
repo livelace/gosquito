@@ -79,12 +79,11 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude bool
-	OptionRequire []int
-
 	OptionFindAll        bool
+	OptionInclude        bool
 	OptionInput          []string
 	OptionOutput         []string
+	OptionRequire        []int
 	OptionXpath          [][]string
 	OptionXpathHtml      bool
 	OptionXpathHtmlSelf  bool

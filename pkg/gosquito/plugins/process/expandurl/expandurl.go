@@ -91,12 +91,11 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude bool
-	OptionRequire []int
-
 	OptionDepth     int
+	OptionInclude   bool
 	OptionInput     []string
 	OptionOutput    []string
+	OptionRequire   []int
 	OptionTimeout   int
 	OptionUserAgent string
 }

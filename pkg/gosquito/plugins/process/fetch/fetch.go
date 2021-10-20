@@ -55,10 +55,9 @@ type Plugin struct {
 	PluginType  string
 
 	OptionInclude bool
-	OptionRequire []int
-
 	OptionInput   []string
 	OptionOutput  []string
+	OptionRequire []int
 	OptionTimeout int
 }
 

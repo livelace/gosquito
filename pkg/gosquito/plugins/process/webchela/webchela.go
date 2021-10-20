@@ -315,14 +315,9 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude bool
-	OptionRequire []int
-	OptionTimeout int
-
 	OptionBatchChannel         chan *BatchTask
 	OptionBatchRetry           int
 	OptionBatchSize            int
-	OptionBrowserType          string
 	OptionBrowserArgument      []string
 	OptionBrowserExtension     []string
 	OptionBrowserGeometry      string
@@ -332,16 +327,20 @@ type Plugin struct {
 	OptionBrowserPageTimeout   int
 	OptionBrowserProxy         string
 	OptionBrowserScriptTimeout int
+	OptionBrowserType          string
 	OptionChunkSize            int64
 	OptionClientId             string
 	OptionCpuLoad              int32
+	OptionInclude              bool
 	OptionInput                []string
 	OptionMemFree              int64
 	OptionOutput               []string
 	OptionRequestTimeout       int
+	OptionRequire              []int
 	OptionScript               []string
 	OptionServer               []string
 	OptionServerTimeout        int
+	OptionTimeout              int
 }
 
 func (p *Plugin) GetID() int {

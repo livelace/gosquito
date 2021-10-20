@@ -88,18 +88,17 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude bool
-	OptionRequire []int
-	OptionTimeout int
-
 	OptionAccessKey string
 	OptionAction    string
 	OptionBucket    string
+	OptionInclude   bool
 	OptionInput     []string
 	OptionOutput    []string
+	OptionRequire   []int
 	OptionSSL       bool
 	OptionSecretKey string
 	OptionServer    string
+	OptionTimeout   int
 }
 
 func (p *Plugin) GetID() int {

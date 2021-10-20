@@ -30,10 +30,9 @@ type Plugin struct {
 
 	OptionInclude bool
 	OptionRequire []int
-
-	OptionDepth  int
-	OptionInput  []string
-	OptionOutput []string
+	OptionDepth   int
+	OptionInput   []string
+	OptionOutput  []string
 }
 
 func (p *Plugin) GetID() int {

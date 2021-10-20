@@ -86,33 +86,32 @@ func uploadFiles(p *Plugin, channel string, files *[]string) []string {
 type Plugin struct {
 	Flow *core.Flow
 
-	PluginName string
-	PluginType string
-
 	MattermostApi  *mattermost.Client4
 	MattermostUser *mattermost.User
 
+	PluginName string
+	PluginType string
+
+	OptionAttachments     bool
 	OptionChannels        []string
+	OptionColor           string
 	OptionFiles           []string
 	OptionMessage         string
 	OptionMessageTemplate *tmpl.Template
 	OptionOutput          []string
 	OptionPassword        string
-	OptionTeam            string
-	OptionTimeout         int
-	OptionUsername        string
-	OptionUsers           []string
-	OptionURL             string
-
-	OptionAttachments     bool
-	OptionColor           string
 	OptionPretext         string
 	OptionPretextTemplate *tmpl.Template
-	OptionTitle           string
-	OptionTitleTemplate   *tmpl.Template
-	OptionTitleLink       []string
+	OptionTeam            string
 	OptionText            string
 	OptionTextTemplate    *tmpl.Template
+	OptionTimeout         int
+	OptionTitle           string
+	OptionTitleLink       []string
+	OptionTitleTemplate   *tmpl.Template
+	OptionURL             string
+	OptionUsername        string
+	OptionUsers           []string
 }
 
 func (p *Plugin) GetFile() string {

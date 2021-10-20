@@ -56,30 +56,29 @@ func uploadFiles(p *Plugin, channel string, files *[]string) {
 type Plugin struct {
 	Flow *core.Flow
 
+	SlackClient *slack.Client
+
 	PluginName string
 	PluginType string
 
-	SlackClient *slack.Client
-
+	OptionAttachments     bool
 	OptionChannels        []string
+	OptionColor           string
 	OptionFiles           []string
 	OptionMessage         string
 	OptionMessageTemplate *tmpl.Template
 	OptionOutput          []string
-	OptionTimeout         int
-	OptionToken           string
-	OptionUsers           []string
-	OptionURL             string
-
-	OptionAttachments     bool
-	OptionColor           string
 	OptionPretext         string
 	OptionPretextTemplate *tmpl.Template
-	OptionTitle           string
-	OptionTitleTemplate   *tmpl.Template
-	OptionTitleLink       []string
 	OptionText            string
 	OptionTextTemplate    *tmpl.Template
+	OptionTimeout         int
+	OptionTitle           string
+	OptionTitleLink       []string
+	OptionTitleTemplate   *tmpl.Template
+	OptionToken           string
+	OptionURL             string
+	OptionUsers           []string
 }
 
 func (p *Plugin) GetFile() string {
