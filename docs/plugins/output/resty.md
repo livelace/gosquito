@@ -16,7 +16,7 @@
 | :----------- | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------      |
 | auth         | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).              |
 | bearer_token | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                             |
-| body         | +          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                             |
+| body         | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                             |
 | headers      | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.          |
 | method       | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).               |
 | **output**   | +          | array    | -     | +          | -             | "[]"                | ["https://freegeoip.app/json/"]  | List of REST endpoints.                   |

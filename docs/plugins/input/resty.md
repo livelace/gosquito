@@ -34,7 +34,7 @@ type RestyData struct {
 | :-----------    | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------       |
 | auth            | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).               |
 | bearer_token    | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                              |
-| body            | +          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                              |
+| body            | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                              |
 | headers         | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.           |
 | **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://www.pcweek.ru/rss/"]   | List of REST endpoints.                    |
 | match_signature | -          | array    | -     | +          | -             | "[]"                | ["body", "statuscode"]           | Match new articles by signature.           |

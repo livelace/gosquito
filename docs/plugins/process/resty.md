@@ -17,7 +17,7 @@
 | :----------- | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------                                                             |
 | auth         | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).                                                                     |
 | bearer_token | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                                                                                    |
-| body         | +          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                                                                                    |
+| body         | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                                                                                    |
 | headers      | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.                                                                 |
 | method       | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).                                                                      |
 | output       | -          | array    | -     | +          | -             | "[]"                | ["data.array0"]                  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
@@ -26,7 +26,7 @@
 | proxy        | -          | string   | -     | +          | -             | ""                  | "http://127.0.0.1:8080"          | Proxy settings.                                                                                  |
 | redirect     | -          | bool     | -     | +          | -             | true                | false                            | Follow redirects.                                                                                |
 | ssl_verify   | -          | bool     | -     | +          | -             | true                | false                            | Verify server certificate.                                                                       |
-| **target**   | -          | string   | -     | +          | -             | ""                  | "http://172.17.0.2:8080/api"     | REST endpoint.                                                                                   |
+| **target**   | +          | string   | -     | +          | -             | ""                  | "http://172.17.0.2:8080/api"     | REST endpoint.                                                                                   |
 | user_agent   | -          | string   | -     | +          | -             | "gosquito v1.0.0"   | "webchela 1.0"                   | Custom User-Agent for feed access.                                                               |
 | username     | -          | string   | +     | -          | -             | ""                  | ""                               | Basic auth username.                                                                             |
 
