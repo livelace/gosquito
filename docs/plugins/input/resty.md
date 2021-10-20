@@ -1,6 +1,6 @@
 ### Description:
 
-**rss** input plugin is intended for data gathering from [REST](https://en.wikipedia.org/wiki/Representational_state_transfer).
+**resty** input plugin is intended for data gathering from [REST](https://en.wikipedia.org/wiki/Representational_state_transfer).
 
 ### Data structure:
 
@@ -27,13 +27,18 @@ type RestyData struct {
 
 ### Plugin parameters:
 
-| Param           | Required   | Type     | Template   | Default             | Example                          | Description                                |
-| :-----------    | :--------: | :------: | :--------: | :-----------------: | :------------------------------: | :-----------------------------------       |
-| **input**       | +          | array    | +          | "[]"                | ["https://tass.ru/rss/v2.xml"]   | List of RSS/Atom feeds.                    |
-| match_signature | -          | array    | +          | "[]"                | ["title", "time"]                | Match new articles by signature.           |
-| match_ttl       | -          | string   | +          | "1d"                | "24h"                            | TTL (Time To Live) for matched signatures. |
-| ssl_verify      | -          | bool     | +          | true                | false                            | Verify server certificate.                 |
-| user_agent      | -          | string   | +          | "gosquito v1.0.0"   | "webchela 1.0"                   | Custom User-Agent for feed access.         |
+| Param           | Required   | Type     | Cred  | Template   | Text Template | Default             | Example                          | Description                                |
+| :-----------    | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------       |
+| auth            | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).               |
+| body            | +          | string   | -     | +          | +             | ""                  | "{ "foo": "bar" }"               | Request body.                              |
+| headers         | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.             |
+| **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://www.pcweek.ru/rss/"]   | List of REST endpoints.                    |
+| match_signature | -          | array    | -     | +          | -             | "[]"                | ["body"]                         | Match new articles by signature.           |
+| match_ttl       | -          | string   | -     | +          | -             | "1d"                | "24h"                            | TTL (Time To Live) for matched signatures. |
+| password        | -          | int      | +     | -          | -             | -                   | ""                               | Basic auth password.                       |
+| ssl_verify      | -          | bool     | -     | +          | -             | true                | false                            | Verify server certificate.                 |
+| user_agent      | -          | string   | -     | +          | -             | "gosquito v1.0.0"   | "webchela 1.0"                   | Custom User-Agent for feed access.         |
+| username        | -          | int      | +     | -          | -             | -                   | ""                               | Basic auth username.                       |
 
 
 ### Flow sample:
