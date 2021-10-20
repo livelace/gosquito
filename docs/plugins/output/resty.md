@@ -1,6 +1,6 @@
 ### Description:
 
-**resty** input plugin is intended for sending data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints.
+**resty** output plugin is intended for sending data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints.
 
 
 ### Generic parameters:
