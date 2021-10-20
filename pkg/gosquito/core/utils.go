@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	b64 "encoding/base64"
 	"encoding/gob"
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
@@ -27,6 +28,15 @@ var (
 	TemplateFuncMap = tmpl.FuncMap{
 		"ToLower": strings.ToLower,
 		"ToUpper": strings.ToUpper,
+		"FromBase64": func(s string) string {
+			result, err := b64.StdEncoding.DecodeString(s)
+			if err != nil {
+				return fmt.Sprintf("decode error: %s", err)
+			} else {
+				return fmt.Sprintf("%s", result)
+			}
+		},
+		"ToBase64": func(s string) string { return b64.StdEncoding.EncodeToString([]byte(s)) },
 	}
 )
 

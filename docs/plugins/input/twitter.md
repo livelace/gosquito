@@ -43,7 +43,7 @@ type TwitterData struct {
 | **input**             | +          | array    | -      | +          | []                  | ["tass_agency"]   | List of Twitter channels.                                                 |
 | match_signature       | -          | array    | -      | +          | "[]"                | ["text", "time"]  | Match new tweets by signature.                                          |
 | match_ttl             | -          | string   | -      | +          | "1d"                | "24h"             | TTL (Time To Live) for matched signatures.                                |
-| user_agent            | -          | string   | -      | +          | "gosquito v1.0.0"   | "webchela 1.0"    | Custom User-Agent for API access.                                         |
+| user_agent            | -          | string   | -      | +          | "gosquito v3.0.0"   | "webchela 1.0"    | Custom User-Agent for API access.                                         |
 
 
 ### Flow sample:
