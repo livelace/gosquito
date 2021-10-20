@@ -19,29 +19,7 @@ type Plugin struct {
 	OptionRequire []int
 }
 
-func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
-
-	if len(data) == 0 {
-		return temp, nil
-	}
-
-	uuidCache := make(map[uuid.UUID]bool, 0)
-
-	// Order preserving.
-	for i := 0; i < len(data); i++ {
-		item := data[i]
-
-		if _, ok := uuidCache[item.UUID]; !ok {
-			uuidCache[item.UUID] = true
-			temp = append(temp, item)
-		}
-	}
-
-	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
+func (p *Plugin) GetID() int {
 	return p.PluginID
 }
 
@@ -67,6 +45,28 @@ func (p *Plugin) GetInclude() bool {
 
 func (p *Plugin) GetRequire() []int {
 	return p.OptionRequire
+}
+
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
+	temp := make([]*core.DataItem, 0)
+
+	if len(data) == 0 {
+		return temp, nil
+	}
+
+	uuidCache := make(map[uuid.UUID]bool, 0)
+
+	// Order preserving.
+	for i := 0; i < len(data); i++ {
+		item := data[i]
+
+		if _, ok := uuidCache[item.UUID]; !ok {
+			uuidCache[item.UUID] = true
+			temp = append(temp, item)
+		}
+	}
+
+	return temp, nil
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

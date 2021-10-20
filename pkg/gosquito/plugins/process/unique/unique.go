@@ -27,34 +27,7 @@ type Plugin struct {
 	OptionOutput []string
 }
 
-func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
-
-	if len(data) == 0 {
-		return temp, nil
-	}
-
-	// Iterate over data items (articles, tweets etc.).
-	for _, item := range data {
-		inputs := make([]string, 0)
-
-		ro, _ := core.ReflectDataField(item, p.OptionOutput[0])
-
-		// Expand all inputs into single slice.
-		for _, input := range p.OptionInput {
-			inputs = append(inputs, core.ExtractDataFieldIntoArray(item, input)...)
-		}
-
-		inputsUnique := core.UniqueSliceValues(&inputs)
-		ro.Set(reflect.ValueOf(inputsUnique))
-
-		temp = append(temp, item)
-	}
-
-	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
+func (p *Plugin) GetID() int {
 	return p.PluginID
 }
 
@@ -80,6 +53,33 @@ func (p *Plugin) GetInclude() bool {
 
 func (p *Plugin) GetRequire() []int {
 	return []int{0}
+}
+
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
+	temp := make([]*core.DataItem, 0)
+
+	if len(data) == 0 {
+		return temp, nil
+	}
+
+	// Iterate over data items (articles, tweets etc.).
+	for _, item := range data {
+		inputs := make([]string, 0)
+
+		ro, _ := core.ReflectDataField(item, p.OptionOutput[0])
+
+		// Expand all inputs into single slice.
+		for _, input := range p.OptionInput {
+			inputs = append(inputs, core.ExtractDataFieldIntoArray(item, input)...)
+		}
+
+		inputsUnique := core.UniqueSliceValues(&inputs)
+		ro.Set(reflect.ValueOf(inputsUnique))
+
+		temp = append(temp, item)
+	}
+
+	return temp, nil
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

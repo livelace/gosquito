@@ -22,7 +22,7 @@ type InputPlugin interface {
 }
 
 type ProcessPlugin interface {
-	GetId() int
+	GetID() int
 	GetAlias() string
 
 	GetFile() string

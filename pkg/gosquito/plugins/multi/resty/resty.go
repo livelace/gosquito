@@ -21,6 +21,45 @@ const (
 	DEFAULT_SSL_VERIFY = true
 )
 
+func logResponseDebug(p *Plugin, target string, resp *resty.Response) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s: %s, %v", p.OptionMethod, target, resp.StatusCode()),
+	}).Debug(core.LOG_PLUGIN_DATA)
+}
+
+func logResponseWarning(p *Plugin, target string, resp *resty.Response) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s: %s, %v", p.OptionMethod, target, resp.StatusCode()),
+	}).Warn(core.LOG_PLUGIN_DATA)
+}
+
+func logResponseError(p *Plugin, target string, err error) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s: %s", target, err),
+	}).Error(core.LOG_PLUGIN_DATA)
+}
+
 func restyClient(p *Plugin) *resty.Client {
 	client := resty.New()
 
@@ -34,29 +73,29 @@ func restyClient(p *Plugin) *resty.Client {
 		client.SetAuthToken(p.OptionBearerToken)
 	}
 
-	// set proxy.
+	// Set proxy.
 	if p.OptionProxy != "" {
 		client.SetProxy(p.OptionProxy)
 	}
 
-	// set redirect.
+	// Set redirect.
 	if p.OptionRedirect {
 		client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(15))
 	} else {
 		client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(0))
 	}
 
-	// set ssl_verify.
+	// Set ssl_verify.
 	if p.OptionSSLVerify {
 		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: false})
 	} else {
 		client.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 	}
 
-	// set timeout.
+	// Set timeout.
 	client.SetTimeout(time.Duration(p.OptionTimeout) * time.Second)
 
-	// set user_agent.
+	// Set user_agent.
 	client.SetHeader("User-Agent", p.OptionUserAgent)
 
 	return client
@@ -106,93 +145,6 @@ type Plugin struct {
 	OptionUsername            string
 }
 
-func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
-
-	if len(data) == 0 {
-		return temp, nil
-	}
-
-	var resp *resty.Response
-
-	// Iterate over data items (articles, tweets etc.).
-	for _, item := range data {
-		// format body.
-		body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
-		if err != nil {
-			return temp, err
-		}
-
-		// format headers.
-		headers := make(map[string]string, len(p.OptionHeadersTemplate))
-		for header, template := range p.OptionHeadersTemplate {
-			value, err := core.ExtractTemplateIntoString(item, template)
-			if err != nil {
-				return temp, err
-			}
-			headers[header] = value
-		}
-		p.RestyClient.SetHeaders(headers)
-
-		// format params.
-		params := make(map[string]string, len(p.OptionParamsTemplate))
-		for param, template := range p.OptionParamsTemplate {
-			value, err := core.ExtractTemplateIntoString(item, template)
-			if err != nil {
-				return temp, err
-			}
-			params[param] = value
-		}
-		p.RestyClient.SetQueryParams(params)
-
-		//
-		for index, input := range p.OptionInput {
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
-
-			switch ri.Kind() {
-			case reflect.String:
-				switch p.OptionMethod {
-				case "GET":
-					resp, err = p.RestyClient.R().SetBody(body).Get(p.OptionTarget)
-					break
-				case "POST":
-					resp, err = p.RestyClient.R().SetBody(body).Post(p.OptionTarget)
-					break
-				}
-
-				if err == nil {
-					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
-				} else {
-					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
-				}
-
-			case reflect.Slice:
-				for i := 0; i < ri.Len(); i++ {
-					switch p.OptionMethod {
-					case "GET":
-						resp, err = p.RestyClient.R().SetBody(body).Get(p.OptionTarget)
-						break
-					case "POST":
-						resp, err = p.RestyClient.R().SetBody(body).Post(p.OptionTarget)
-						break
-					}
-
-					if err == nil {
-						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
-					} else {
-						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
-					}
-				}
-			}
-		}
-
-		temp = append(temp, item)
-	}
-
-	return temp, nil
-}
-
 func (p *Plugin) GetAlias() string {
 	return p.PluginAlias
 }
@@ -201,7 +153,7 @@ func (p *Plugin) GetFile() string {
 	return p.Flow.FlowFile
 }
 
-func (p *Plugin) GetId() int {
+func (p *Plugin) GetID() int {
 	return p.PluginID
 }
 
@@ -242,6 +194,83 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	return data, nil
 }
 
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
+	temp := make([]*core.DataItem, 0)
+
+	if len(data) == 0 {
+		return temp, nil
+	}
+
+	// perform request func.
+	makeRequest := func(body string) (*resty.Response, error) {
+		var resp *resty.Response
+		var err error
+
+		switch p.OptionMethod {
+		case "GET":
+			resp, err = p.RestyClient.R().SetBody(body).Get(p.OptionTarget)
+			break
+		case "POST":
+			resp, err = p.RestyClient.R().SetBody(body).Post(p.OptionTarget)
+			break
+		}
+
+		return resp, err
+	}
+
+	// Iterate over data items (articles, tweets etc.).
+	for _, item := range data {
+		// Format body.
+		body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
+		if err != nil {
+			return temp, err
+		}
+
+		// Format headers.
+		headers, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionHeadersTemplate)
+		if err != nil {
+			return temp, err
+		}
+		p.RestyClient.SetHeaders(headers)
+
+		// Format params.
+		params, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionParamsTemplate)
+		if err != nil {
+			return temp, err
+		}
+		p.RestyClient.SetQueryParams(params)
+
+		// Perform request.
+		if len(p.OptionOutput) > 0 {
+			for _, output := range p.OptionOutput {
+				ro, _ := core.ReflectDataField(item, output)
+				resp, err := makeRequest(body)
+
+				if err == nil {
+					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
+					logResponseDebug(p, p.OptionTarget, resp)
+				} else {
+					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
+					logResponseError(p, p.OptionTarget, err)
+				}
+			}
+
+		} else {
+			resp, err := makeRequest(body)
+
+			if err == nil {
+				logResponseDebug(p, p.OptionTarget, resp)
+			} else {
+				logResponseError(p, p.OptionTarget, err)
+			}
+		}
+
+		temp = append(temp, item)
+	}
+
+	return temp, nil
+}
+
 func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
@@ -270,12 +299,43 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			sourceLastTime = time.Unix(0, 0)
 		}
 
+		// DataItem template for query formatting.
+		itemTpl := &core.DataItem{
+			FLOW:       p.Flow.FlowName,
+			PLUGIN:     p.PluginName,
+			SOURCE:     source,
+			TIME:       itemTime,
+			TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+			UUID:       u,
+		}
+
+		// Format body.
+		body, err := core.ExtractTemplateIntoString(itemTpl, p.OptionBodyTemplate)
+		if err != nil {
+			return temp, err
+		}
+
+		// Format headers.
+		headers, err := core.ExtractTemplateMapIntoStringMap(itemTpl, p.OptionHeadersTemplate)
+		if err != nil {
+			return temp, err
+		}
+		p.RestyClient.SetHeaders(headers)
+
+		// Format params.
+		params, err := core.ExtractTemplateMapIntoStringMap(itemTpl, p.OptionParamsTemplate)
+		if err != nil {
+			return temp, err
+		}
+		p.RestyClient.SetQueryParams(params)
+
+		// Perform request.
 		switch p.OptionMethod {
 		case "GET":
-			resp, err = p.RestyClient.R().SetBody(p.OptionBody).Get(source)
+			resp, err = p.RestyClient.R().SetBody(body).Get(source)
 			break
 		case "POST":
-			resp, err = p.RestyClient.R().SetBody(p.OptionBody).Post(source)
+			resp, err = p.RestyClient.R().SetBody(body).Post(source)
 			break
 		}
 
@@ -429,7 +489,57 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
-	return nil
+	var resp *resty.Response
+	var err error
+
+	for _, output := range p.OptionOutput {
+
+		// Iterate over data items (articles, tweets etc.).
+		for _, item := range data {
+			// Format body.
+			body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
+			if err != nil {
+				return err
+			}
+
+			// Format headers.
+			headers, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionHeadersTemplate)
+			if err != nil {
+				return err
+			}
+			p.RestyClient.SetHeaders(headers)
+
+			// Format params.
+			params, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionParamsTemplate)
+			if err != nil {
+				return err
+			}
+			p.RestyClient.SetQueryParams(params)
+
+			// Perform request.
+			switch p.OptionMethod {
+			case "GET":
+				resp, err = p.RestyClient.R().SetBody(body).Get(output)
+				break
+			case "POST":
+				resp, err = p.RestyClient.R().SetBody(body).Post(output)
+				break
+			}
+
+			if err == nil {
+				if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
+					logResponseWarning(p, output, resp)
+				} else {
+					logResponseDebug(p, output, resp)
+				}
+
+			} else {
+				logResponseError(p, output, err)
+			}
+		}
+	}
+
+	return err
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
@@ -479,13 +589,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["match_ttl"] = -1
 		break
 	case "process":
-		availableParams["input"] = 1
-		availableParams["output"] = 1
+		availableParams["output"] = -1
 		availableParams["target"] = 1
 		break
 	case "output":
 		availableParams["output"] = 1
-		availableParams["target"] = 1
 		break
 	}
 
@@ -631,17 +739,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		break
 
 	case "process":
-		// input.
-		setInput := func(p interface{}) {
-			if v, b := core.IsSliceOfString(p); b {
-				availableParams["input"] = 0
-				plugin.OptionInput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-			}
-		}
-		setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
-		setInput((*pluginConfig.PluginParams)["input"])
-		showParam("input", plugin.OptionInput)
-
 		// output.
 		setOutput := func(p interface{}) {
 			if v, b := core.IsSliceOfString(p); b {
@@ -676,16 +773,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 		setOutput((*pluginConfig.PluginParams)["output"])
 		showParam("output", plugin.OptionOutput)
-
-		// target.
-		setTarget := func(p interface{}) {
-			if v, b := core.IsString(p); b {
-				availableParams["target"] = 0
-				plugin.OptionTarget = v
-			}
-		}
-		setOutput(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.target", template)))
-		setTarget((*pluginConfig.PluginParams)["target"])
 
 		break
 	}

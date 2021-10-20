@@ -33,6 +33,14 @@ var (
 	ERROR_SAVE_CHATS_ERROR = errors.New("cannot save chats: %s")
 )
 
+type clientAuthorizer struct {
+	TdlibParameters chan *client.TdlibParameters
+	PhoneNumber     chan string
+	Code            chan string
+	State           chan client.AuthorizationState
+	Password        chan string
+}
+
 func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	showMessage := func(m string) {
 		log.WithFields(log.Fields{
@@ -387,14 +395,6 @@ func saveUsers(p *Plugin) error {
 	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), p.UsersById)
 }
 
-type clientAuthorizer struct {
-	TdlibParameters chan *client.TdlibParameters
-	PhoneNumber     chan string
-	Code            chan string
-	State           chan client.AuthorizationState
-	Password        chan string
-}
-
 type Plugin struct {
 	m sync.Mutex
 
@@ -431,6 +431,35 @@ type Plugin struct {
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetInput() []string {
+	return p.OptionInput
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) LoadState() (map[string]time.Time, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	data := make(map[string]time.Time, 0)
+
+	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
+		return data, err
+	}
+
+	return data, nil
 }
 
 func (p *Plugin) Receive() ([]*core.DataItem, error) {
@@ -598,35 +627,6 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetInput() []string {
-	return p.OptionInput
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) LoadState() (map[string]time.Time, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	data := make(map[string]time.Time, 0)
-
-	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
-		return data, err
-	}
-
-	return data, nil
 }
 
 func (p *Plugin) SaveState(data map[string]time.Time) error {

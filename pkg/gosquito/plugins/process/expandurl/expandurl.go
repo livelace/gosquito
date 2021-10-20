@@ -33,8 +33,8 @@ func expandUrl(p *Plugin, url string, previousURL string, depth int) string {
 	// 2. https://apne.ws/BvY2ib9 (<- this doesn't work, https port closed)
 	// 3. we now try http://apne.ws/BvY2ib9
 	// 4. that gives https://apnews.com/article/virus-outbreak-donald-trump-wisconsin-mike ...
-	v1, b1 := getServerRedirect(p, url)
-	v2, b2 := getServerRedirect(p, swapUrlSchema(url))
+	v1, b1 := getRedirectFromServer(p, url)
+	v2, b2 := getRedirectFromServer(p, swapURLSchema(url))
 
 	if b1 {
 		return expandUrl(p, v1, url, depth-1)
@@ -47,7 +47,7 @@ func expandUrl(p *Plugin, url string, previousURL string, depth int) string {
 	}
 }
 
-func getServerRedirect(p *Plugin, url string) (string, bool) {
+func getRedirectFromServer(p *Plugin, url string) (string, bool) {
 	f := func(req *http.Request, via []*http.Request) error {
 		return errors.New("server redirect detected, not really error")
 	}
@@ -72,7 +72,7 @@ func getServerRedirect(p *Plugin, url string) (string, bool) {
 	return url, false
 }
 
-func swapUrlSchema(s string) string {
+func swapURLSchema(s string) string {
 	if httpSchema.MatchString(s) {
 		return httpSchema.ReplaceAllString(s, "https://")
 
@@ -99,6 +99,34 @@ type Plugin struct {
 	OptionOutput    []string
 	OptionTimeout   int
 	OptionUserAgent string
+}
+
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return p.OptionInclude
+}
+
+func (p *Plugin) GetRequire() []int {
+	return p.OptionRequire
 }
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -149,34 +177,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
-	return p.PluginID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.PluginAlias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) GetInclude() bool {
-	return p.OptionInclude
-}
-
-func (p *Plugin) GetRequire() []int {
-	return p.OptionRequire
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

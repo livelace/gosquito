@@ -22,35 +22,6 @@ var (
 	ERROR_SEND_FAIL         = errors.New("sending finished with errors")
 )
 
-type Plugin struct {
-	Flow *core.Flow
-
-	PluginName string
-	PluginType string
-
-	SlackClient *slack.Client
-
-	OptionChannels        []string
-	OptionFiles           []string
-	OptionMessage         string
-	OptionMessageTemplate *tmpl.Template
-	OptionOutput          []string
-	OptionTimeout         int
-	OptionToken           string
-	OptionUsers           []string
-	OptionURL             string
-
-	OptionAttachments     bool
-	OptionColor           string
-	OptionPretext         string
-	OptionPretextTemplate *tmpl.Template
-	OptionTitle           string
-	OptionTitleTemplate   *tmpl.Template
-	OptionTitleLink       []string
-	OptionText            string
-	OptionTextTemplate    *tmpl.Template
-}
-
 func uploadFile(p *Plugin, channel string, file string) error {
 	mime, err := core.DetectFileType(file)
 	if err != nil {
@@ -80,6 +51,51 @@ func uploadFiles(p *Plugin, channel string, files *[]string) {
 			continue
 		}
 	}
+}
+
+type Plugin struct {
+	Flow *core.Flow
+
+	PluginName string
+	PluginType string
+
+	SlackClient *slack.Client
+
+	OptionChannels        []string
+	OptionFiles           []string
+	OptionMessage         string
+	OptionMessageTemplate *tmpl.Template
+	OptionOutput          []string
+	OptionTimeout         int
+	OptionToken           string
+	OptionUsers           []string
+	OptionURL             string
+
+	OptionAttachments     bool
+	OptionColor           string
+	OptionPretext         string
+	OptionPretextTemplate *tmpl.Template
+	OptionTitle           string
+	OptionTitleTemplate   *tmpl.Template
+	OptionTitleLink       []string
+	OptionText            string
+	OptionTextTemplate    *tmpl.Template
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -192,22 +208,6 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	}
 
 	return nil
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetOutput() []string {
-	return p.OptionOutput
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

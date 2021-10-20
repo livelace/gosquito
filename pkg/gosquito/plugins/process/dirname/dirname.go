@@ -12,6 +12,14 @@ const (
 	DEFAULT_DEPTH = 1
 )
 
+func getDirName(p string, d int) string {
+	if p == "/" || p == "." || d == 0 {
+		return p
+	}
+
+	return getDirName(filepath.Dir(p), d-1)
+}
+
 type Plugin struct {
 	Flow *core.Flow
 
@@ -28,12 +36,32 @@ type Plugin struct {
 	OptionOutput []string
 }
 
-func getDirName(p string, d int) string {
-	if p == "/" || p == "." || d == 0 {
-		return p
-	}
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
 
-	return getDirName(filepath.Dir(p), d-1)
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return false
+}
+
+func (p *Plugin) GetRequire() []int {
+	return []int{0}
 }
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -60,34 +88,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
-	return p.PluginID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.PluginAlias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) GetInclude() bool {
-	return false
-}
-
-func (p *Plugin) GetRequire() []int {
-	return []int{0}
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

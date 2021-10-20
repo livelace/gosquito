@@ -37,6 +37,14 @@ const (
 	DEFAULT_TIMEOUT                = 300
 )
 
+type BatchTask struct {
+	ID     int
+	Server string
+	Status string
+	Input  []string
+	Output []string
+}
+
 func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	serverLoad := make(map[string]int32, 0)
 
@@ -299,14 +307,6 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 	return nil
 }
 
-type BatchTask struct {
-	ID     int
-	Server string
-	Status string
-	Input  []string
-	Output []string
-}
-
 type Plugin struct {
 	Flow *core.Flow
 
@@ -342,6 +342,34 @@ type Plugin struct {
 	OptionScript               []string
 	OptionServer               []string
 	OptionServerTimeout        int
+}
+
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return p.OptionInclude
+}
+
+func (p *Plugin) GetRequire() []int {
+	return p.OptionRequire
 }
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -511,34 +539,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
-	return p.PluginID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.PluginAlias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) GetInclude() bool {
-	return p.OptionInclude
-}
-
-func (p *Plugin) GetRequire() []int {
-	return p.OptionRequire
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

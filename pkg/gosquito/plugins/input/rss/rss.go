@@ -107,6 +107,35 @@ type Plugin struct {
 	OptionUserAgent           string
 }
 
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetInput() []string {
+	return p.OptionInput
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) LoadState() (map[string]time.Time, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	data := make(map[string]time.Time, 0)
+
+	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
+		return data, err
+	}
+
+	return data, nil
+}
+
 func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
@@ -329,35 +358,6 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetInput() []string {
-	return p.OptionInput
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) LoadState() (map[string]time.Time, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	data := make(map[string]time.Time, 0)
-
-	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
-		return data, err
-	}
-
-	return data, nil
 }
 
 func (p *Plugin) SaveState(data map[string]time.Time) error {

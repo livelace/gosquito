@@ -180,6 +180,22 @@ type Plugin struct {
 	OptionTimeout               int
 }
 
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
 func (p *Plugin) Send(data []*core.DataItem) error {
 	// Generate and send messages for every provided topic.
 	for _, topic := range p.OptionOutput {
@@ -260,22 +276,6 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	}
 
 	return nil
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetOutput() []string {
-	return p.OptionOutput
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

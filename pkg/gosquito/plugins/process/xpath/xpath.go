@@ -17,26 +17,6 @@ const (
 	DEFAULT_XPATH_SEPARATOR = "\n"
 )
 
-type Plugin struct {
-	Flow *core.Flow
-
-	PluginID    int
-	PluginAlias string
-	PluginName  string
-	PluginType  string
-
-	OptionInclude bool
-	OptionRequire []int
-
-	OptionFindAll        bool
-	OptionInput          []string
-	OptionOutput         []string
-	OptionXpath          [][]string
-	OptionXpathHtml      bool
-	OptionXpathHtmlSelf  bool
-	OptionXpathSeparator string
-}
-
 func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	var doc *html.Node
 	var err error
@@ -89,6 +69,54 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	}
 
 	return temp, len(temp) > 0
+}
+
+type Plugin struct {
+	Flow *core.Flow
+
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
+
+	OptionInclude bool
+	OptionRequire []int
+
+	OptionFindAll        bool
+	OptionInput          []string
+	OptionOutput         []string
+	OptionXpath          [][]string
+	OptionXpathHtml      bool
+	OptionXpathHtmlSelf  bool
+	OptionXpathSeparator string
+}
+
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return false
+}
+
+func (p *Plugin) GetRequire() []int {
+	return []int{0}
 }
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
@@ -153,34 +181,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	}
 
 	return temp, nil
-}
-
-func (p *Plugin) GetId() int {
-	return p.PluginID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.PluginAlias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
-func (p *Plugin) GetInclude() bool {
-	return false
-}
-
-func (p *Plugin) GetRequire() []int {
-	return []int{0}
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

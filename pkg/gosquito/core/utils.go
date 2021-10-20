@@ -290,14 +290,28 @@ func ExtractScripts(config *viper.Viper, scripts []string) []string {
 	return temp
 }
 
-func ExtractTemplateIntoString(data *DataItem, t *tmpl.Template) (string, error) {
+func ExtractTemplateIntoString(i *DataItem, t *tmpl.Template) (string, error) {
 	var b bytes.Buffer
 
-	if err := t.Execute(&b, data); err != nil {
+	if err := t.Execute(&b, i); err != nil {
 		return "", err
 	}
 
 	return b.String(), nil
+}
+
+func ExtractTemplateMapIntoStringMap(i *DataItem, m map[string]*tmpl.Template) (map[string]string, error) {
+	result := make(map[string]string, len(m))
+
+	for k, t := range m {
+		s, err := ExtractTemplateIntoString(i, t)
+		if err != nil {
+			return result, err
+		}
+		result[k] = s
+	}
+
+	return result, nil
 }
 
 func ExtractXpathsIntoArrays(config *viper.Viper, xpaths []string) [][]string {

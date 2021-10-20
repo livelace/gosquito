@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	"github.com/xhit/go-simple-mail/v2"
+	mail "github.com/xhit/go-simple-mail/v2"
 	"path"
 	"strings"
 	tmpl "text/template"
@@ -51,6 +51,22 @@ type Plugin struct {
 	OptionPort            int
 	OptionTimeout         int
 	OptionUsername        string
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -134,22 +150,6 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	}
 
 	return nil
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetOutput() []string {
-	return p.OptionOutput
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {

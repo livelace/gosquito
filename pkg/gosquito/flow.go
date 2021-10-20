@@ -628,7 +628,7 @@ func runFlow(flow *core.Flow) {
 					"file":   plugin.GetFile(),
 					"plugin": plugin.GetName(),
 					"type":   plugin.GetType(),
-					"id":     plugin.GetId(),
+					"id":     plugin.GetID(),
 					"alias":  plugin.GetAlias(),
 					"error":  err,
 				}).Warn(core.LOG_FLOW_WARN)
@@ -644,7 +644,7 @@ func runFlow(flow *core.Flow) {
 					"file":   plugin.GetFile(),
 					"plugin": plugin.GetName(),
 					"type":   plugin.GetType(),
-					"id":     plugin.GetId(),
+					"id":     plugin.GetID(),
 					"alias":  plugin.GetAlias(),
 					"data":   len(result),
 				}).Debug(core.LOG_FLOW_STAT)
