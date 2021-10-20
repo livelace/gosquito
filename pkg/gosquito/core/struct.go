@@ -167,7 +167,10 @@ type Data struct {
 }
 
 type RestyData struct {
-	BODY string
+	BODY       string
+	PROTO      string
+	STATUS     string
+	STATUSCODE string
 }
 
 type RssData struct {

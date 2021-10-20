@@ -7,6 +7,9 @@
 ```go
 type RestyData struct {
 	BODY*       string
+	PROTO*      string
+	STATUS*     string
+	STATUSCODE* string
 }
 ```
 
@@ -30,11 +33,11 @@ type RestyData struct {
 | Param           | Required   | Type     | Cred  | Template   | Text Template | Default             | Example                          | Description                                |
 | :-----------    | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------       |
 | auth            | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).               |
-| bearer_token    | -          | string   | +     | -          | -             | ""                  | "040d7..."                       | Bearer token.                              |
+| bearer_token    | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                              |
 | body            | +          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                              |
 | headers         | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.           |
 | **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://www.pcweek.ru/rss/"]   | List of REST endpoints.                    |
-| match_signature | -          | array    | -     | +          | -             | "[]"                | ["body"]                         | Match new articles by signature.           |
+| match_signature | -          | array    | -     | +          | -             | "[]"                | ["body", "statuscode"]           | Match new articles by signature.           |
 | match_ttl       | -          | string   | -     | +          | -             | "1d"                | "24h"                            | TTL (Time To Live) for matched signatures. |
 | method          | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).                |
 | params          | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request query parameters.  |
@@ -50,39 +53,36 @@ type RestyData struct {
 
 ```yaml
 flow:
-  name: "rss-example"
+  name: "resty-input-example"
 
   input:
-    plugin: "rss"
+    plugin: "resty"
     params:
-      input: ["http://tass.ru/rss/v2.xml"]
-      force: true
-      force_count: 10
+      template: "templates.resty.echo.default"
+      input: ["https://freegeoip.app/json/"]
 
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.rss.smtp.default"
+  process:
+    - id: 0
+      plugin: "echo"
+      params:
+        input: ["resty.body"]
 ```
 
 ### Config sample:
 
 ```toml
-[templates.rss.smtp.default]
-server = "mail.example.com"
+[templates.resty.echo.default]
+method = "GET"
+proxy = "http://127.0.0.1:8081"
+ssl_verify = false
 
-from = "gosquito@example.com"
-output = ["user@example.com"]
+[templates.resty.echo.default.headers]
+foo = "bar"
 
-subject = "{{ .RSS.TITLE }}"
+[templates.resty.echo.default.params]
+foo = "bar"
 
-body = """
-    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
-    {{ .RSS.TITLE }}<br>
-    {{ if .RSS.DESCRIPTION }}{{ .RSS.DESCRIPTION }}<br>{{end}}
-    {{ if .RSS.CONTENT }}{{ .RSS.CONTENT }}<br><br>{{else}}<br>{{end}}
-    {{ if .RSS.LINK }}{{ .RSS.LINK }}{{end}}
-    """
 ```
+
 
 

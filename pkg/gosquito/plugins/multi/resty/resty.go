@@ -30,7 +30,7 @@ func logResponseDebug(p *Plugin, target string, resp *resty.Response) {
 		"type":   p.PluginType,
 		"id":     p.PluginID,
 		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s: %s, %v", p.OptionMethod, target, resp.StatusCode()),
+		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
 	}).Debug(core.LOG_PLUGIN_DATA)
 }
 
@@ -43,7 +43,7 @@ func logResponseWarning(p *Plugin, target string, resp *resty.Response) {
 		"type":   p.PluginType,
 		"id":     p.PluginID,
 		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s: %s, %v", p.OptionMethod, target, resp.StatusCode()),
+		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
 	}).Warn(core.LOG_PLUGIN_DATA)
 }
 
@@ -56,7 +56,7 @@ func logResponseError(p *Plugin, target string, err error) {
 		"type":   p.PluginType,
 		"id":     p.PluginID,
 		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s: %s", target, err),
+		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, err),
 	}).Error(core.LOG_PLUGIN_DATA)
 }
 
@@ -390,12 +390,17 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					UUID:       u,
 
 					RESTY: core.RestyData{
-						BODY: fmt.Sprintf("%s", resp.Body()),
+						BODY:       fmt.Sprintf("%s", resp.Body()),
+						PROTO:      fmt.Sprintf("%s", resp.Proto()),
+						STATUS:     fmt.Sprintf("%s", resp.Status()),
+						STATUSCODE: fmt.Sprintf("%v", resp.StatusCode()),
 					},
 				})
 			}
 
 			flowStates[source] = sourceLastTime
+
+			logResponseDebug(p, source, resp)
 
 			log.WithFields(log.Fields{
 				"hash":   p.Flow.FlowHash,
