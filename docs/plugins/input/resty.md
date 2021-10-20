@@ -58,7 +58,7 @@ flow:
   input:
     plugin: "resty"
     params:
-      template: "templates.resty.echo.default"
+      template: "templates.resty.input"
       input: ["https://freegeoip.app/json/"]
 
   process:
@@ -71,15 +71,15 @@ flow:
 ### Config sample:
 
 ```toml
-[templates.resty.echo.default]
+[templates.resty.input]
 method = "GET"
 proxy = "http://127.0.0.1:8081"
 ssl_verify = false
 
-[templates.resty.echo.default.headers]
+[templates.resty.input.headers]
 foo = "bar"
 
-[templates.resty.echo.default.params]
+[templates.resty.input.params]
 foo = "bar"
 
 ```
