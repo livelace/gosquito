@@ -1,6 +1,6 @@
 ### Description:
 
-**rss** input plugin is intended for data gathering from [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feeds.
+**rss** input plugin is intended for data gathering from [REST](https://en.wikipedia.org/wiki/Representational_state_transfer).
 
 ### Data structure:
 

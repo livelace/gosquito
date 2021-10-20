@@ -1,11 +1,11 @@
 ### Input plugins:
 
-| Plugin                                                                                        | Description                                                                     |
-| :-------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
-| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/resty.md)         | [REST](https://en.wikipedia.org/wiki/RSS) requests data source.                 |
-| [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)             | [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feeds (text, urls) data source.   |
-| [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)   | [Telegram](https://telegram.org/) chats (text, image, video) data source.       |
-| [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)     | [Twitter](https://twitter.com/) tweets (media, tags, text, urls) data source.   |
+| Plugin                                                                                        | Description                                                                        |
+| :-------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------    |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/resty.md)         | [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) data source. |
+| [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)             | [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feeds (text, urls) data source.      |
+| [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)   | [Telegram](https://telegram.org/) chats (text, image, video) data source.          |
+| [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)     | [Twitter](https://twitter.com/) tweets (media, tags, text, urls) data source.      |
 
 ### Process plugins:
 
@@ -26,11 +26,11 @@
 
 ### Output plugins:
 
-| Plugin                                                                                             | Description                                                          |
-| :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------- |
-| [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)             | Send data to [Kafka](https://kafka.apache.org/) topics.              |
-| [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)   | Send data to [Mattermost](https://mattermost.org/) channels/users.   |
-| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/resty.md)             | Send data to [REST](https://slack.com) endpoints.                    |
-| [slack](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/slack.md)             | Send data to [Slack](https://slack.com) channels/users.              |
-| [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)               | Send data as emails with custom attachments/headers.                 |
+| Plugin                                                                                             | Description                                                                                   |
+| :------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------                          |
+| [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)             | Send data to [Kafka](https://kafka.apache.org/) topics.                                       |
+| [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)   | Send data to [Mattermost](https://mattermost.org/) channels/users.                            |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/resty.md)             | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints. |
+| [slack](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/slack.md)             | Send data to [Slack](https://slack.com) channels/users.                                       |
+| [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)               | Send data as emails with custom attachments/headers.                                          |
 
