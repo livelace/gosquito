@@ -15,6 +15,7 @@
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                     | Echoing processing data.                                                                 |
 | [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)           | Expand short urls.                                                                       |
 | [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                   | Fetch remote data.                                                                       |
+| [jq](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/jq.md)                         | Extract JSON elements with [gojq](https://github.com/itchyny/gojq).                                                                       |
 | [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                   | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                        |
 | [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)         | Find patters in data.                                                                    |
 | [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)       | Match data by patterns.                                                                  |
@@ -22,7 +23,7 @@
 | [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/resty.md)                   | Perform REST requests with data.                                                         |
 | [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)                 | Remove duplicates from data.                                                             |
 | [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)             | Interact with web pages, fetch data.                                                     |
-| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                   | Find HTML elements with [Xpath](https://en.wikipedia.org/wiki/XPath).                    |
+| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                   | Extract HTML elements with [htmlquery](https://github.com/antchfx/htmlquery).                    |
 
 ### Output plugins:
 
