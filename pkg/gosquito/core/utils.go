@@ -10,6 +10,7 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/renameio"
+	"github.com/itchyny/gojq"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
@@ -279,6 +280,33 @@ func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string, matchCase b
 		}
 
 		temp = append(temp, currentRegexps)
+	}
+
+	return temp
+}
+
+func ExtractJqQueriesIntoArray(config *viper.Viper, queries []string) [][]*gojq.Query {
+	temp := make([][]*gojq.Query, 0)
+
+	for _, q := range queries {
+		currentQueries := make([]*gojq.Query, 0)
+		templateQueries := config.GetStringSlice(fmt.Sprintf("%s.query", q))
+
+		if len(templateQueries) > 0 {
+			for _, v := range templateQueries {
+				query, err := gojq.Parse(v)
+				if err == nil {
+					currentQueries = append(currentQueries, query)
+				}
+			}
+		} else {
+			query, err := gojq.Parse(q)
+			if err == nil {
+				currentQueries = append(currentQueries, query)
+			}
+		}
+
+		temp = append(temp, currentQueries)
 	}
 
 	return temp

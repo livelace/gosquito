@@ -21,6 +21,7 @@ require (
 	github.com/google/renameio v0.1.0
 	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-getter v1.4.2
+	github.com/itchyny/gojq v0.12.5
 	github.com/lib/pq v1.8.0 // indirect
 	github.com/linkedin/goavro/v2 v2.9.8
 	github.com/livelace/logrus v1.6.1

@@ -14,9 +14,10 @@ import (
 	smtpOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/smtp"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dedup"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dirname"
-	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/echo"
+	echoProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/echo"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/expandurl"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/fetch"
+	jqProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/jq"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/minio"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpfind"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpmatch"
@@ -382,14 +383,16 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				plugin, err = dedupProcess.Init(&processPluginConfig)
 			case "dirname":
 				plugin, err = dirnameProcess.Init(&processPluginConfig)
+			case "echo":
+				plugin, err = echoProcess.Init(&processPluginConfig)
 			case "expandurl":
 				plugin, err = expandurlProcess.Init(&processPluginConfig)
 			case "fetch":
 				plugin, err = fetchProcess.Init(&processPluginConfig)
+			case "jq":
+				plugin, err = jqProcess.Init(&processPluginConfig)
 			case "minio":
 				plugin, err = minioProcess.Init(&processPluginConfig)
-			case "echo":
-				plugin, err = echoProcess.Init(&processPluginConfig)
 			case "regexpfind":
 				plugin, err = regexpfindProcess.Init(&processPluginConfig)
 			case "regexpmatch":
