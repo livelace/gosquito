@@ -195,9 +195,9 @@ func RunApp() {
 
 				for _, candidate := range flowCandidatesSlice {
 					if flowRunning+1 <= flowLimit {
-						go runFlow(candidate.Flow)
 						flowTimestamp[candidate.Flow.FlowUUID] = currentTime
 						flowRunning += 1
+						go runFlow(candidate.Flow)
 					} else {
 						break
 					}
