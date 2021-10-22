@@ -11,10 +11,6 @@
 # s - seconds, m - minutes, h - hours, d - days.
 # Example: 10s, 120m, 48h, 365d 
 
-# Size units suffixes:
-# b - bytes, k - kilobytes, m - megabytes, g - gigabytes.
-# Example: 512b, 1024k, 10m, 3g
-
 # Set command execution for expired input plugin sources.
 # First 3 arguments always added: <flow_name> <input_source> <source_timestamp>
 #expire_action           = ["/path/to/executable", "arg4", "arg5", "arg6"]
@@ -32,30 +28,28 @@
 #exporter_listen         = ":8080"
 
 # Path to flow configurations.
-#flow_conf               = "/path/to/config/flow/conf"
+#flow_conf               = "/path/to/conf"
+
+# Path to flow data.
+#flow_data               = "/path/to/data"
 
 # Disable/enable flow by names, mutually exclusive.
 #flow_disable            = ["flow1", "flow2", "flow3"]
 #flow_enable             = ["flow1", "flow2", "flow3"]
 
-# How often flows run.
+# How many flows may run in parallel (0 - no limits).
+#flow_limit              = 0
+
+# Default number of flow instances.
+#flow_instance           = 1
+
+# How often flow run.
 #flow_interval           = "5m"
 
-# Set to DEBUG in any unclear situation.
-#log_level               = "INFO"
+#log_level               = "DEBUG"
 
-# Process plugins results will be send by default.
+# Results of process plugins will be included for sending by default.
 #plugin_include          = true
-
-# Some plugins have their own persistent data/settings for proper work (Telegram, for instance).
-#plugin_data             = "/path/to/config/plugin/data"
-
-# Directory where plugins save their states. 
-# States - it's about gosquito related features (as opposite to plugin_data).
-#plugin_state            = "/path/to/config/plugin/state"
-
-# Plugins use this dir for temporary data placing.
-#plugin_temp             = "/path/to/config/plugin/temp"
 
 # Maximum plugin execution time (seconds). Some plugins ignore this value and use their own timeout.
 #plugin_timeout          = 60
@@ -69,5 +63,5 @@
 #time_zone               = "UTC"
 
 # Default user_agent for all compatible plugins.
-#user_agent              = "gosquito v1.0.0"
+#user_agent              = "gosquito v3.0.0"
 ```
