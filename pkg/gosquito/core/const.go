@@ -127,7 +127,7 @@ const (
 
 #log_level               = "DEBUG"
 
-# Process plugins results will be send by default.
+# Results of process plugins will be included for sending by default.
 #plugin_include          = true
 
 # Maximum plugin execution time (seconds). Some plugins ignore this value and use their own timeout.
@@ -142,6 +142,6 @@ const (
 #time_zone               = "UTC"
 
 # Default user_agent for all compatible plugins.
-#user_agent              = "gosquito v2.4.0"
+#user_agent              = "gosquito v3.0.0"
 `
 )
