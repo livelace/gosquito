@@ -25,7 +25,6 @@ const (
 	DEFAULT_LOG_LEVEL             = "INFO"
 	DEFAULT_LOG_TIME_FORMAT       = "02.01.2006 15:04:05.000"
 	DEFAULT_LOOP_SLEEP            = 300
-	DEFAULT_MIN_COUNTER           = int64(1000000000)
 	DEFAULT_PLUGIN_INCLUDE        = true
 	DEFAULT_PLUGIN_TIMEOUT        = 60
 	DEFAULT_STATE_DIR             = "state"

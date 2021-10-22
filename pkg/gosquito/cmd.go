@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"time"
 )
 
@@ -110,20 +111,26 @@ func RunApp() {
 	if len(flows) > 0 {
 		for {
 			currentTime := time.Now()
-
-			flowCandidates := make([]*core.Flow, 0)
-			flowCandidatesMinCounter := core.DEFAULT_MIN_COUNTER
+			flowCandidates := make(map[*core.Flow]int64, 0)
 			flowRunning := 0
 
 			// Analyze flows:
 			// 1. Count running flows.
-			// 2. Update metrics for non-running flows.
+			// 2. Find flow candidates and save their execution counters.
+			// 3. Update metrics for non-running flows.
 			for _, flow := range flows {
+				lastTime := flowTimestamp[flow.FlowUUID]
+
 				if flow.GetInstance() > 0 {
 					flowCounter[flow.FlowUUID] += int64(flow.GetInstance())
 					flowRunning += flow.GetInstance()
 
 				} else {
+					// Save candidates counters.
+					if currentTime.Unix()-lastTime.Unix() > flow.FlowInterval {
+						flowCandidates[flow] = flowCounter[flow.FlowUUID]
+					}
+
 					// Process/output plugins may not be set.
 					processPlugins := make([]string, 0)
 					if len(flow.ProcessPlugins) > 0 {
@@ -158,39 +165,43 @@ func RunApp() {
 				}
 			}
 
-			// Choose flow candidates.
-			for _, flow := range flows {
-				lastTime := flowTimestamp[flow.FlowUUID]
+			// Run flow candidates.
+			// 1. No limits.
+			// 2. With limits.
+			if flowLimit == 0 {
+				for flow := range flowCandidates {
+					flowTimestamp[flow.FlowUUID] = currentTime
+					go runFlow(flow)
+				}
 
-				if (currentTime.Unix()-lastTime.Unix()) > flow.FlowInterval && flow.GetInstance() < flow.FlowInstance {
-					// Add every suitable flow if there are no limits.
-					if flowLimit == 0 {
-						flowCandidates = append(flowCandidates, flow)
-					}
+			} else {
+				// Create and sort slice of candidates.
+				// It needs for searching the most infrequent running flows.
+				// If we don't respect counter so the frequent (1s) flows will prevent running infrequent (1m) flows.
+				// Example (flow_limit = 4):
+				// flow1 1s 10
+				// flow2 1s 10
+				// flow3 1s 10
+				// flow4 1s 10
+				// flow5 1m 0
+				var flowCandidatesSlice []core.FlowCandidate
+				for flow, counter := range flowCandidates {
+					flowCandidatesSlice = append(flowCandidatesSlice, core.FlowCandidate{Flow: flow, Counter: counter})
+				}
 
-					// Add flow if:
-					// 1. We fit in limits.
-					// 2. We choose the flow with the lowest running counter.
-					// If we don't respect counter so the frequent (1s) flows will prevent running infrequent flows.
-					// Example (flow_limit = 4):
-					// flow1 1s 10
-					// flow2 1s 10
-					// flow3 1s 10
-					// flow4 1s 10
-					// flow5 1m 0
-					if flowRunning+len(flowCandidates)+1 <= flowLimit &&
-						flowCounter[flow.FlowUUID] <= flowCandidatesMinCounter {
+				sort.Slice(flowCandidatesSlice, func(i, j int) bool {
+					return flowCandidatesSlice[i].Counter < flowCandidatesSlice[j].Counter
+				})
 
-						flowCandidates = append(flowCandidates, flow)
-						flowCandidatesMinCounter = flowCounter[flow.FlowUUID]
+				for _, candidate := range flowCandidatesSlice {
+					if flowRunning+1 <= flowLimit {
+						go runFlow(candidate.Flow)
+						flowTimestamp[candidate.Flow.FlowUUID] = currentTime
+						flowRunning += 1
+					} else {
+						break
 					}
 				}
-			}
-
-			// Run flow candidates.
-			for _, flow := range flowCandidates {
-				flowTimestamp[flow.FlowUUID] = currentTime
-				go runFlow(flow)
 			}
 
 			time.Sleep(core.DEFAULT_LOOP_SLEEP * time.Millisecond)

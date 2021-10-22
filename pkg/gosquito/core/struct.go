@@ -121,6 +121,11 @@ func (f *Flow) Unlock() bool {
 	}
 }
 
+type FlowCandidate struct {
+	Flow    *Flow
+	Counter int64
+}
+
 type FlowUnmarshal struct {
 	Flow struct {
 		Name string `yaml:"name"`
