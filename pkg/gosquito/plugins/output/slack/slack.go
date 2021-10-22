@@ -22,44 +22,13 @@ var (
 	ERROR_SEND_FAIL         = errors.New("sending finished with errors")
 )
 
-type Plugin struct {
-	Hash string
-	Flow string
-
-	File string
-	Name string
-	Type string
-
-	Api *slack.Client
-
-	Channels        []string
-	Files           []string
-	Message         string
-	MessageTemplate *tmpl.Template
-	Output          []string
-	Timeout         int
-	Token           string
-	Users           []string
-	URL             string
-
-	Attachments     bool
-	Color           string
-	Pretext         string
-	PretextTemplate *tmpl.Template
-	Title           string
-	TitleTemplate   *tmpl.Template
-	TitleLink       []string
-	Text            string
-	TextTemplate    *tmpl.Template
-}
-
 func uploadFile(p *Plugin, channel string, file string) error {
 	mime, err := core.DetectFileType(file)
 	if err != nil {
 		return err
 	}
 
-	_, err = p.Api.UploadFile(slack.FileUploadParameters{
+	_, err = p.SlackClient.UploadFile(slack.FileUploadParameters{
 		Channels: []string{channel},
 		File:     file,
 		Filename: fmt.Sprintf("%s%s", filepath.Base(file), mime.Extension()),
@@ -72,16 +41,60 @@ func uploadFiles(p *Plugin, channel string, files *[]string) {
 	for _, file := range *files {
 		if err := uploadFile(p, channel, file); err != nil {
 			log.WithFields(log.Fields{
-				"hash":   p.Hash,
-				"flow":   p.Flow,
-				"file":   p.File,
-				"plugin": p.Name,
-				"type":   p.Type,
+				"hash":   p.Flow.FlowHash,
+				"flow":   p.Flow.FlowName,
+				"file":   p.Flow.FlowFile,
+				"plugin": p.PluginName,
+				"type":   p.PluginType,
 				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
 			}).Error(core.LOG_PLUGIN_DATA)
 			continue
 		}
 	}
+}
+
+type Plugin struct {
+	Flow *core.Flow
+
+	SlackClient *slack.Client
+
+	PluginName string
+	PluginType string
+
+	OptionAttachments     bool
+	OptionChannels        []string
+	OptionColor           string
+	OptionFiles           []string
+	OptionMessage         string
+	OptionMessageTemplate *tmpl.Template
+	OptionOutput          []string
+	OptionPretext         string
+	OptionPretextTemplate *tmpl.Template
+	OptionText            string
+	OptionTextTemplate    *tmpl.Template
+	OptionTimeout         int
+	OptionTitle           string
+	OptionTitleLink       []string
+	OptionTitleTemplate   *tmpl.Template
+	OptionToken           string
+	OptionURL             string
+	OptionUsers           []string
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
@@ -90,11 +103,11 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	// Logging.
 	logError := func(msg string) {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
 			"error":  msg,
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
@@ -104,12 +117,12 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 		// Files.
 		files := make([]string, 0)
-		for _, v := range p.Files {
+		for _, v := range p.OptionFiles {
 			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
 		}
 
 		// Message text.
-		message, err := core.ExtractTemplateIntoString(item, p.MessageTemplate)
+		message, err := core.ExtractTemplateIntoString(item, p.OptionMessageTemplate)
 		if err != nil {
 			return err
 		}
@@ -117,25 +130,25 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		// Attachments.
 		attachments := slack.Attachment{}
 
-		if p.Attachments {
-			color := p.Color
+		if p.OptionAttachments {
+			color := p.OptionColor
 
-			pretext, err := core.ExtractTemplateIntoString(item, p.PretextTemplate)
+			pretext, err := core.ExtractTemplateIntoString(item, p.OptionPretextTemplate)
 			if err != nil {
 				return err
 			}
 
-			text, err := core.ExtractTemplateIntoString(item, p.TextTemplate)
+			text, err := core.ExtractTemplateIntoString(item, p.OptionTextTemplate)
 			if err != nil {
 				return err
 			}
 
-			title, err := core.ExtractTemplateIntoString(item, p.TitleTemplate)
+			title, err := core.ExtractTemplateIntoString(item, p.OptionTitleTemplate)
 			if err != nil {
 				return err
 			}
 
-			titleLink := core.ExtractDataFieldIntoString(item, p.TitleLink)
+			titleLink := core.ExtractDataFieldIntoString(item, p.OptionTitleLink)
 
 			attachments.Color = color
 			attachments.Pretext = pretext
@@ -145,8 +158,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}
 
 		// Send to channels.
-		for _, channel := range p.Channels {
-			_, _, err := p.Api.PostMessage(
+		for _, channel := range p.OptionChannels {
+			_, _, err := p.SlackClient.PostMessage(
 				channel,
 				slack.MsgOptionAsUser(true),
 				slack.MsgOptionAttachments(attachments),
@@ -163,15 +176,15 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		}
 
 		// Send to users.
-		for _, user := range p.Users {
-			ch, _, _, err := p.Api.OpenConversation(&slack.OpenConversationParameters{Users: []string{user}})
+		for _, user := range p.OptionUsers {
+			ch, _, _, err := p.SlackClient.OpenConversation(&slack.OpenConversationParameters{Users: []string{user}})
 			if err != nil {
 				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, err))
 				sendFail = true
 				continue
 			}
 
-			_, _, err = p.Api.PostMessage(
+			_, _, err = p.SlackClient.PostMessage(
 				ch.ID,
 				slack.MsgOptionAsUser(true),
 				slack.MsgOptionAttachments(attachments),
@@ -196,32 +209,13 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	return nil
 }
 
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetOutput() []string {
-	return p.Output
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		File: pluginConfig.File,
-		Name: "slack",
-		Type: "output",
+		Flow:       pluginConfig.Flow,
+		PluginName: "slack",
+		PluginType: pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -255,78 +249,78 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// token.
 	setToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["token"] = 0
-			plugin.Token = v
+			plugin.OptionToken = v
 		}
 	}
-	setToken(pluginConfig.Config.GetString(fmt.Sprintf("%s.token", cred)))
-	setToken((*pluginConfig.Params)["token"])
+	setToken(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.token", cred)))
+	setToken((*pluginConfig.PluginParams)["token"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// files.
 	setFiles := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["files"] = 0
-			plugin.Files = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionFiles = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setFiles(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.files", template)))
-	setFiles((*pluginConfig.Params)["files"])
-	showParam("files", plugin.Files)
+	setFiles(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.files", template)))
+	setFiles((*pluginConfig.PluginParams)["files"])
+	showParam("files", plugin.OptionFiles)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["output"] = 0
-			plugin.Output = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionOutput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
-	for _, v := range plugin.Output {
+	for _, v := range plugin.OptionOutput {
 		if t, b := core.IsChatUsername(v); b {
-			plugin.Users = append(plugin.Users, t)
+			plugin.OptionUsers = append(plugin.OptionUsers, t)
 		} else {
-			plugin.Channels = append(plugin.Channels, t)
+			plugin.OptionChannels = append(plugin.OptionChannels, t)
 		}
 	}
-	showParam("channels", plugin.Channels)
-	showParam("users", plugin.Users)
+	showParam("channels", plugin.OptionChannels)
+	showParam("users", plugin.OptionUsers)
 
 	// message.
 	setMessage := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["message"] = 0
-			plugin.Message = v
+			plugin.OptionMessage = v
 		}
 	}
-	setMessage(pluginConfig.Config.GetString(fmt.Sprintf("%s.message", template)))
-	setMessage((*pluginConfig.Params)["message"])
-	showParam("message", plugin.Message)
+	setMessage(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message", template)))
+	setMessage((*pluginConfig.PluginParams)["message"])
+	showParam("message", plugin.OptionMessage)
 
 	// message template.
-	plugin.MessageTemplate, err = tmpl.New("message").Funcs(core.TemplateFuncMap).Parse(plugin.Message)
+	plugin.OptionMessageTemplate, err = tmpl.New("message").Funcs(core.TemplateFuncMap).Parse(plugin.OptionMessage)
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -335,44 +329,44 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// attachments.
-	attachments, _ := core.IsMapWithStringAsKey((*pluginConfig.Params)["attachments"])
+	attachments, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["attachments"])
 
 	// color.
 	setColor := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["color"] = 0
-			plugin.Color = v
+			plugin.OptionColor = v
 		}
 	}
 	setColor(DEFAULT_ATTACHMENTS_COLOR)
-	setColor(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.color", template)))
+	setColor(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.color", template)))
 	setColor(attachments["color"])
-	showParam("attachments.color", plugin.Color)
+	showParam("attachments.color", plugin.OptionColor)
 
 	// pretext.
 	setPretext := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["pretext"] = 0
-			plugin.Attachments = true
-			plugin.Pretext = v
+			plugin.OptionAttachments = true
+			plugin.OptionPretext = v
 		}
 	}
-	setPretext(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.pretext", template)))
+	setPretext(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.pretext", template)))
 	setPretext(attachments["pretext"])
-	showParam("attachments.pretext", plugin.Pretext)
+	showParam("attachments.pretext", plugin.OptionPretext)
 
 	// pretext template.
-	plugin.PretextTemplate, err = tmpl.New("pretext").Funcs(core.TemplateFuncMap).Parse(plugin.Pretext)
+	plugin.OptionPretextTemplate, err = tmpl.New("pretext").Funcs(core.TemplateFuncMap).Parse(plugin.OptionPretext)
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -381,16 +375,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setText := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["text"] = 0
-			plugin.Attachments = true
-			plugin.Text = v
+			plugin.OptionAttachments = true
+			plugin.OptionText = v
 		}
 	}
-	setText(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.text", template)))
+	setText(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.text", template)))
 	setText(attachments["text"])
-	showParam("attachments.text", plugin.Text)
+	showParam("attachments.text", plugin.OptionText)
 
 	// text template.
-	if plugin.TextTemplate, err = tmpl.New("text").Funcs(core.TemplateFuncMap).Parse(plugin.Text); err != nil {
+	if plugin.OptionTextTemplate, err = tmpl.New("text").Funcs(core.TemplateFuncMap).Parse(plugin.OptionText); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -398,16 +392,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTitle := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["title"] = 0
-			plugin.Attachments = true
-			plugin.Title = v
+			plugin.OptionAttachments = true
+			plugin.OptionTitle = v
 		}
 	}
-	setTitle(pluginConfig.Config.GetString(fmt.Sprintf("%s.attachments.title", template)))
+	setTitle(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.attachments.title", template)))
 	setText(attachments["title"])
-	showParam("attachments.title", plugin.Title)
+	showParam("attachments.title", plugin.OptionTitle)
 
 	// title template.
-	if plugin.TitleTemplate, err = tmpl.New("title").Funcs(core.TemplateFuncMap).Parse(plugin.Title); err != nil {
+	if plugin.OptionTitleTemplate, err = tmpl.New("title").Funcs(core.TemplateFuncMap).Parse(plugin.OptionTitle); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -415,34 +409,34 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTitleLink := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["title_link"] = 0
-			plugin.Attachments = true
-			plugin.TitleLink = v
+			plugin.OptionAttachments = true
+			plugin.OptionTitleLink = v
 		}
 	}
-	setTitleLink(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.attachments.title_link", template)))
+	setTitleLink(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.attachments.title_link", template)))
 	setTitleLink(attachments["title_link"])
-	showParam("attachments.title_link", plugin.TitleLink)
+	showParam("attachments.title_link", plugin.OptionTitleLink)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Slack.
 
-	plugin.Api = slack.New(plugin.Token)
+	plugin.SlackClient = slack.New(plugin.OptionToken)
 
 	// Resolve users ids.
-	workspaceUsers, err := plugin.Api.GetUsers()
+	workspaceUsers, err := plugin.SlackClient.GetUsers()
 	if err != nil {
 		return &Plugin{}, err
 	}
 
 	usersId := make([]string, 0)
-	for _, user := range plugin.Users {
+	for _, user := range plugin.OptionUsers {
 		found := false
 
 		for _, u := range workspaceUsers {
@@ -458,16 +452,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 
-	plugin.Users = usersId
+	plugin.OptionUsers = usersId
 
 	// Resolve channels ids.
-	workspaceChannels, _, err := plugin.Api.GetConversations(&slack.GetConversationsParameters{Limit: 100})
+	workspaceChannels, _, err := plugin.SlackClient.GetConversations(&slack.GetConversationsParameters{Limit: 100})
 	if err != nil {
 		return &Plugin{}, err
 	}
 
 	channelsId := make([]string, 0)
-	for _, channel := range plugin.Channels {
+	for _, channel := range plugin.OptionChannels {
 		found := false
 
 		for _, c := range workspaceChannels {
@@ -483,13 +477,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 
-	plugin.Channels = channelsId
+	plugin.OptionChannels = channelsId
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
 	// channels or users must be set.
-	if len(plugin.Channels) == 0 && len(plugin.Users) == 0 {
+	if len(plugin.OptionChannels) == 0 && len(plugin.OptionUsers) == 0 {
 		return &Plugin{}, ERROR_OUTPUT_NOT_SET
 	}
 

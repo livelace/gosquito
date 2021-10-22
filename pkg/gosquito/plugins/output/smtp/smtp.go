@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	"github.com/xhit/go-simple-mail/v2"
+	mail "github.com/xhit/go-simple-mail/v2"
 	"path"
 	"strings"
 	tmpl "text/template"
@@ -28,54 +28,68 @@ var (
 )
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	File string
-	Name string
-	Type string
+	PluginName string
+	PluginType string
 
-	Attachments     []string
-	Body            string
-	BodyTemplate    *tmpl.Template
-	BodyLength      int
-	BodyHTML        bool
-	From            string
-	Headers         map[string]interface{}
-	Output          []string
-	Server          string
-	SSL             bool
-	SSLVerify       bool
-	Subject         string
-	SubjectTemplate *tmpl.Template
-	SubjectLength   int
-	Password        string
-	Port            int
-	Timeout         int
-	Username        string
+	OptionAttachments     []string
+	OptionBody            string
+	OptionBodyTemplate    *tmpl.Template
+	OptionBodyLength      int
+	OptionBodyHTML        bool
+	OptionFrom            string
+	OptionHeaders         map[string]interface{}
+	OptionOutput          []string
+	OptionServer          string
+	OptionSSL             bool
+	OptionSSLVerify       bool
+	OptionSubject         string
+	OptionSubjectTemplate *tmpl.Template
+	OptionSubjectLength   int
+	OptionPassword        string
+	OptionPort            int
+	OptionTimeout         int
+	OptionUsername        string
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
 	// Connection settings.
 	server := mail.NewSMTPClient()
 
-	server.Host = p.Server
-	server.Port = p.Port
+	server.Host = p.OptionServer
+	server.Port = p.OptionPort
 
-	if p.Username != "" && p.Password != "" {
+	if p.OptionUsername != "" && p.OptionPassword != "" {
 		server.Authentication = mail.AuthPlain
-		server.Username = p.Username
-		server.Password = p.Password
+		server.Username = p.OptionUsername
+		server.Password = p.OptionPassword
 	}
 
-	if p.SSL {
+	if p.OptionSSL {
 		server.Encryption = mail.EncryptionTLS
-		server.TLSConfig = &tls.Config{InsecureSkipVerify: !p.SSLVerify}
+		server.TLSConfig = &tls.Config{InsecureSkipVerify: !p.OptionSSLVerify}
 	}
 
 	server.KeepAlive = true
-	server.ConnectTimeout = time.Duration(p.Timeout) * time.Second
-	server.SendTimeout = time.Duration(p.Timeout) * time.Second
+	server.ConnectTimeout = time.Duration(p.OptionTimeout) * time.Second
+	server.SendTimeout = time.Duration(p.OptionTimeout) * time.Second
 
 	smtpClient, err := server.Connect()
 	if err != nil {
@@ -85,34 +99,34 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	// Send data.
 	for _, item := range data {
 
-		for _, to := range p.Output {
-			b, err := core.ExtractTemplateIntoString(item, p.BodyTemplate)
+		for _, to := range p.OptionOutput {
+			b, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
 			if err != nil {
 				return err
 			}
-			body := core.ShrinkString(&b, p.BodyLength)
+			body := core.ShrinkString(&b, p.OptionBodyLength)
 
-			s, err := core.ExtractTemplateIntoString(item, p.SubjectTemplate)
+			s, err := core.ExtractTemplateIntoString(item, p.OptionSubjectTemplate)
 			if err != nil {
 				return err
 			}
 			s = strings.ReplaceAll(s, "\n", " ")
-			subject := core.ShrinkString(&s, p.SubjectLength)
+			subject := core.ShrinkString(&s, p.OptionSubjectLength)
 
 			// Assemble letter.
 			email := mail.NewMSG()
-			email.SetFrom(p.From).AddTo(to).SetSubject(subject)
+			email.SetFrom(p.OptionFrom).AddTo(to).SetSubject(subject)
 
 			// Set body.
-			if p.BodyHTML {
+			if p.OptionBodyHTML {
 				email.SetBody(mail.TextHTML, body)
 			} else {
 				email.SetBody(mail.TextPlain, body)
 			}
 
 			// Add attachments.
-			if len(p.Attachments) > 0 {
-				attachments := core.ExtractDataFieldIntoArray(item, p.Attachments)
+			if len(p.OptionAttachments) > 0 {
+				attachments := core.ExtractDataFieldIntoArray(item, p.OptionAttachments)
 
 				for _, v := range attachments {
 					email.AddAttachment(v, path.Base(v))
@@ -120,8 +134,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			}
 
 			// Add headers.
-			if len(p.Headers) > 0 {
-				for k, v := range p.Headers {
+			if len(p.OptionHeaders) > 0 {
+				for k, v := range p.OptionHeaders {
 					s := core.ExtractDataFieldIntoString(item, v)
 					email.AddHeader(k, s)
 				}
@@ -138,32 +152,13 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 	return nil
 }
 
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetOutput() []string {
-	return p.Output
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		File: pluginConfig.File,
-		Name: "smtp",
-		Type: "output",
+		Flow:       pluginConfig.Flow,
+		PluginName: "smtp",
+		PluginType: pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -199,67 +194,67 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// username.
 	setUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["username"] = 0
-			plugin.Username = v
+			plugin.OptionUsername = v
 		}
 	}
-	setUsername(pluginConfig.Config.GetString(fmt.Sprintf("%s.username", cred)))
-	setUsername((*pluginConfig.Params)["username"])
+	setUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.username", cred)))
+	setUsername((*pluginConfig.PluginParams)["username"])
 
 	// password.
 	setPassword := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["password"] = 0
-			plugin.Password = v
+			plugin.OptionPassword = v
 		}
 	}
-	setPassword(pluginConfig.Config.GetString(fmt.Sprintf("%s.password", cred)))
-	setPassword((*pluginConfig.Params)["password"])
+	setPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.password", cred)))
+	setPassword((*pluginConfig.PluginParams)["password"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// attachments.
 	setAttachments := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["attachments"] = 0
-			plugin.Attachments = v
+			plugin.OptionAttachments = v
 		}
 	}
-	setAttachments(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.attachments", template)))
-	setAttachments((*pluginConfig.Params)["attachments"])
-	showParam("attachments", plugin.Attachments)
+	setAttachments(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.attachments", template)))
+	setAttachments((*pluginConfig.PluginParams)["attachments"])
+	showParam("attachments", plugin.OptionAttachments)
 
 	// body.
 	setBody := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["body"] = 0
-			plugin.Body = v
+			plugin.OptionBody = v
 		}
 	}
-	setBody(pluginConfig.Config.GetString(fmt.Sprintf("%s.body", template)))
-	setBody((*pluginConfig.Params)["body"])
-	showParam("body", plugin.Body)
+	setBody(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.body", template)))
+	setBody((*pluginConfig.PluginParams)["body"])
+	showParam("body", plugin.OptionBody)
 
 	// body template.
-	if plugin.BodyTemplate, err = tmpl.New("body").Funcs(core.TemplateFuncMap).Parse(plugin.Body); err != nil {
+	if plugin.OptionBodyTemplate, err = tmpl.New("body").Funcs(core.TemplateFuncMap).Parse(plugin.OptionBody); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -267,40 +262,40 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBodyHTML := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["body_html"] = 0
-			plugin.BodyHTML = v
+			plugin.OptionBodyHTML = v
 		}
 	}
 	setBodyHTML(DEFAULT_BODY_HTML)
-	setBodyHTML(pluginConfig.Config.GetString(fmt.Sprintf("%s.body_html", template)))
-	setBodyHTML((*pluginConfig.Params)["body_html"])
-	showParam("body_html", plugin.BodyHTML)
+	setBodyHTML(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.body_html", template)))
+	setBodyHTML((*pluginConfig.PluginParams)["body_html"])
+	showParam("body_html", plugin.OptionBodyHTML)
 
 	// body_length.
 	setBodyLength := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["body_length"] = 0
-			plugin.BodyLength = v
+			plugin.OptionBodyLength = v
 		}
 	}
 	setBodyLength(DEFAULT_BODY_LENGTH)
-	setBodyLength(pluginConfig.Config.GetInt(fmt.Sprintf("%s.body_length", template)))
-	setBodyLength((*pluginConfig.Params)["body_length"])
-	showParam("body_length", plugin.BodyLength)
+	setBodyLength(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.body_length", template)))
+	setBodyLength((*pluginConfig.PluginParams)["body_length"])
+	showParam("body_length", plugin.OptionBodyLength)
 
 	// from.
 	setFrom := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["from"] = 0
-			plugin.From = v
+			plugin.OptionFrom = v
 		}
 	}
-	setFrom(pluginConfig.Config.GetString(fmt.Sprintf("%s.from", template)))
-	setFrom((*pluginConfig.Params)["from"])
-	showParam("from", plugin.From)
+	setFrom(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.from", template)))
+	setFrom((*pluginConfig.PluginParams)["from"])
+	showParam("from", plugin.OptionFrom)
 
 	// headers.
-	templateHeaders, _ := core.IsMapWithStringAsKey(pluginConfig.Config.GetStringMap(fmt.Sprintf("%s.headers", template)))
-	configHeaders, _ := core.IsMapWithStringAsKey((*pluginConfig.Params)["headers"])
+	templateHeaders, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.headers", template)))
+	configHeaders, _ := core.IsMapWithStringAsKey((*pluginConfig.PluginParams)["headers"])
 	mergedHeaders := make(map[string]interface{}, 0)
 
 	for k, v := range templateHeaders {
@@ -311,78 +306,80 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		mergedHeaders[k] = v
 	}
 
-	plugin.Headers = mergedHeaders
+	plugin.OptionHeaders = mergedHeaders
+
+	showParam("headers", plugin.OptionHeaders)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["output"] = 0
-			plugin.Output = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionOutput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// port.
 	setPort := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["port"] = 0
-			plugin.Port = v
+			plugin.OptionPort = v
 		}
 	}
 	setPort(DEFAULT_SMTP_PORT)
-	setPort(pluginConfig.Config.GetInt(fmt.Sprintf("%s.port", template)))
-	setPort((*pluginConfig.Params)["port"])
-	showParam("port", plugin.Port)
+	setPort(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.port", template)))
+	setPort((*pluginConfig.PluginParams)["port"])
+	showParam("port", plugin.OptionPort)
 
 	// server.
 	setServer := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["server"] = 0
-			plugin.Server = v
+			plugin.OptionServer = v
 		}
 	}
-	setServer(pluginConfig.Config.GetString(fmt.Sprintf("%s.server", template)))
-	setServer((*pluginConfig.Params)["server"])
+	setServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.server", template)))
+	setServer((*pluginConfig.PluginParams)["server"])
 
 	// ssl.
 	setSSL := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["ssl"] = 0
-			plugin.SSL = v
+			plugin.OptionSSL = v
 		}
 	}
 	setSSL(DEFAULT_SSL_ENABLE)
-	setSSL(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl", template)))
-	setSSL((*pluginConfig.Params)["ssl"])
-	showParam("ssl", plugin.SSL)
+	setSSL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ssl", template)))
+	setSSL((*pluginConfig.PluginParams)["ssl"])
+	showParam("ssl", plugin.OptionSSL)
 
 	// ssl_verify.
 	setSSLVerify := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["ssl_verify"] = 0
-			plugin.SSLVerify = v
+			plugin.OptionSSLVerify = v
 		}
 	}
 	setSSLVerify(DEFAULT_SSL_VERIFY)
-	setSSLVerify(pluginConfig.Config.GetString(fmt.Sprintf("%s.ssl_verify", template)))
-	setSSLVerify((*pluginConfig.Params)["ssl_verify"])
-	showParam("ssl_verify", plugin.SSLVerify)
+	setSSLVerify(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ssl_verify", template)))
+	setSSLVerify((*pluginConfig.PluginParams)["ssl_verify"])
+	showParam("ssl_verify", plugin.OptionSSLVerify)
 
 	// subject.
 	setSubject := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["subject"] = 0
-			plugin.Subject = v
+			plugin.OptionSubject = v
 		}
 	}
-	setSubject(pluginConfig.Config.GetString(fmt.Sprintf("%s.subject", template)))
-	setSubject((*pluginConfig.Params)["subject"])
-	showParam("subject", plugin.Subject)
+	setSubject(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.subject", template)))
+	setSubject((*pluginConfig.PluginParams)["subject"])
+	showParam("subject", plugin.OptionSubject)
 
 	// subject template.
-	plugin.SubjectTemplate, err = tmpl.New("subject").Funcs(core.TemplateFuncMap).Parse(plugin.Subject)
+	plugin.OptionSubjectTemplate, err = tmpl.New("subject").Funcs(core.TemplateFuncMap).Parse(plugin.OptionSubject)
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -391,30 +388,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSubjectLength := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["subject_length"] = 0
-			plugin.SubjectLength = v
+			plugin.OptionSubjectLength = v
 		}
 	}
 	setSubjectLength(DEFAULT_SUBJECT_LENGTH)
-	setSubjectLength(pluginConfig.Config.GetInt(fmt.Sprintf("%s.subject_length", template)))
-	setSubjectLength((*pluginConfig.Params)["subject_length"])
-	showParam("subject_length", plugin.SubjectLength)
+	setSubjectLength(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.subject_length", template)))
+	setSubjectLength((*pluginConfig.PluginParams)["subject_length"])
+	showParam("subject_length", plugin.OptionSubjectLength)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
-	setTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 

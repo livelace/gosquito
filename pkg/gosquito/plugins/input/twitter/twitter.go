@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	DEFAULT_MATCH_TTL = "1d"
+)
+
 func expandMedia(s *[]twitter.MediaEntity) []string {
 	temp := make([]string, 0)
 
@@ -60,8 +64,8 @@ func fetchTweets(p *Plugin, source string) (*[]twitter.Tweet, error) {
 
 	// twitter client.
 	// TODO: Add custom User-Agent support. Need a custom Transport with token support.
-	config := oauth1.NewConfig(p.ConsumerKey, p.ConsumerSecret)
-	token := oauth1.NewToken(p.AccessToken, p.AccessSecret)
+	config := oauth1.NewConfig(p.OptionConsumerKey, p.OptionConsumerSecret)
+	token := oauth1.NewToken(p.OptionAccessToken, p.OptionAccessSecret)
 	httpClient := config.Client(ctx, token)
 	client := twitter.NewClient(httpClient)
 
@@ -88,7 +92,7 @@ func fetchTweets(p *Plugin, source string) (*[]twitter.Tweet, error) {
 		if err != nil {
 			return &temp, fmt.Errorf("error: %s, %s", source, err)
 		}
-	case <-time.After(time.Duration(p.Timeout) * time.Second):
+	case <-time.After(time.Duration(p.OptionTimeout) * time.Second):
 		return &temp, fmt.Errorf("timeout: %s", source)
 	}
 
@@ -98,34 +102,61 @@ func fetchTweets(p *Plugin, source string) (*[]twitter.Tweet, error) {
 type Plugin struct {
 	m sync.Mutex
 
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	File     string
-	Name     string
-	StateDir string
-	Type     string
+	PluginName string
+	PluginType string
 
-	ExpireAction        []string
-	ExpireActionDelay   int64
-	ExpireActionTimeout int
-	ExpireInterval      int64
-	ExpireLast          int64
-	Force               bool
-	ForceCount          int
-
-	AccessToken    string
-	AccessSecret   string
-	ConsumerKey    string
-	ConsumerSecret string
-	Input          []string
-	Timeout        int
-	TimeFormat     string
-	TimeZone       *time.Location
-	UserAgent      string
+	OptionAccessSecret        string
+	OptionAccessToken         string
+	OptionConsumerKey         string
+	OptionConsumerSecret      string
+	OptionExpireAction        []string
+	OptionExpireActionDelay   int64
+	OptionExpireActionTimeout int
+	OptionExpireInterval      int64
+	OptionExpireLast          int64
+	OptionForce               bool
+	OptionForceCount          int
+	OptionInput               []string
+	OptionMatchSignature      []string
+	OptionMatchTTL            time.Duration
+	OptionTimeFormat          string
+	OptionTimeZone            *time.Location
+	OptionTimeout             int
+	OptionUserAgent           string
 }
 
-func (p *Plugin) Recv() ([]*core.DataItem, error) {
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetInput() []string {
+	return p.OptionInput
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) LoadState() (map[string]time.Time, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	data := make(map[string]time.Time, 0)
+
+	if err := core.PluginLoadState(p.Flow.FlowStateDir, &data); err != nil {
+		return data, err
+	}
+
+	return data, nil
+}
+
+func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
@@ -136,22 +167,18 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 		return temp, err
 	}
 
-	// Delete irrelevant/obsolete sources.
-	for source := range flowStates {
-		if !core.IsValueInSlice(source, &p.Input) {
-			delete(flowStates, source)
-		}
-	}
+	// Source stat.
+	sourceNewStat := make(map[string]int32)
 
 	// Fetch data from sources.
-	for _, source := range p.Input {
-		var lastTime time.Time
+	for _, source := range p.OptionInput {
+		var sourceLastTime time.Time
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[source]; ok {
-			lastTime = v
+			sourceLastTime = v
 		} else {
-			lastTime = time.Unix(0, 0)
+			sourceLastTime = time.Unix(0, 0)
 		}
 
 		// Try to fetch new tweets.
@@ -160,11 +187,11 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			failedSources = append(failedSources, source)
 
 			log.WithFields(log.Fields{
-				"hash":   p.Hash,
-				"flow":   p.Flow,
-				"file":   p.File,
-				"plugin": p.Name,
-				"type":   p.Type,
+				"hash":   p.Flow.FlowHash,
+				"flow":   p.Flow.FlowName,
+				"file":   p.Flow.FlowFile,
+				"plugin": p.PluginName,
+				"type":   p.PluginType,
 				"source": source,
 				"error":  err,
 			}).Error(core.LOG_PLUGIN_DATA)
@@ -172,23 +199,21 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 			continue
 		}
 
-		// Grab only specific amount of tweets from
-		// every source, if p.Force = true.
+		// Process only specific amount of tweets from every source if force = true.
 		var start = len(*tweets) - 1
-		var end int
+		var end = 0
 
-		if p.Force {
-			if len(*tweets) > p.ForceCount {
-				end = start - p.ForceCount + 1
-			} else {
-				end = 0
+		if p.OptionForce {
+			if len(*tweets) > p.OptionForceCount {
+				end = start - p.OptionForceCount + 1
 			}
-		} else {
-			end = 0
 		}
 
 		// Process fetched data in reverse order.
 		for i := start; i >= end; i-- {
+			var itemNew = false
+			var itemSignature string
+			var itemSignatureHash string
 			var itemTime time.Time
 			var u, _ = uuid.NewRandom()
 
@@ -199,11 +224,54 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				return temp, err
 			}
 
-			// Process only new items.
-			if itemTime.Unix() > lastTime.Unix() || p.Force {
-				lastTime = itemTime
+			// Process only new items. Two methods:
+			// 1. Match item by user provided signature.
+			// 2. Compare item timestamp with source timestamp.
+			if len(p.OptionMatchSignature) > 0 || p.OptionForce {
+				itemSignature = source
 
-				// Derive various data.
+				for _, v := range p.OptionMatchSignature {
+					switch v {
+					case "lang":
+						itemSignature += item.Lang
+						break
+					case "text":
+						itemSignature += item.Text
+						break
+					case "time":
+						itemSignature += itemTime.String()
+						break
+					}
+				}
+
+				// set default value for signature if user provided wrong values.
+				if itemSignature == source {
+					itemSignature += item.Text + itemTime.String()
+				}
+
+				itemSignatureHash = core.HashString(&itemSignature)
+
+				if _, ok := flowStates[itemSignatureHash]; !ok || p.OptionForce {
+					// save item signature hash to state.
+					flowStates[itemSignatureHash] = currentTime
+
+					// update source timestamp.
+					if itemTime.Unix() > sourceLastTime.Unix() {
+						sourceLastTime = itemTime
+					}
+
+					itemNew = true
+				}
+
+			} else {
+				if itemTime.Unix() > sourceLastTime.Unix() || p.OptionForce {
+					sourceLastTime = itemTime
+					itemNew = true
+				}
+			}
+
+			// Add item to result.
+			if itemNew {
 				media := expandMedia(&item.Entities.Media)
 				if item.ExtendedEntities != nil {
 					media = append(media, expandMedia(&item.ExtendedEntities.Media)...)
@@ -213,11 +281,11 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 				urls := expandURL(&item.Entities.Urls)
 
 				temp = append(temp, &core.DataItem{
-					FLOW:       p.Flow,
-					PLUGIN:     p.Name,
+					FLOW:       p.Flow.FlowName,
+					PLUGIN:     p.PluginName,
 					SOURCE:     source,
 					TIME:       itemTime,
-					TIMEFORMAT: itemTime.In(p.TimeZone).Format(p.TimeFormat),
+					TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 					UUID:       u,
 
 					TWITTER: core.TwitterData{
@@ -228,19 +296,22 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 						URLS:  core.UniqueSliceValues(&urls),
 					},
 				})
+
+				sourceNewStat[source] += 1
 			}
 		}
 
-		flowStates[source] = lastTime
+		flowStates[source] = sourceLastTime
 
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
 			"source": source,
-			"data":   fmt.Sprintf("last update: %s, fetched data: %d", lastTime, len(*tweets)),
+			"data": fmt.Sprintf("last update: %s, received data: %d, new data: %d",
+				sourceLastTime, len(*tweets), sourceNewStat[source]),
 		}).Debug(core.LOG_PLUGIN_DATA)
 	}
 
@@ -254,29 +325,29 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.ExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.ExpireLast) > p.ExpireActionDelay {
-				p.ExpireLast = currentTime.Unix()
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
 				// We don't worry about command return code.
-				if len(p.ExpireAction) > 0 {
-					cmd := p.ExpireAction[0]
-					args := []string{p.Flow, source, fmt.Sprintf("%v", sourceTime.Unix())}
-					args = append(args, p.ExpireAction[1:]...)
+				if len(p.OptionExpireAction) > 0 {
+					cmd := p.OptionExpireAction[0]
+					args := []string{p.Flow.FlowName, source, fmt.Sprintf("%v", sourceTime.Unix())}
+					args = append(args, p.OptionExpireAction[1:]...)
 
-					output, err := core.ExecWithTimeout(cmd, args, p.ExpireActionTimeout)
+					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
 					log.WithFields(log.Fields{
-						"hash":   p.Hash,
-						"flow":   p.Flow,
-						"file":   p.File,
-						"plugin": p.Name,
-						"type":   p.Type,
+						"hash":   p.Flow.FlowHash,
+						"flow":   p.Flow.FlowName,
+						"file":   p.Flow.FlowFile,
+						"plugin": p.PluginName,
+						"type":   p.PluginType,
 						"source": source,
 						"data": fmt.Sprintf(
 							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
@@ -300,55 +371,21 @@ func (p *Plugin) Recv() ([]*core.DataItem, error) {
 	return temp, nil
 }
 
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetInput() []string {
-	return p.Input
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
-func (p *Plugin) LoadState() (map[string]time.Time, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
-
-	temp := make(map[string]time.Time, 0)
-
-	if err := core.PluginLoadData(p.StateDir, p.Flow, &temp); err != nil {
-		return temp, err
-	}
-
-	return temp, nil
-}
-
 func (p *Plugin) SaveState(data map[string]time.Time) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return core.PluginSaveData(p.StateDir, p.Flow, data)
+	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		File:     pluginConfig.File,
-		Name:     "twitter",
-		StateDir: pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_STATE),
-		Type:     "input",
-
-		ExpireLast: 0,
+		Flow:             pluginConfig.Flow,
+		PluginName:       "twitter",
+		PluginType:       pluginConfig.PluginType,
+		OptionExpireLast: 0,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -375,6 +412,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"consumer_secret": 1,
 		"cred":            -1,
 		"input":           1,
+		"match_signature": -1,
+		"match_ttl":       -1,
 		"user_agent":      -1,
 	}
 
@@ -383,198 +422,221 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	cred, _ := core.IsString((*pluginConfig.Params)["cred"])
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// access_token.
 	setAccessToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_token"] = 0
-			plugin.AccessToken = v
+			plugin.OptionAccessToken = v
 		}
 	}
-	setAccessToken(pluginConfig.Config.GetString(fmt.Sprintf("%s.access_token", cred)))
-	setAccessToken((*pluginConfig.Params)["access_token"])
+	setAccessToken(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_token", cred)))
+	setAccessToken((*pluginConfig.PluginParams)["access_token"])
 
 	// access_secret.
 	setAccessSecret := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_secret"] = 0
-			plugin.AccessSecret = v
+			plugin.OptionAccessSecret = v
 		}
 	}
-	setAccessSecret(pluginConfig.Config.GetString(fmt.Sprintf("%s.access_secret", cred)))
-	setAccessSecret((*pluginConfig.Params)["access_secret"])
+	setAccessSecret(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_secret", cred)))
+	setAccessSecret((*pluginConfig.PluginParams)["access_secret"])
 
 	// consumer_key.
 	setConsumerKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["consumer_key"] = 0
-			plugin.ConsumerKey = v
+			plugin.OptionConsumerKey = v
 		}
 	}
-	setConsumerKey(pluginConfig.Config.GetString(fmt.Sprintf("%s.consumer_key", cred)))
-	setConsumerKey((*pluginConfig.Params)["consumer_key"])
+	setConsumerKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.consumer_key", cred)))
+	setConsumerKey((*pluginConfig.PluginParams)["consumer_key"])
 
 	// consumer_secret.
 	setConsumerSecret := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["consumer_secret"] = 0
-			plugin.ConsumerSecret = v
+			plugin.OptionConsumerSecret = v
 		}
 	}
-	setConsumerSecret(pluginConfig.Config.GetString(fmt.Sprintf("%s.consumer_secret", cred)))
-	setConsumerSecret((*pluginConfig.Params)["consumer_secret"])
+	setConsumerSecret(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.consumer_secret", cred)))
+	setConsumerSecret((*pluginConfig.PluginParams)["consumer_secret"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// expire_action.
 	setExpireAction := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["expire_action"] = 0
-			plugin.ExpireAction = v
+			plugin.OptionExpireAction = v
 		}
 	}
-	setExpireAction(pluginConfig.Config.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
-	setExpireAction(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
-	setExpireAction((*pluginConfig.Params)["expire_action"])
-	showParam("expire_action", plugin.ExpireAction)
+	setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
+	setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
+	setExpireAction((*pluginConfig.PluginParams)["expire_action"])
+	showParam("expire_action", plugin.OptionExpireAction)
 
 	// expire_action_delay.
 	setExpireActionDelay := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["expire_action_delay"] = 0
-			plugin.ExpireActionDelay = v
+			plugin.OptionExpireActionDelay = v
 		}
 	}
-	setExpireActionDelay(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
-	setExpireActionDelay(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
-	setExpireActionDelay((*pluginConfig.Params)["expire_action_delay"])
-	showParam("expire_action_delay", plugin.ExpireActionDelay)
+	setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
+	setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
+	setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
+	showParam("expire_action_delay", plugin.OptionExpireActionDelay)
 
 	// expire_action_timeout.
 	setExpireActionTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["expire_action_timeout"] = 0
-			plugin.ExpireActionTimeout = v
+			plugin.OptionExpireActionTimeout = v
 		}
 	}
-	setExpireActionTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
-	setExpireActionTimeout(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
-	setExpireActionTimeout((*pluginConfig.Params)["expire_action_timeout"])
-	showParam("expire_action_timeout", plugin.ExpireActionTimeout)
+	setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
+	setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
+	setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
+	showParam("expire_action_timeout", plugin.OptionExpireActionTimeout)
 
 	// expire_interval.
 	setExpireInterval := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["expire_interval"] = 0
-			plugin.ExpireInterval = v
+			plugin.OptionExpireInterval = v
 		}
 	}
-	setExpireInterval(pluginConfig.Config.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
-	setExpireInterval(pluginConfig.Config.GetString(fmt.Sprintf("%s.expire_interval", template)))
-	setExpireInterval((*pluginConfig.Params)["expire_interval"])
-	showParam("expire_interval", plugin.ExpireInterval)
+	setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
+	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
+	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
+	showParam("expire_interval", plugin.OptionExpireInterval)
 
 	// force.
 	setForce := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["force"] = 0
-			plugin.Force = v
+			plugin.OptionForce = v
 		}
 	}
 	setForce(core.DEFAULT_FORCE_INPUT)
-	setForce(pluginConfig.Config.GetString(fmt.Sprintf("%s.force", template)))
-	setForce((*pluginConfig.Params)["force"])
-	showParam("force", plugin.Force)
+	setForce(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.force", template)))
+	setForce((*pluginConfig.PluginParams)["force"])
+	showParam("force", plugin.OptionForce)
 
 	// force_count.
 	setForceCount := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["force_count"] = 0
-			plugin.ForceCount = v
+			plugin.OptionForceCount = v
 		}
 	}
 	setForceCount(core.DEFAULT_FORCE_COUNT)
-	setForceCount(pluginConfig.Config.GetInt(fmt.Sprintf("%s.force_count", template)))
-	setForceCount((*pluginConfig.Params)["force_count"])
-	showParam("force_count", plugin.ForceCount)
+	setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
+	setForceCount((*pluginConfig.PluginParams)["force_count"])
+	showParam("force_count", plugin.OptionForceCount)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["input"] = 0
-			plugin.Input = core.ExtractConfigVariableIntoArray(pluginConfig.Config, v)
+			plugin.OptionInput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
+
+	// match_signature.
+	setMatchSignature := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["match_signature"] = 0
+			plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+	showParam("match_signature", plugin.OptionMatchSignature)
+
+	// match_ttl.
+	setMatchTTL := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["match_ttl"] = 0
+			plugin.OptionMatchTTL = time.Duration(v) * time.Second
+		}
+	}
+	setMatchTTL(DEFAULT_MATCH_TTL)
+	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+	showParam("match_ttl", plugin.OptionMatchTTL)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
-	setTimeout(pluginConfig.Config.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// time_format.
 	setTimeFormat := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["time_format"] = 0
-			plugin.TimeFormat = v
+			plugin.OptionTimeFormat = v
 		}
 	}
-	setTimeFormat(pluginConfig.Config.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
-	setTimeFormat(pluginConfig.Config.GetString(fmt.Sprintf("%s.time_format", template)))
-	setTimeFormat((*pluginConfig.Params)["time_format"])
-	showParam("time_format", plugin.TimeFormat)
+	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
+	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
+	showParam("time_format", plugin.OptionTimeFormat)
 
 	// time_zone.
 	setTimeZone := func(p interface{}) {
 		if v, b := core.IsTimeZone(p); b {
 			availableParams["time_zone"] = 0
-			plugin.TimeZone = v
+			plugin.OptionTimeZone = v
 		}
 	}
-	setTimeZone(pluginConfig.Config.GetString(core.VIPER_DEFAULT_TIME_ZONE))
-	setTimeZone(pluginConfig.Config.GetString(fmt.Sprintf("%s.time_zone", template)))
-	setTimeZone((*pluginConfig.Params)["time_zone"])
-	showParam("time_zone", plugin.TimeZone)
+	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
+	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
+	showParam("time_zone", plugin.OptionTimeZone)
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["user_agent"] = 0
-			plugin.UserAgent = v
+			plugin.OptionUserAgent = v
 		}
 	}
-	setUserAgent(pluginConfig.Config.GetString(core.VIPER_DEFAULT_USER_AGENT))
-	setUserAgent(pluginConfig.Config.GetString(fmt.Sprintf("%s.user_agent", template)))
-	setUserAgent((*pluginConfig.Params)["user_agent"])
-	showParam("user_agent", plugin.UserAgent)
+	setUserAgent(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_USER_AGENT))
+	setUserAgent(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_agent", template)))
+	setUserAgent((*pluginConfig.PluginParams)["user_agent"])
+	showParam("user_agent", plugin.OptionUserAgent)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 

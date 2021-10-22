@@ -9,14 +9,7 @@ import (
 	"runtime"
 )
 
-var (
-	FLOW_CONF_DIR    = filepath.Join("flow", "conf")
-	PLUGIN_DATA_DIR  = filepath.Join("plugin", "data")
-	PLUGIN_STATE_DIR = filepath.Join("plugin", "state")
-	PLUGIN_TEMP_DIR  = filepath.Join("plugin", "temp")
-)
-
-func initConfig() (string, error) {
+func initAppConfig() (string, error) {
 	// Get current user info.
 	userAccount, err := user.Current()
 	if err != nil {
@@ -27,7 +20,10 @@ func initConfig() (string, error) {
 	userDir := filepath.Join(userAccount.HomeDir, ".gosquito")
 	configFile := "config.toml"
 
-	// Return existing config path.
+	// Path priority order.
+	// 1. /etc/gosquito/
+	// 2. ~/.gosquito
+	// 3. .gosquito
 	if IsFile(DEFAULT_ETC_PATH, configFile) {
 		return DEFAULT_ETC_PATH, nil
 
@@ -50,8 +46,8 @@ func initConfig() (string, error) {
 	return userDir, nil
 }
 
-func GetConfig() *viper.Viper {
-	configPath, err := initConfig()
+func GetAppConfig() *viper.Viper {
+	configPath, err := initAppConfig()
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -65,7 +61,7 @@ func GetConfig() *viper.Viper {
 	if configPath != "" {
 		log.WithFields(log.Fields{
 			"path": configPath,
-		}).Info(LOG_CONFIG_INIT)
+		}).Info(LOG_CONFIG_APPLY)
 	}
 
 	// Read generated/existed configuration.
@@ -87,15 +83,13 @@ func GetConfig() *viper.Viper {
 	v.SetDefault(VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT, DEFAULT_EXPIRE_ACTION_TIMEOUT)
 	v.SetDefault(VIPER_DEFAULT_EXPIRE_INTERVAL, DEFAULT_EXPIRE_INTERVAL)
 	v.SetDefault(VIPER_DEFAULT_EXPORTER_LISTEN, DEFAULT_EXPORTER_LISTEN)
-	v.SetDefault(VIPER_DEFAULT_FLOW_CONF, filepath.Join(configPath, FLOW_CONF_DIR))
+	v.SetDefault(VIPER_DEFAULT_FLOW_CONF, filepath.Join(configPath, DEFAULT_FLOW_CONF_DIR))
+	v.SetDefault(VIPER_DEFAULT_FLOW_DATA, filepath.Join(configPath, DEFAULT_FLOW_DATA_DIR))
 	v.SetDefault(VIPER_DEFAULT_FLOW_ENABLE, make([]string, 0))
 	v.SetDefault(VIPER_DEFAULT_FLOW_INTERVAL, DEFAULT_FLOW_INTERVAL)
 	v.SetDefault(VIPER_DEFAULT_FLOW_NUMBER, DEFAULT_FLOW_NUMBER)
 	v.SetDefault(VIPER_DEFAULT_LOG_LEVEL, DEFAULT_LOG_LEVEL)
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_DATA, filepath.Join(configPath, PLUGIN_DATA_DIR))
 	v.SetDefault(VIPER_DEFAULT_PLUGIN_INCLUDE, DEFAULT_PLUGIN_INCLUDE)
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_STATE, filepath.Join(configPath, PLUGIN_STATE_DIR))
-	v.SetDefault(VIPER_DEFAULT_PLUGIN_TEMP, filepath.Join(configPath, PLUGIN_TEMP_DIR))
 	v.SetDefault(VIPER_DEFAULT_PLUGIN_TIMEOUT, DEFAULT_PLUGIN_TIMEOUT)
 	v.SetDefault(VIPER_DEFAULT_PROC_NUM, runtime.GOMAXPROCS(0))
 	v.SetDefault(VIPER_DEFAULT_TIME_FORMAT, DEFAULT_TIME_FORMAT)
@@ -105,9 +99,7 @@ func GetConfig() *viper.Viper {
 	// Directories must exist for proper work.
 	workDirs := []string{
 		v.GetString(VIPER_DEFAULT_FLOW_CONF),
-		v.GetString(VIPER_DEFAULT_PLUGIN_DATA),
-		v.GetString(VIPER_DEFAULT_PLUGIN_STATE),
-		v.GetString(VIPER_DEFAULT_PLUGIN_TEMP),
+		v.GetString(VIPER_DEFAULT_FLOW_DATA),
 	}
 
 	for _, workDir := range workDirs {

@@ -3,9 +3,14 @@ package core
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
+	b64 "encoding/base64"
 	"encoding/gob"
 	"fmt"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
+	"github.com/google/renameio"
+	"github.com/itchyny/gojq"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
@@ -24,6 +29,15 @@ var (
 	TemplateFuncMap = tmpl.FuncMap{
 		"ToLower": strings.ToLower,
 		"ToUpper": strings.ToUpper,
+		"FromBase64": func(s string) string {
+			result, err := b64.StdEncoding.DecodeString(s)
+			if err != nil {
+				return fmt.Sprintf("decode error: %s", err)
+			} else {
+				return fmt.Sprintf("%s", result)
+			}
+		},
+		"ToBase64": func(s string) string { return b64.StdEncoding.EncodeToString([]byte(s)) },
 	}
 )
 
@@ -118,7 +132,7 @@ func ExtractDataFieldIntoArray(data *DataItem, field interface{}) []string {
 	// "qwerty" - regular string.
 	// "rss.title" - string representation of data field.
 	//
-	// Every data field might be expanded (reflect) into string, int, slice etc.
+	// All data field might be expanded (reflect) into string, int, slice etc.
 	// All expanded data appended to []string.
 
 	// Try to reflect string into data field.
@@ -271,6 +285,33 @@ func ExtractRegexpsIntoArrays(config *viper.Viper, regexps []string, matchCase b
 	return temp
 }
 
+func ExtractJqQueriesIntoArray(config *viper.Viper, queries []string) [][]*gojq.Query {
+	temp := make([][]*gojq.Query, 0)
+
+	for _, q := range queries {
+		currentQueries := make([]*gojq.Query, 0)
+		templateQueries := config.GetStringSlice(fmt.Sprintf("%s.query", q))
+
+		if len(templateQueries) > 0 {
+			for _, v := range templateQueries {
+				query, err := gojq.Parse(v)
+				if err == nil {
+					currentQueries = append(currentQueries, query)
+				}
+			}
+		} else {
+			query, err := gojq.Parse(q)
+			if err == nil {
+				currentQueries = append(currentQueries, query)
+			}
+		}
+
+		temp = append(temp, currentQueries)
+	}
+
+	return temp
+}
+
 func ExtractScripts(config *viper.Viper, scripts []string) []string {
 	temp := make([]string, 0)
 
@@ -287,14 +328,28 @@ func ExtractScripts(config *viper.Viper, scripts []string) []string {
 	return temp
 }
 
-func ExtractTemplateIntoString(data *DataItem, t *tmpl.Template) (string, error) {
+func ExtractTemplateIntoString(i *DataItem, t *tmpl.Template) (string, error) {
 	var b bytes.Buffer
 
-	if err := t.Execute(&b, data); err != nil {
+	if err := t.Execute(&b, i); err != nil {
 		return "", err
 	}
 
 	return b.String(), nil
+}
+
+func ExtractTemplateMapIntoStringMap(i *DataItem, m map[string]*tmpl.Template) (map[string]string, error) {
+	result := make(map[string]string, len(m))
+
+	for k, t := range m {
+		s, err := ExtractTemplateIntoString(i, t)
+		if err != nil {
+			return result, err
+		}
+		result[k] = s
+	}
+
+	return result, nil
 }
 
 func ExtractXpathsIntoArrays(config *viper.Viper, xpaths []string) [][]string {
@@ -353,6 +408,10 @@ func GetDataFieldType(field interface{}) (reflect.Kind, error) {
 	} else {
 		return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
 	}
+}
+
+func HashString(s *string) string {
+	return fmt.Sprintf("%x", sha1.Sum([]byte(*s)))
 }
 
 func IntervalToSeconds(s string) (int64, error) {
@@ -416,7 +475,7 @@ func IsChatUsername(i interface{}) (string, bool) {
 func IsDir(path string) bool {
 	info, err := os.Stat(path)
 
-	if os.IsNotExist(err) {
+	if err != nil {
 		return false
 	}
 
@@ -465,11 +524,7 @@ func IsDataFieldsTypesEqual(a *[]string, b *[]string) error {
 func IsFile(path string, file string) bool {
 	info, err := os.Stat(filepath.Join(path, file))
 
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	if info.IsDir() || !info.Mode().IsRegular() {
+	if err != nil || info.IsDir() || !info.Mode().IsRegular() {
 		return false
 	}
 
@@ -667,30 +722,32 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(path string, file string, output interface{}) error {
-	if IsFile(path, file) {
-		// read file.
-		f, err := os.OpenFile(filepath.Join(path, file), os.O_RDONLY, 0644)
+func PluginLoadData(database string, data interface{}) error {
+	if IsFile(database, "") {
+		// open file.
+		f, err := os.OpenFile(database, os.O_RDONLY, 0644)
 		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
 		}
 
+		// get file size.
 		fs, err := f.Stat()
 		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
 		}
 
-		data := make([]byte, fs.Size())
-		_, err = f.Read(data)
+		// read file.
+		content := make([]byte, fs.Size())
+		_, err = f.Read(content)
 		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
 		}
 
 		// decode data.
-		decoder := gob.NewDecoder(bytes.NewReader(data))
-		err = decoder.Decode(output)
+		decoder := gob.NewDecoder(bytes.NewReader(content))
+		err = decoder.Decode(data)
 		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_DATA_READ.Error(), err)
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
 		}
 
 		err = f.Close()
@@ -701,35 +758,89 @@ func PluginLoadData(path string, file string, output interface{}) error {
 	return nil
 }
 
-// TODO: Sources' state time has to be truly last despite of concurrency.
-// TODO: proc1 may have time 11111.
-// TODO: proc2 may have time 22222.
-// TODO: proc2 may save state time as 22222 first.
-// TODO: proc1 may save state time as 11111 last.
-// TODO: "Last time" 11111 isn't what we expect.
-// TODO: Should be atomic operation.
-func PluginSaveData(path string, file string, data interface{}) error {
-	buffer := new(bytes.Buffer)
+func PluginLoadState(database string, data *map[string]time.Time) error {
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
 
-	//gob.Register(time.Time{})
+	// Open database.
+	db, err := badger.Open(opts)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Read database.
+	err = db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 10
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+
+			err := item.Value(func(value []byte) error {
+				signature := fmt.Sprintf("%s", item.Key())
+				timestamp, err := time.Parse(time.RFC3339, fmt.Sprintf("%s", value))
+				(*data)[signature] = timestamp
+
+				return err
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func PluginSaveData(database string, data interface{}) error {
+	buffer := new(bytes.Buffer)
 	encoder := gob.NewEncoder(buffer)
 
 	err := encoder.Encode(data)
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
+		return fmt.Errorf(ERROR_PLUGIN_SAVE_DATA.Error(), err)
 	}
 
-	f, err := os.OpenFile(filepath.Join(path, file), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	err = renameio.WriteFile(database, buffer.Bytes(), 0644)
 	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
-	}
-
-	_, err = f.Write(buffer.Bytes())
-	if err != nil {
-		return fmt.Errorf(ERROR_PLUGIN_DATA_WRITE.Error(), err)
+		return fmt.Errorf(ERROR_PLUGIN_SAVE_DATA.Error(), err)
 	}
 
 	return nil
+}
+
+func PluginSaveState(database string, data *map[string]time.Time, ttl time.Duration) error {
+	// Disable logging.
+	opts := badger.DefaultOptions(database)
+	opts.Logger = nil
+
+	// Open database.
+	db, err := badger.Open(opts)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Save data.
+	err = db.Update(func(txn *badger.Txn) error {
+		for signature, timestamp := range *data {
+			e := badger.NewEntry([]byte(signature), []byte(timestamp.Format(time.RFC3339))).WithTTL(ttl)
+			err := txn.SetEntry(e)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
 }
 
 func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {

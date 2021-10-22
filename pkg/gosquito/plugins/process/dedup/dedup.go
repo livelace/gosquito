@@ -1,4 +1,4 @@
-package dedup
+package dedupProcess
 
 import (
 	"fmt"
@@ -8,21 +8,46 @@ import (
 )
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	File string
-	Name string
-	Type string
-
-	Include bool
-	Require []int
+	OptionInclude bool
+	OptionRequire []int
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return p.OptionInclude
+}
+
+func (p *Plugin) GetRequire() []int {
+	return p.OptionRequire
+}
+
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 
 	if len(data) == 0 {
@@ -44,47 +69,15 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	return temp, nil
 }
 
-func (p *Plugin) GetId() int {
-	return p.ID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.Alias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
-func (p *Plugin) GetInclude() bool {
-	return p.Include
-}
-
-func (p *Plugin) GetRequire() []int {
-	return p.Require
-}
-
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "dedup",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "dedup",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -104,10 +97,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
@@ -118,28 +112,28 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetString(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 

@@ -1,4 +1,4 @@
-package expandurl
+package expandurlProcess
 
 import (
 	"errors"
@@ -33,8 +33,8 @@ func expandUrl(p *Plugin, url string, previousURL string, depth int) string {
 	// 2. https://apne.ws/BvY2ib9 (<- this doesn't work, https port closed)
 	// 3. we now try http://apne.ws/BvY2ib9
 	// 4. that gives https://apnews.com/article/virus-outbreak-donald-trump-wisconsin-mike ...
-	v1, b1 := getServerRedirect(p, url)
-	v2, b2 := getServerRedirect(p, swapUrlSchema(url))
+	v1, b1 := getRedirectFromServer(p, url)
+	v2, b2 := getRedirectFromServer(p, swapURLSchema(url))
 
 	if b1 {
 		return expandUrl(p, v1, url, depth-1)
@@ -47,18 +47,18 @@ func expandUrl(p *Plugin, url string, previousURL string, depth int) string {
 	}
 }
 
-func getServerRedirect(p *Plugin, url string) (string, bool) {
+func getRedirectFromServer(p *Plugin, url string) (string, bool) {
 	f := func(req *http.Request, via []*http.Request) error {
 		return errors.New("server redirect detected, not really error")
 	}
 
 	client := &http.Client{
 		CheckRedirect: f,
-		Timeout:       time.Duration(p.Timeout) * time.Second,
+		Timeout:       time.Duration(p.OptionTimeout) * time.Second,
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("User-Agent", p.UserAgent)
+	req.Header.Set("User-Agent", p.OptionUserAgent)
 	resp, _ := client.Do(req)
 
 	if resp != nil {
@@ -72,7 +72,7 @@ func getServerRedirect(p *Plugin, url string) (string, bool) {
 	return url, false
 }
 
-func swapUrlSchema(s string) string {
+func swapURLSchema(s string) string {
 	if httpSchema.MatchString(s) {
 		return httpSchema.ReplaceAllString(s, "https://")
 
@@ -84,27 +84,51 @@ func swapUrlSchema(s string) string {
 }
 
 type Plugin struct {
-	Hash string
-	Flow string
+	Flow *core.Flow
 
-	ID    int
-	Alias string
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	File string
-	Name string
-	Type string
-
-	Include bool
-	Require []int
-
-	Depth     int
-	Input     []string
-	Output    []string
-	Timeout   int
-	UserAgent string
+	OptionDepth     int
+	OptionInclude   bool
+	OptionInput     []string
+	OptionOutput    []string
+	OptionRequire   []int
+	OptionTimeout   int
+	OptionUserAgent string
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return p.OptionInclude
+}
+
+func (p *Plugin) GetRequire() []int {
+	return p.OptionRequire
+}
+
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 
 	if len(data) == 0 {
@@ -115,16 +139,16 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	for _, item := range data {
 		expanded := false
 
-		for index, input := range p.Input {
+		for index, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.Output[index])
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.Slice:
 				for i := 0; i < ri.Len(); i++ {
-					expandedUrl := expandUrl(p, ri.Index(i).String(), "", p.Depth)
+					expandedUrl := expandUrl(p, ri.Index(i).String(), "", p.OptionDepth)
 
 					if expandedUrl != ri.Index(i).String() {
 						expanded = true
@@ -132,15 +156,15 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 					}
 
 					log.WithFields(log.Fields{
-						"hash":   p.Hash,
-						"flow":   p.Flow,
-						"file":   p.File,
-						"plugin": p.Name,
-						"type":   p.Type,
-						"id":     p.ID,
-						"alias":  p.Alias,
+						"hash":   p.Flow.FlowHash,
+						"flow":   p.Flow.FlowName,
+						"file":   p.Flow.FlowFile,
+						"plugin": p.PluginName,
+						"type":   p.PluginType,
+						"id":     p.PluginID,
+						"alias":  p.PluginAlias,
 						"data": fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
-							ri.Index(i).String(), p.Depth, expandedUrl),
+							ri.Index(i).String(), p.OptionDepth, expandedUrl),
 					}).Debug(core.LOG_PLUGIN_DATA)
 				}
 			}
@@ -154,47 +178,15 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	return temp, nil
 }
 
-func (p *Plugin) GetId() int {
-	return p.ID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.Alias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
-func (p *Plugin) GetInclude() bool {
-	return p.Include
-}
-
-func (p *Plugin) GetRequire() []int {
-	return p.Require
-}
-
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "expandurl",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "expandurl",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -219,109 +211,109 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.Params)["template"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// depth.
 	setDepth := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["depth"] = 0
-			plugin.Depth = v
+			plugin.OptionDepth = v
 		}
 	}
 	setDepth(DEFAULT_DEPTH)
-	setDepth(pluginConfig.Config.GetInt(fmt.Sprintf("%s.depth", template)))
-	setDepth((*pluginConfig.Params)["depth"])
-	showParam("depth", plugin.Depth)
+	setDepth(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.depth", template)))
+	setDepth((*pluginConfig.PluginParams)["depth"])
+	showParam("depth", plugin.OptionDepth)
 
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude(pluginConfig.Config.GetString(fmt.Sprintf("%s.include", template)))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.include", template)))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
-				plugin.Input = v
+				plugin.OptionInput = v
 			}
 		}
 	}
-	setInput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput(pluginConfig.Config.GetStringSlice(fmt.Sprintf("%s.output", template)))
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire(pluginConfig.Config.GetIntSlice(fmt.Sprintf("%s.require", template)))
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.require", template)))
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.Timeout = v
+			plugin.OptionTimeout = v
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
-	setTimeout(pluginConfig.Config.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.Params)["timeout"])
-	showParam("timeout", plugin.Timeout)
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	showParam("timeout", plugin.OptionTimeout)
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["user_agent"] = 0
-			plugin.UserAgent = v
+			plugin.OptionUserAgent = v
 		}
 	}
-	setUserAgent(pluginConfig.Config.GetString(core.VIPER_DEFAULT_USER_AGENT))
-	setUserAgent(pluginConfig.Config.GetString(fmt.Sprintf("%s.user_agent", template)))
-	setUserAgent((*pluginConfig.Params)["user_agent"])
-	showParam("user_agent", plugin.UserAgent)
+	setUserAgent(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_USER_AGENT))
+	setUserAgent(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_agent", template)))
+	setUserAgent((*pluginConfig.PluginParams)["user_agent"])
+	showParam("user_agent", plugin.OptionUserAgent)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -329,11 +321,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// input and output must have equal size.
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

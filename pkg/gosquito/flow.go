@@ -7,15 +7,17 @@ import (
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
 	telegramIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/telegram"
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
+	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
 	kafkaOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/kafka"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
 	smtpOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/smtp"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dedup"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/dirname"
-	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/echo"
+	echoProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/echo"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/expandurl"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/fetch"
+	jqProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/jq"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/minio"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpfind"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpmatch"
@@ -58,15 +60,15 @@ func readFlow(dir string) ([]string, error) {
 	return temp, err
 }
 
-func getFlow(config *viper.Viper) []*core.Flow {
+func getFlow(appConfig *viper.Viper) []*core.Flow {
 	var flows []*core.Flow
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Early checks.
 
 	// Enable/disable selected flows (mutual exclusive).
-	flowsDisabled := config.GetStringSlice(core.VIPER_DEFAULT_FLOW_DISABLE)
-	flowsEnabled := config.GetStringSlice(core.VIPER_DEFAULT_FLOW_ENABLE)
+	flowsDisabled := appConfig.GetStringSlice(core.VIPER_DEFAULT_FLOW_DISABLE)
+	flowsEnabled := appConfig.GetStringSlice(core.VIPER_DEFAULT_FLOW_ENABLE)
 
 	if len(flowsDisabled) > 0 && len(flowsEnabled) > 0 {
 		log.WithFields(log.Fields{
@@ -79,7 +81,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	flowsNames := make(map[string]string)
 
 	// Read "flow" files.
-	files, err := readFlow(config.GetString(core.VIPER_DEFAULT_FLOW_CONF))
+	files, err := readFlow(appConfig.GetString(core.VIPER_DEFAULT_FLOW_CONF))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -90,7 +92,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 	// Exit if there are no flows.
 	if len(files) == 0 {
 		log.WithFields(log.Fields{
-			"path":  config.GetString(core.VIPER_DEFAULT_FLOW_CONF),
+			"path":  appConfig.GetString(core.VIPER_DEFAULT_FLOW_CONF),
 			"error": core.ERROR_NO_VALID_FLOW,
 		}).Error(core.LOG_FLOW_READ)
 		os.Exit(1)
@@ -103,6 +105,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
+		// ---------------------------------------------------------------------------------------------------------
 		// Every flow consists of:
 		// 1. Flow parameters.
 		// 2. Input plugin.
@@ -119,19 +122,25 @@ func getFlow(config *viper.Viper) []*core.Flow {
 			}).Error(msg)
 		}
 
-		var flowHash = core.GenFlowHash()
+		// ---------------------------------------------------------------------------------------------------------
+		// Parse and check flow body.
+
 		var flowUUID, _ = uuid.NewRandom()
+		var flowHash = core.GenFlowHash()
 		var flowName string
+
 		var flowInterval int64
 		var flowNumber int
+
 		var flowParams map[string]interface{}
+
 		var inputPlugin core.InputPlugin
 		var processPlugins = make(map[int]core.ProcessPlugin, 0)
 		var processPluginsNames = make([]string, 0)
 		var outputPlugin core.OutputPlugin
 
-		// Read "raw" flow data into structure.
-		flowRaw := core.FlowUnmarshal{}
+		// Read flow body into structure.
+		flowBody := core.FlowUnmarshal{}
 
 		// Skip flow if we cannot read flow.
 		data, err := ioutil.ReadFile(file)
@@ -141,43 +150,59 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		}
 
 		// Skip flow if we cannot unmarshal flow yaml.
-		err = yaml.Unmarshal(data, &flowRaw)
+		err = yaml.Unmarshal(data, &flowBody)
 		if err != nil {
 			logFlowError(core.ERROR_FLOW_PARSE.Error(), err)
 			continue
 		}
 
 		// Flow name must be compatible.
-		if !core.IsFlowName(flowRaw.Flow.Name) {
+		if !core.IsFlowName(flowBody.Flow.Name) {
 			logFlowError(core.LOG_FLOW_READ,
-				fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowRaw.Flow.Name))
+				fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowBody.Flow.Name))
 			continue
 		}
 
 		// Flow name must be unique.
-		if v, ok := flowsNames[flowRaw.Flow.Name]; ok {
+		if v, ok := flowsNames[flowBody.Flow.Name]; ok {
 			logFlowError(core.LOG_FLOW_READ,
 				fmt.Errorf(core.ERROR_FLOW_NAME_UNIQUE.Error(), v))
 			continue
 		}
 
 		// Exclude disabled flows.
-		if (len(flowsEnabled) > 0 && !core.IsValueInSlice(flowRaw.Flow.Name, &flowsEnabled)) ||
-			(len(flowsDisabled) > 0 && core.IsValueInSlice(flowRaw.Flow.Name, &flowsDisabled)) {
+		if (len(flowsEnabled) > 0 && !core.IsValueInSlice(flowBody.Flow.Name, &flowsEnabled)) ||
+			(len(flowsDisabled) > 0 && core.IsValueInSlice(flowBody.Flow.Name, &flowsDisabled)) {
 			log.WithFields(log.Fields{
-				"flow":  flowRaw.Flow.Name,
+				"flow":  flowBody.Flow.Name,
 				"error": core.ERROR_FLOW_DISABLED,
 			}).Warn(core.LOG_FLOW_IGNORE)
 			continue
 		}
 
-		flowName = flowRaw.Flow.Name
+		flowName = flowBody.Flow.Name
 		flowsNames[flowName] = fileName
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Logging.
 
-		LogParam := func(p string, v interface{}) {
+		logFlowValid := func(p string) {
+			log.WithFields(log.Fields{
+				"hash": flowHash,
+				"flow": flowName,
+				"file": fileName,
+			}).Info(core.LOG_FLOW_VALID)
+		}
+
+		logFlowInvalid := func(p string) {
+			log.WithFields(log.Fields{
+				"hash": flowHash,
+				"flow": flowName,
+				"file": fileName,
+			}).Error(core.LOG_FLOW_INVALID)
+		}
+
+		logFlowParam := func(p string, v interface{}) {
 			log.WithFields(log.Fields{
 				"hash":  flowHash,
 				"flow":  flowName,
@@ -187,7 +212,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 			}).Debug(core.LOG_SET_VALUE)
 		}
 
-		LogPluginError := func(plugin string, pluginType string, msg string, err error) {
+		logInputOutputPluginError := func(plugin string, pluginType string, msg string, err error) {
 			log.WithFields(log.Fields{
 				"hash":   flowHash,
 				"flow":   flowName,
@@ -208,7 +233,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		}
 
 		// Flow parameters may be not specified (use defaults).
-		flowParams, _ = core.IsMapWithStringAsKey(flowRaw.Flow.Params)
+		flowParams, _ = core.IsMapWithStringAsKey(flowBody.Flow.Params)
 
 		// Check required and unknown parameters.
 		if err := core.CheckPluginParams(&flowParamsAvailable, &flowParams); err != nil {
@@ -217,48 +242,68 @@ func getFlow(config *viper.Viper) []*core.Flow {
 				"file":  fileName,
 				"error": err,
 			}).Error(core.ERROR_PARAM_ERROR)
+			logFlowInvalid(flowName)
 			continue
 		}
 
 		// Set flow interval.
 		if v, b := core.IsInterval(flowParams["interval"]); b {
 			flowInterval = v
-			LogParam("interval", v)
+			logFlowParam("interval", v)
 		} else {
-			flowInterval, _ = core.IsInterval(config.GetString(core.VIPER_DEFAULT_FLOW_INTERVAL))
-			LogParam("interval", flowInterval)
+			flowInterval, _ = core.IsInterval(appConfig.GetString(core.VIPER_DEFAULT_FLOW_INTERVAL))
+			logFlowParam("interval", flowInterval)
 		}
 
 		// Set flow number limit.
 		if v, b := core.IsInt(flowParams["number"]); b {
 			flowNumber = v
-			LogParam("number", v)
+			logFlowParam("number", v)
 		} else {
-			flowNumber = config.GetInt(core.VIPER_DEFAULT_FLOW_NUMBER)
-			LogParam("number", flowNumber)
+			flowNumber = appConfig.GetInt(core.VIPER_DEFAULT_FLOW_NUMBER)
+			logFlowParam("number", flowNumber)
+		}
+
+		// ---------------------------------------------------------------------------------------------------------
+		// Create flow.
+
+		flow := &core.Flow{
+			FlowUUID: flowUUID,
+			FlowHash: flowHash,
+			FlowName: flowName,
+
+			FlowFile:     fileName,
+			FlowDataDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_DATA_DIR),
+			FlowStateDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_STATE_DIR),
+			FlowTempDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_TEMP_DIR),
+
+			FlowInterval: flowInterval,
+			FlowNumber:   flowNumber,
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Map "input" plugin.
 
-		inputParams, b := core.IsMapWithStringAsKey(flowRaw.Flow.Input.Params)
+		inputParams, b := core.IsMapWithStringAsKey(flowBody.Flow.Input.Params)
 		if !b {
-			LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.ERROR_PARAM_ERROR.Error(),
+			logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.ERROR_PARAM_ERROR.Error(),
 				core.ERROR_PARAM_KEY_MUST_STRING)
+			logFlowInvalid(flowName)
 			continue
 		}
 
 		// Assemble plugin configuration.
 		inputPluginConfig := core.PluginConfig{
-			Config: config,
-			File:   fileName,
-			Flow:   flowName,
-			Hash:   flowHash,
-			Params: &inputParams,
+			AppConfig:    appConfig,
+			Flow:         flow,
+			PluginParams: &inputParams,
+			PluginType:   "input",
 		}
 
 		// Available "input" plugins.
-		switch flowRaw.Flow.Input.Plugin {
+		switch flowBody.Flow.Input.Plugin {
+		case "resty":
+			inputPlugin, err = restyMulti.Init(&inputPluginConfig)
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
@@ -266,7 +311,7 @@ func getFlow(config *viper.Viper) []*core.Flow {
 				inputPlugin, err = telegramIn.Init(&inputPluginConfig)
 				telegramInPluginTotal += 1
 			} else {
-				LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
+				logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
 					fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramInPluginTotal))
 				continue
 			}
@@ -278,15 +323,16 @@ func getFlow(config *viper.Viper) []*core.Flow {
 
 		// Skip flow if we cannot initialize "input" plugin.
 		if err != nil {
-			LogPluginError(flowRaw.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT, err)
+			logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT, err)
+			logFlowInvalid(flowName)
 			continue
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Map "process" plugins.
 
-		for index := 0; index < len(flowRaw.Flow.Process); index++ {
-			item := flowRaw.Flow.Process[index]
+		for index := 0; index < len(flowBody.Flow.Process); index++ {
+			item := flowBody.Flow.Process[index]
 
 			var pluginId int
 			var plugin core.ProcessPlugin
@@ -296,75 +342,10 @@ func getFlow(config *viper.Viper) []*core.Flow {
 			pluginId, a := core.IsPluginId(item["id"])
 			pluginName, b := core.IsString(item["plugin"])
 			pluginParams, c := core.IsMapWithStringAsKey(item["params"])
-
 			pluginAlias, _ := core.IsString(item["alias"])
 
-			// Every plugin must have: id, plugin, params.
-			if !a || !b || !c {
-				log.WithFields(log.Fields{
-					"flow":   flowName,
-					"file":   fileName,
-					"plugin": pluginName,
-					"id":     pluginId,
-					"error":  core.ERROR_PLUGIN_PROCESS_PARAMS,
-				}).Error(core.LOG_PLUGIN_INIT)
-				break
-			}
-
-			// All "process" plugins ids must be ordered.
-			if pluginId != index {
-				log.WithFields(log.Fields{
-					"flow":   flowName,
-					"file":   fileName,
-					"plugin": pluginName,
-					"id":     pluginId,
-					"error":  core.ERROR_PLUGIN_PROCESS_ORDER,
-				}).Error(core.LOG_PLUGIN_INIT)
-				break
-			}
-
-			// Assemble plugin configuration.
-			processPluginConfig := core.PluginConfig{
-				Alias:  pluginAlias,
-				Config: config,
-				File:   fileName,
-				Flow:   flowName,
-				Hash:   flowHash,
-				ID:     pluginId,
-				Params: &pluginParams,
-			}
-
-			// Available "process" plugins.
-			switch pluginName {
-			case "dedup":
-				plugin, err = dedup.Init(&processPluginConfig)
-			case "dirname":
-				plugin, err = dirname.Init(&processPluginConfig)
-			case "expandurl":
-				plugin, err = expandurl.Init(&processPluginConfig)
-			case "fetch":
-				plugin, err = fetch.Init(&processPluginConfig)
-			case "minio":
-				plugin, err = minio.Init(&processPluginConfig)
-			case "echo":
-				plugin, err = echo.Init(&processPluginConfig)
-			case "regexpfind":
-				plugin, err = regexpfind.Init(&processPluginConfig)
-			case "regexpmatch":
-				plugin, err = regexpmatch.Init(&processPluginConfig)
-			case "regexpreplace":
-				plugin, err = regexpreplace.Init(&processPluginConfig)
-			case "unique":
-				plugin, err = unique.Init(&processPluginConfig)
-			case "webchela":
-				plugin, err = webchela.Init(&processPluginConfig)
-			case "xpath":
-				plugin, err = xpath.Init(&processPluginConfig)
-			default:
-				err = core.ERROR_PLUGIN_UNKNOWN
-			}
-
-			if err != nil {
+			// Logging.
+			logProcessPluginError := func(err error) {
 				log.WithFields(log.Fields{
 					"flow":   flowName,
 					"file":   fileName,
@@ -372,6 +353,66 @@ func getFlow(config *viper.Viper) []*core.Flow {
 					"id":     pluginId,
 					"error":  err,
 				}).Error(core.LOG_PLUGIN_INIT)
+			}
+
+			// Every plugin must have: id, plugin, params.
+			if !a || !b || !c {
+				logProcessPluginError(core.ERROR_PLUGIN_PROCESS_PARAMS)
+				break
+			}
+
+			// All "process" plugins ids must be ordered.
+			if pluginId != index {
+				logProcessPluginError(fmt.Errorf("%s: %d", core.ERROR_PLUGIN_PROCESS_ORDER, pluginId))
+				break
+			}
+
+			// Assemble plugin configuration.
+			processPluginConfig := core.PluginConfig{
+				AppConfig:    appConfig,
+				Flow:         flow,
+				PluginID:     pluginId,
+				PluginAlias:  pluginAlias,
+				PluginParams: &pluginParams,
+				PluginType:   "process",
+			}
+
+			// Available "process" plugins.
+			switch pluginName {
+			case "dedup":
+				plugin, err = dedupProcess.Init(&processPluginConfig)
+			case "dirname":
+				plugin, err = dirnameProcess.Init(&processPluginConfig)
+			case "echo":
+				plugin, err = echoProcess.Init(&processPluginConfig)
+			case "expandurl":
+				plugin, err = expandurlProcess.Init(&processPluginConfig)
+			case "fetch":
+				plugin, err = fetchProcess.Init(&processPluginConfig)
+			case "jq":
+				plugin, err = jqProcess.Init(&processPluginConfig)
+			case "minio":
+				plugin, err = minioProcess.Init(&processPluginConfig)
+			case "regexpfind":
+				plugin, err = regexpfindProcess.Init(&processPluginConfig)
+			case "regexpmatch":
+				plugin, err = regexpmatchProcess.Init(&processPluginConfig)
+			case "regexpreplace":
+				plugin, err = regexpreplaceProcess.Init(&processPluginConfig)
+			case "resty":
+				plugin, err = restyMulti.Init(&processPluginConfig)
+			case "unique":
+				plugin, err = uniqueProcess.Init(&processPluginConfig)
+			case "webchela":
+				plugin, err = webchelaProcess.Init(&processPluginConfig)
+			case "xpath":
+				plugin, err = xpathProcess.Init(&processPluginConfig)
+			default:
+				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, pluginName)
+			}
+
+			if err != nil {
+				logProcessPluginError(err)
 
 			} else {
 				processPlugins[pluginId] = plugin
@@ -380,78 +421,80 @@ func getFlow(config *viper.Viper) []*core.Flow {
 		}
 
 		// Skip flow if some "process" plugins weren't initialized.
-		if len(processPlugins) != len(flowRaw.Flow.Process) {
+		if len(processPlugins) != len(flowBody.Flow.Process) {
+			logFlowInvalid(flowName)
 			continue
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
 		// Map "output" plugin.
 
-		outputParams, b := core.IsMapWithStringAsKey(flowRaw.Flow.Output.Params)
+		outputParams, b := core.IsMapWithStringAsKey(flowBody.Flow.Output.Params)
 		if b {
 			// Assemble plugin configuration.
 			outputPluginConfig := core.PluginConfig{
-				Config: config,
-				File:   fileName,
-				Flow:   flowName,
-				Hash:   flowHash,
-				Params: &outputParams,
+				AppConfig:    appConfig,
+				Flow:         flow,
+				PluginParams: &outputParams,
+				PluginType:   "output",
 			}
 
 			// Available "output" plugins.
-			switch flowRaw.Flow.Output.Plugin {
+			switch flowBody.Flow.Output.Plugin {
 			case "kafka":
 				outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
 			case "mattermost":
 				outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
+			case "resty":
+				outputPlugin, err = restyMulti.Init(&outputPluginConfig)
 			case "slack":
 				outputPlugin, err = slackOut.Init(&outputPluginConfig)
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
 			default:
-				err = core.ERROR_PLUGIN_UNKNOWN
+				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, flowBody.Flow.Output.Plugin)
 			}
 
 			// Skip flow if we cannot initialize "output" plugin.
 			if err != nil {
-				LogPluginError(flowRaw.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
+				logInputOutputPluginError(flowBody.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT, err)
+				logFlowInvalid(flowName)
 				continue
 			}
 		}
 
-		flows = append(flows, &core.Flow{
-			Hash: flowHash,
-			UUID: flowUUID,
+		// ---------------------------------------------------------------------------------------------------------
+		// Finish flow creation.
 
-			Name:                flowName,
-			Interval:            flowInterval,
-			Number:              flowNumber,
-			InputPlugin:         inputPlugin,
-			ProcessPlugins:      processPlugins,
-			ProcessPluginsNames: processPluginsNames,
-			OutputPlugin:        outputPlugin,
-		})
+		flow.InputPlugin = inputPlugin
+		flow.ProcessPlugins = processPlugins
+		flow.ProcessPluginsNames = processPluginsNames
+		flow.OutputPlugin = outputPlugin
+
+		flows = append(flows, flow)
+
+		logFlowValid(flowName)
 	}
 
 	return flows
 }
 
-func runFlow(config *viper.Viper, flow *core.Flow) {
+func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Let's get started :)
 
 	if flow.Lock() {
 		log.WithFields(log.Fields{
-			"hash": flow.Hash,
-			"flow": flow.Name,
+			"hash": flow.FlowHash,
+			"flow": flow.FlowName,
 		}).Info(core.LOG_FLOW_START)
 
 		defer flow.Unlock()
 
 	} else {
 		log.WithFields(log.Fields{
-			"hash": flow.Hash,
-			"flow": flow.Name,
+			"hash": flow.FlowHash,
+			"flow": flow.FlowName,
 		}).Warn(core.LOG_FLOW_LOCK_WARNING)
 
 		return
@@ -460,9 +503,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Cleanup flow temp dir.
 
-	flowTempDir := filepath.Join(config.GetString(core.VIPER_DEFAULT_PLUGIN_TEMP), flow.Name)
 	cleanFlowTemp := func() {
-		_ = os.RemoveAll(flowTempDir)
+		_ = os.RemoveAll(flow.FlowTempDir)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -474,8 +516,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 	logFlowWarn := func(err error) {
 		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
+			"hash":   flow.FlowHash,
+			"flow":   flow.FlowName,
 			"plugin": flow.InputPlugin.GetName(),
 			"type":   flow.InputPlugin.GetType(),
 			"error":  err,
@@ -484,8 +526,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 	logFlowStat := func(msg interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
+			"hash":   flow.FlowHash,
+			"flow":   flow.FlowName,
 			"file":   flow.InputPlugin.GetFile(),
 			"plugin": flow.InputPlugin.GetName(),
 			"type":   flow.InputPlugin.GetType(),
@@ -495,23 +537,23 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 	logFlowStop := func() {
 		log.WithFields(log.Fields{
-			"hash": flow.Hash,
-			"flow": flow.Name,
+			"hash": flow.FlowHash,
+			"flow": flow.FlowName,
 		}).Info(core.LOG_FLOW_STOP)
 	}
 
 	log.WithFields(log.Fields{
-		"hash":   flow.Hash,
-		"flow":   flow.Name,
+		"hash":   flow.FlowHash,
+		"flow":   flow.FlowName,
 		"plugin": flow.InputPlugin.GetName(),
 		"type":   flow.InputPlugin.GetType(),
 	}).Info(core.LOG_FLOW_RECEIVE)
 
 	// Get data.
-	inputData, err := flow.InputPlugin.Recv()
+	inputData, err := flow.InputPlugin.Receive()
 	logFlowStat(len(inputData))
 
-	// Process data if some of flow sources are expired/failed.
+	// Process data if flow sources are expired/failed.
 	// Skip flow if we have other problems.
 	if err == core.ERROR_FLOW_EXPIRE {
 		atomic.AddInt32(&flow.MetricExpire, 1)
@@ -545,8 +587,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 	if len(flow.ProcessPlugins) > 0 {
 		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
+			"hash":   flow.FlowHash,
+			"flow":   flow.FlowName,
 			"plugin": flow.ProcessPluginsNames,
 			"type":   "process",
 		}).Info(core.LOG_FLOW_PROCESS)
@@ -563,7 +605,7 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 			// 1. It's the first "process" plugin on the list.
 			// 2 "require" is not set for plugin.
 			if index == 0 || len(require) == 0 {
-				result, err = plugin.Do(inputData)
+				result, err = plugin.Process(inputData)
 			} else {
 				// Combine datasets from required process plugins.
 				var combined = make([]*core.DataItem, 0)
@@ -578,18 +620,18 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 					}
 				}
 
-				result, err = plugin.Do(combined)
+				result, err = plugin.Process(combined)
 			}
 
 			// Skip flow if we have problems with data processing.
 			if err != nil {
 				log.WithFields(log.Fields{
-					"hash":   flow.Hash,
-					"flow":   flow.Name,
+					"hash":   flow.FlowHash,
+					"flow":   flow.FlowName,
 					"file":   plugin.GetFile(),
 					"plugin": plugin.GetName(),
 					"type":   plugin.GetType(),
-					"id":     plugin.GetId(),
+					"id":     plugin.GetID(),
 					"alias":  plugin.GetAlias(),
 					"error":  err,
 				}).Warn(core.LOG_FLOW_WARN)
@@ -600,12 +642,12 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 			} else {
 				log.WithFields(log.Fields{
-					"hash":   flow.Hash,
-					"flow":   flow.Name,
+					"hash":   flow.FlowHash,
+					"flow":   flow.FlowName,
 					"file":   plugin.GetFile(),
 					"plugin": plugin.GetName(),
 					"type":   plugin.GetType(),
-					"id":     plugin.GetId(),
+					"id":     plugin.GetID(),
 					"alias":  plugin.GetAlias(),
 					"data":   len(result),
 				}).Debug(core.LOG_FLOW_STAT)
@@ -622,8 +664,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 		logFlowWarn = func(err error) {
 			log.WithFields(log.Fields{
-				"hash":   flow.Hash,
-				"flow":   flow.Name,
+				"hash":   flow.FlowHash,
+				"flow":   flow.FlowName,
 				"plugin": flow.OutputPlugin.GetName(),
 				"type":   flow.OutputPlugin.GetType(),
 				"error":  err,
@@ -632,8 +674,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 
 		logFlowStat = func(msg interface{}) {
 			log.WithFields(log.Fields{
-				"hash":   flow.Hash,
-				"flow":   flow.Name,
+				"hash":   flow.FlowHash,
+				"flow":   flow.FlowName,
 				"file":   flow.OutputPlugin.GetFile(),
 				"plugin": flow.OutputPlugin.GetName(),
 				"type":   flow.OutputPlugin.GetType(),
@@ -642,8 +684,8 @@ func runFlow(config *viper.Viper, flow *core.Flow) {
 		}
 
 		log.WithFields(log.Fields{
-			"hash":   flow.Hash,
-			"flow":   flow.Name,
+			"hash":   flow.FlowHash,
+			"flow":   flow.FlowName,
 			"plugin": flow.OutputPlugin.GetName(),
 			"type":   flow.OutputPlugin.GetType(),
 		}).Info(core.LOG_FLOW_SEND)

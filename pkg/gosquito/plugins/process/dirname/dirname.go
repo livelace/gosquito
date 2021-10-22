@@ -1,4 +1,4 @@
-package dirname
+package dirnameProcess
 
 import (
 	"fmt"
@@ -12,25 +12,6 @@ const (
 	DEFAULT_DEPTH = 1
 )
 
-type Plugin struct {
-	Hash string
-	Flow string
-
-	ID    int
-	Alias string
-
-	File string
-	Name string
-	Type string
-
-	Include bool
-	Require []int
-
-	Depth  int
-	Input  []string
-	Output []string
-}
-
 func getDirName(p string, d int) string {
 	if p == "/" || p == "." || d == 0 {
 		return p
@@ -39,50 +20,39 @@ func getDirName(p string, d int) string {
 	return getDirName(filepath.Dir(p), d-1)
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
+type Plugin struct {
+	Flow *core.Flow
 
-	if len(data) == 0 {
-		return temp, nil
-	}
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
 
-	// Iterate over data items (articles, tweets etc.).
-	for _, item := range data {
-
-		for index, input := range p.Input {
-			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.Output[index])
-
-			for i := 0; i < ri.Len(); i++ {
-				dir := getDirName(ri.Index(i).String(), p.Depth)
-				ro.Set(reflect.Append(ro, reflect.ValueOf(dir)))
-			}
-		}
-	}
-
-	return temp, nil
+	OptionInclude bool
+	OptionRequire []int
+	OptionDepth   int
+	OptionInput   []string
+	OptionOutput  []string
 }
 
-func (p *Plugin) GetId() int {
-	return p.ID
+func (p *Plugin) GetID() int {
+	return p.PluginID
 }
 
 func (p *Plugin) GetAlias() string {
-	return p.Alias
+	return p.PluginAlias
 }
 
 func (p *Plugin) GetFile() string {
-	return p.File
+	return p.Flow.FlowFile
 }
 
 func (p *Plugin) GetName() string {
-	return p.Name
+	return p.PluginName
 }
 
 func (p *Plugin) GetType() string {
-	return p.Type
+	return p.PluginType
 }
 
 func (p *Plugin) GetInclude() bool {
@@ -93,19 +63,41 @@ func (p *Plugin) GetRequire() []int {
 	return []int{0}
 }
 
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
+	temp := make([]*core.DataItem, 0)
+
+	if len(data) == 0 {
+		return temp, nil
+	}
+
+	// Iterate over data items (articles, tweets etc.).
+	for _, item := range data {
+
+		for index, input := range p.OptionInput {
+			// Reflect "input" plugin data fields.
+			// Error ignored because we always checks fields during plugin init.
+			ri, _ := core.ReflectDataField(item, input)
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+
+			for i := 0; i < ri.Len(); i++ {
+				dir := getDirName(ri.Index(i).String(), p.OptionDepth)
+				ro.Set(reflect.Append(ro, reflect.ValueOf(dir)))
+			}
+		}
+	}
+
+	return temp, nil
+}
+
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "dirname",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "dirname",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -125,11 +117,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
@@ -140,41 +132,41 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setDepth := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["depth"] = 0
-			plugin.Depth = v
+			plugin.OptionDepth = v
 		}
 	}
 	setDepth(DEFAULT_DEPTH)
-	setDepth((*pluginConfig.Params)["depth"])
-	showParam("depth", plugin.Depth)
+	setDepth((*pluginConfig.PluginParams)["depth"])
+	showParam("depth", plugin.OptionDepth)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
-				plugin.Input = v
+				plugin.OptionInput = v
 			}
 		}
 	}
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -182,11 +174,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// input and output must have equal size.
-	if len(plugin.Input) != len(plugin.Output) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output)
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

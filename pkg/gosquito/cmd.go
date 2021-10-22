@@ -78,20 +78,20 @@ func RunApp() {
 	log.Info(fmt.Sprintf("%s %s", core.APP_NAME, core.APP_VERSION))
 
 	// Get user config.
-	config := core.GetConfig()
+	appConfig := core.GetAppConfig()
 
 	// Set maximum number of threads.
-	runtime.GOMAXPROCS(config.GetInt(core.VIPER_DEFAULT_PROC_NUM))
+	runtime.GOMAXPROCS(appConfig.GetInt(core.VIPER_DEFAULT_PROC_NUM))
 
 	// Set log level.
-	ll, _ := log.ParseLevel(config.GetString(core.VIPER_DEFAULT_LOG_LEVEL))
+	ll, _ := log.ParseLevel(appConfig.GetString(core.VIPER_DEFAULT_LOG_LEVEL))
 	log.SetLevel(ll)
 
 	// Metrics.
 	go func() {
 		http.Handle("/", promhttp.Handler())
 		http.Handle("/metrics", promhttp.Handler())
-		err := http.ListenAndServe(config.GetString(core.VIPER_DEFAULT_EXPORTER_LISTEN), nil)
+		err := http.ListenAndServe(appConfig.GetString(core.VIPER_DEFAULT_EXPORTER_LISTEN), nil)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
@@ -102,7 +102,7 @@ func RunApp() {
 	}()
 
 	// Get user-defined flows.
-	flows := getFlow(config)
+	flows := getFlow(appConfig)
 	flowsStates := make(map[uuid.UUID]time.Time, len(flows))
 
 	if len(flows) > 0 {
@@ -110,20 +110,23 @@ func RunApp() {
 			currentTime := time.Now()
 
 			for _, flow := range flows {
-				lastTime := flowsStates[flow.UUID]
+				lastTime := flowsStates[flow.FlowUUID]
 
-				if (currentTime.Unix()-lastTime.Unix()) > flow.Interval && flow.GetNumber() < flow.Number {
-					flowsStates[flow.UUID] = currentTime
-					go runFlow(config, flow)
+				// 1. run flow if conditions (time, instance number) are met.
+				// 2. update metrics if there are no running flow instances.
+				if (currentTime.Unix()-lastTime.Unix()) > flow.FlowInterval && flow.GetNumber() < flow.FlowNumber {
+					flowsStates[flow.FlowUUID] = currentTime
+					go runFlow(flow)
 
 				} else if flow.GetNumber() == 0 {
-					// Process plugins might not be set.
+
+					// Input plugin is strictly mandatory.
+					// Process/output plugins might not be set.
 					processPlugins := make([]string, 0)
 					if len(flow.ProcessPlugins) > 0 {
 						processPlugins = flow.ProcessPluginsNames
 					}
 
-					// Output plugin might not be set.
 					outputPlugin := ""
 					outputValues := make([]string, 0)
 					if flow.OutputPlugin != nil {
@@ -131,9 +134,10 @@ func RunApp() {
 						outputValues = flow.OutputPlugin.GetOutput()
 					}
 
+					// Update flow metrics.
 					labels := prometheus.Labels{
-						"flow":            flow.Name,
-						"hash":            flow.Hash,
+						"flow":            flow.FlowName,
+						"hash":            flow.FlowHash,
 						"input_plugin":    flow.InputPlugin.GetName(),
 						"input_values":    fmt.Sprintf("%v", flow.InputPlugin.GetInput()),
 						"process_plugins": fmt.Sprintf("%v", processPlugins),
@@ -156,7 +160,7 @@ func RunApp() {
 
 	} else {
 		log.WithFields(log.Fields{
-			"path": config.GetString(core.VIPER_DEFAULT_FLOW_CONF),
+			"path": appConfig.GetString(core.VIPER_DEFAULT_FLOW_CONF),
 		}).Error(core.ERROR_NO_VALID_FLOW)
 
 		os.Exit(1)

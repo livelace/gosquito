@@ -1,4 +1,4 @@
-package xpath
+package xpathProcess
 
 import (
 	"fmt"
@@ -17,29 +17,6 @@ const (
 	DEFAULT_XPATH_SEPARATOR = "\n"
 )
 
-type Plugin struct {
-	Hash string
-	Flow string
-
-	ID    int
-	Alias string
-
-	File string
-	Name string
-	Type string
-
-	Include bool
-	Require []int
-
-	FindAll        bool
-	Input          []string
-	Output         []string
-	Xpath          [][]string
-	XpathHtml      bool
-	XpathHtmlSelf  bool
-	XpathSeparator string
-}
-
 func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	var doc *html.Node
 	var err error
@@ -48,12 +25,12 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 
 	logError := func(data string, err error) {
 		log.WithFields(log.Fields{
-			"hash":   p.Hash,
-			"flow":   p.Flow,
-			"file":   p.File,
-			"plugin": p.Name,
-			"type":   p.Type,
-			"id":     p.ID,
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"id":     p.PluginID,
 			"data":   data,
 			"error":  err,
 		}).Error(core.LOG_PLUGIN_DATA)
@@ -73,11 +50,11 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 
 			if err == nil {
 				for _, node := range nodes {
-					if p.XpathHtml {
+					if p.OptionXpathHtml {
 						temp += fmt.Sprintf(
-							"%s%s", htmlquery.OutputHTML(node, p.XpathHtmlSelf), p.XpathSeparator)
+							"%s%s", htmlquery.OutputHTML(node, p.OptionXpathHtmlSelf), p.OptionXpathSeparator)
 					} else {
-						temp += fmt.Sprintf("%s%s", htmlquery.InnerText(node), p.XpathSeparator)
+						temp += fmt.Sprintf("%s%s", htmlquery.InnerText(node), p.OptionXpathSeparator)
 					}
 				}
 			} else {
@@ -94,7 +71,54 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	return temp, len(temp) > 0
 }
 
-func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
+type Plugin struct {
+	Flow *core.Flow
+
+	PluginID    int
+	PluginAlias string
+	PluginName  string
+	PluginType  string
+
+	OptionFindAll        bool
+	OptionInclude        bool
+	OptionInput          []string
+	OptionOutput         []string
+	OptionRequire        []int
+	OptionXpath          [][]string
+	OptionXpathHtml      bool
+	OptionXpathHtmlSelf  bool
+	OptionXpathSeparator string
+}
+
+func (p *Plugin) GetID() int {
+	return p.PluginID
+}
+
+func (p *Plugin) GetAlias() string {
+	return p.PluginAlias
+}
+
+func (p *Plugin) GetFile() string {
+	return p.Flow.FlowFile
+}
+
+func (p *Plugin) GetName() string {
+	return p.PluginName
+}
+
+func (p *Plugin) GetType() string {
+	return p.PluginType
+}
+
+func (p *Plugin) GetInclude() bool {
+	return false
+}
+
+func (p *Plugin) GetRequire() []int {
+	return []int{0}
+}
+
+func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
 
 	if len(data) == 0 {
@@ -103,20 +127,20 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		found := make([]bool, len(p.Input))
+		found := make([]bool, len(p.OptionInput))
 
-		for index, input := range p.Input {
+		for index, input := range p.OptionInput {
 			var ro reflect.Value
 
 			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
+			// Error ignored because we always check fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
-			ro, _ = core.ReflectDataField(item, p.Output[index])
+			ro, _ = core.ReflectDataField(item, p.OptionOutput[index])
 
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if s, b := findXpath(p, p.Xpath[index], ri.String()); b {
+				if s, b := findXpath(p, p.OptionXpath[index], ri.String()); b {
 					found[index] = true
 					ro.SetString(s)
 				} else {
@@ -126,7 +150,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 				somethingWasFound := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if s, b := findXpath(p, p.Xpath[index], ri.Index(i).String()); b {
+					if s, b := findXpath(p, p.OptionXpath[index], ri.Index(i).String()); b {
 						somethingWasFound = true
 						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
 					} else {
@@ -150,7 +174,7 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 			}
 		}
 
-		if (p.FindAll && foundInAllInputs) || (!p.FindAll && foundInSomeInputs) {
+		if (p.OptionFindAll && foundInAllInputs) || (!p.OptionFindAll && foundInSomeInputs) {
 			temp = append(temp, item)
 		}
 	}
@@ -158,47 +182,15 @@ func (p *Plugin) Do(data []*core.DataItem) ([]*core.DataItem, error) {
 	return temp, nil
 }
 
-func (p *Plugin) GetId() int {
-	return p.ID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.Alias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.File
-}
-
-func (p *Plugin) GetName() string {
-	return p.Name
-}
-
-func (p *Plugin) GetType() string {
-	return p.Type
-}
-
-func (p *Plugin) GetInclude() bool {
-	return false
-}
-
-func (p *Plugin) GetRequire() []int {
-	return []int{0}
-}
-
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Hash: pluginConfig.Hash,
-		Flow: pluginConfig.Flow,
-
-		ID:    pluginConfig.ID,
-		Alias: pluginConfig.Alias,
-
-		File: pluginConfig.File,
-		Name: "xpath",
-		Type: "process",
+		Flow:        pluginConfig.Flow,
+		PluginID:    pluginConfig.PluginID,
+		PluginAlias: pluginConfig.PluginAlias,
+		PluginName:  "xpath",
+		PluginType:  pluginConfig.PluginType,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -224,11 +216,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	showParam := func(p string, v interface{}) {
 		log.WithFields(log.Fields{
-			"hash":   plugin.Hash,
-			"flow":   plugin.Flow,
-			"file":   plugin.File,
-			"plugin": plugin.Name,
-			"type":   plugin.Type,
+			"hash":   plugin.Flow.FlowHash,
+			"flow":   plugin.Flow.FlowName,
+			"file":   plugin.Flow.FlowFile,
+			"plugin": plugin.PluginName,
+			"type":   plugin.PluginType,
 			"value":  fmt.Sprintf("%s: %v", p, v),
 		}).Debug(core.LOG_SET_VALUE)
 	}
@@ -239,104 +231,104 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFindAll := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["find_all"] = 0
-			plugin.FindAll = v
+			plugin.OptionFindAll = v
 		}
 	}
 	setFindAll(DEFAULT_FIND_ALL)
-	setFindAll((*pluginConfig.Params)["find_all"])
-	showParam("find_all", plugin.FindAll)
+	setFindAll((*pluginConfig.PluginParams)["find_all"])
+	showParam("find_all", plugin.OptionFindAll)
 
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["include"] = 0
-			plugin.Include = v
+			plugin.OptionInclude = v
 		}
 	}
-	setInclude(pluginConfig.Config.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
-	setInclude((*pluginConfig.Params)["include"])
-	showParam("include", plugin.Include)
+	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+	setInclude((*pluginConfig.PluginParams)["include"])
+	showParam("include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["input"] = 0
-			plugin.Input = v
+			plugin.OptionInput = v
 		}
 	}
-	setInput((*pluginConfig.Params)["input"])
-	showParam("input", plugin.Input)
+	setInput((*pluginConfig.PluginParams)["input"])
+	showParam("input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			if err := core.IsDataFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
-				plugin.Output = v
+				plugin.OptionOutput = v
 			}
 		}
 	}
-	setOutput((*pluginConfig.Params)["output"])
-	showParam("output", plugin.Output)
+	setOutput((*pluginConfig.PluginParams)["output"])
+	showParam("output", plugin.OptionOutput)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
-			plugin.Require = v
+			plugin.OptionRequire = v
 
 		}
 	}
-	setRequire((*pluginConfig.Params)["require"])
-	showParam("require", plugin.Require)
+	setRequire((*pluginConfig.PluginParams)["require"])
+	showParam("require", plugin.OptionRequire)
 
 	// xpath.
 	setXpath := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
 			availableParams["xpath"] = 0
-			plugin.Xpath = core.ExtractXpathsIntoArrays(pluginConfig.Config, v)
+			plugin.OptionXpath = core.ExtractXpathsIntoArrays(pluginConfig.AppConfig, v)
 		}
 	}
-	setXpath((*pluginConfig.Params)["xpath"])
-	showParam("xpath", plugin.Xpath)
+	setXpath((*pluginConfig.PluginParams)["xpath"])
+	showParam("xpath", plugin.OptionXpath)
 
 	// xpath_html.
 	setXpathHtml := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["xpath_html"] = 0
-			plugin.XpathHtml = v
+			plugin.OptionXpathHtml = v
 		}
 	}
 	setXpathHtml(DEFAULT_XPATH_HTML)
-	setXpathHtml((*pluginConfig.Params)["xpath_html"])
-	showParam("xpath_html", plugin.XpathHtml)
+	setXpathHtml((*pluginConfig.PluginParams)["xpath_html"])
+	showParam("xpath_html", plugin.OptionXpathHtml)
 
 	// xpath_html_self.
 	setXpathHtmlSelf := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
 			availableParams["xpath_html_self"] = 0
-			plugin.XpathHtmlSelf = v
+			plugin.OptionXpathHtmlSelf = v
 		}
 	}
 	setXpathHtmlSelf(DEFAULT_XPATH_HTML_SELF)
-	setXpathHtmlSelf((*pluginConfig.Params)["xpath_html_self"])
-	showParam("xpath_html_self", plugin.XpathHtmlSelf)
+	setXpathHtmlSelf((*pluginConfig.PluginParams)["xpath_html_self"])
+	showParam("xpath_html_self", plugin.OptionXpathHtmlSelf)
 
 	// xpath_separator.
 	setXpathSeparator := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["xpath_separator"] = 0
-			plugin.XpathSeparator = v
+			plugin.OptionXpathSeparator = v
 		}
 	}
 	setXpathSeparator(DEFAULT_XPATH_SEPARATOR)
-	setXpathSeparator((*pluginConfig.Params)["xpath_separator"])
-	showParam("xpath_separator", plugin.XpathSeparator)
+	setXpathSeparator((*pluginConfig.PluginParams)["xpath_separator"])
+	showParam("xpath_separator", plugin.OptionXpathSeparator)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
-	if err := core.CheckPluginParams(&availableParams, pluginConfig.Params); err != nil {
+	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
 
@@ -347,7 +339,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// 2. "input, output" values must have equal types.
 	minLength := 10000
 	maxLength := 0
-	lengths := []int{len(plugin.Input), len(plugin.Output), len(plugin.Xpath)}
+	lengths := []int{len(plugin.OptionInput), len(plugin.OptionOutput), len(plugin.OptionXpath)}
 
 	for _, length := range lengths {
 		if length > maxLength {
@@ -360,14 +352,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if minLength != maxLength {
 		return &Plugin{}, fmt.Errorf(
-			"%s: %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.Input, plugin.Output, plugin.Xpath)
+			"%s: %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
 
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.Input, &plugin.Output); err != nil {
+	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 
 	} else {
-		core.SliceStringToUpper(&plugin.Input)
-		core.SliceStringToUpper(&plugin.Output)
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	return &plugin, nil
