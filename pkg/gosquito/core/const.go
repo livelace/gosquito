@@ -116,7 +116,7 @@ const (
 #flow_disable            = ["flow1", "flow2", "flow3"]
 #flow_enable             = ["flow1", "flow2", "flow3"]
 
-# How many flows may run in parallel.
+# How many flows may run in parallel (0 - no limits).
 #flow_limit              = 0
 
 # Default number of flow instances.
