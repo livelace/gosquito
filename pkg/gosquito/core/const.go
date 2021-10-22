@@ -17,13 +17,15 @@ const (
 	DEFAULT_EXPORTER_LISTEN       = ":8080"
 	DEFAULT_FLOW_CONF_DIR         = "conf"
 	DEFAULT_FLOW_DATA_DIR         = "data"
+	DEFAULT_FLOW_INSTANCE         = 1
 	DEFAULT_FLOW_INTERVAL         = "5m"
-	DEFAULT_FLOW_NUMBER           = 1
+	DEFAULT_FLOW_LIMIT            = 0
 	DEFAULT_FORCE_INPUT           = false
 	DEFAULT_FORCE_COUNT           = 100
 	DEFAULT_LOG_LEVEL             = "INFO"
 	DEFAULT_LOG_TIME_FORMAT       = "02.01.2006 15:04:05.000"
 	DEFAULT_LOOP_SLEEP            = 300
+	DEFAULT_MIN_COUNTER           = int64(1000000000)
 	DEFAULT_PLUGIN_INCLUDE        = true
 	DEFAULT_PLUGIN_TIMEOUT        = 60
 	DEFAULT_STATE_DIR             = "state"
@@ -65,8 +67,9 @@ const (
 	VIPER_DEFAULT_FLOW_DATA             = "default.flow_data"
 	VIPER_DEFAULT_FLOW_DISABLE          = "default.flow_disable"
 	VIPER_DEFAULT_FLOW_ENABLE           = "default.flow_enable"
+	VIPER_DEFAULT_FLOW_INSTANCE         = "default.flow_instance"
 	VIPER_DEFAULT_FLOW_INTERVAL         = "default.flow_interval"
-	VIPER_DEFAULT_FLOW_NUMBER           = "default.flow_number"
+	VIPER_DEFAULT_FLOW_LIMIT            = "default.flow_limit"
 	VIPER_DEFAULT_LOG_LEVEL             = "default.log_level"
 	VIPER_DEFAULT_PLUGIN_INCLUDE        = "default.plugin_include"
 	VIPER_DEFAULT_PLUGIN_TIMEOUT        = "default.plugin_timeout"
@@ -113,7 +116,13 @@ const (
 #flow_disable            = ["flow1", "flow2", "flow3"]
 #flow_enable             = ["flow1", "flow2", "flow3"]
 
-# How often flows run.
+# How many flows may run in parallel.
+#flow_limit              = 0
+
+# Default number of flow instances.
+#flow_instance           = 1
+
+# How often flow run.
 #flow_interval           = "5m"
 
 #log_level               = "DEBUG"

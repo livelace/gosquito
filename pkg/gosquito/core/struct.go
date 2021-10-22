@@ -58,8 +58,8 @@ type PluginConfig struct {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type Flow struct {
-	m      sync.Mutex
-	number int
+	m        sync.Mutex
+	instance int
 
 	FlowUUID uuid.UUID
 	FlowHash string
@@ -70,8 +70,8 @@ type Flow struct {
 	FlowStateDir string
 	FlowTempDir  string
 
+	FlowInstance int
 	FlowInterval int64
-	FlowNumber   int
 
 	InputPlugin         InputPlugin
 	ProcessPlugins      map[int]ProcessPlugin
@@ -85,8 +85,8 @@ type Flow struct {
 	MetricSend    int32
 }
 
-func (f *Flow) GetNumber() int {
-	return f.number
+func (f *Flow) GetInstance() int {
+	return f.instance
 }
 
 func (f *Flow) ResetMetric() {
@@ -101,8 +101,8 @@ func (f *Flow) Lock() bool {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	if f.number == 0 || f.number < f.FlowNumber {
-		f.number += 1
+	if f.instance == 0 || f.instance < f.FlowInstance {
+		f.instance += 1
 		return true
 	} else {
 		return false
@@ -113,10 +113,10 @@ func (f *Flow) Unlock() bool {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	if f.number <= 0 {
+	if f.instance <= 0 {
 		return false
 	} else {
-		f.number -= 1
+		f.instance -= 1
 		return true
 	}
 }

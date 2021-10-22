@@ -129,8 +129,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		var flowHash = core.GenFlowHash()
 		var flowName string
 
+		var flowInstance int
 		var flowInterval int64
-		var flowNumber int
 
 		var flowParams map[string]interface{}
 
@@ -246,6 +246,15 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			continue
 		}
 
+		// Set flow instance limit.
+		if v, b := core.IsInt(flowParams["instance"]); b {
+			flowInstance = v
+			logFlowParam("instance", v)
+		} else {
+			flowInstance = appConfig.GetInt(core.VIPER_DEFAULT_FLOW_INSTANCE)
+			logFlowParam("instance", flowInstance)
+		}
+
 		// Set flow interval.
 		if v, b := core.IsInterval(flowParams["interval"]); b {
 			flowInterval = v
@@ -253,15 +262,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		} else {
 			flowInterval, _ = core.IsInterval(appConfig.GetString(core.VIPER_DEFAULT_FLOW_INTERVAL))
 			logFlowParam("interval", flowInterval)
-		}
-
-		// Set flow number limit.
-		if v, b := core.IsInt(flowParams["number"]); b {
-			flowNumber = v
-			logFlowParam("number", v)
-		} else {
-			flowNumber = appConfig.GetInt(core.VIPER_DEFAULT_FLOW_NUMBER)
-			logFlowParam("number", flowNumber)
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
@@ -277,8 +277,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			FlowStateDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_STATE_DIR),
 			FlowTempDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_TEMP_DIR),
 
+			FlowInstance: flowInstance,
 			FlowInterval: flowInterval,
-			FlowNumber:   flowNumber,
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
@@ -754,9 +754,7 @@ func runFlow(flow *core.Flow) {
 	// Cleanup at the end.
 
 	cleanFlowTemp()
+	logFlowStop()
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Fin.
-
-	logFlowStop()
 }
