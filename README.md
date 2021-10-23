@@ -3,14 +3,10 @@
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data
 gathering, data processing and data transmitting to various destinations. 
-Main goal is to replace various in-house automated tasks and move those tasks at the edge.
+Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge.
 
 <img align="right" src="assets/gosquito.png">
 
-
-
-To replace various in-house automated tasks for data gathering with
-single tool.
 
 ### Features:
 
