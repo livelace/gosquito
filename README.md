@@ -24,7 +24,7 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Send only new data or send all fetched data every time.
 * Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela) [plugin](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md).
 
-
+<br>br><br>
 
 ### Input plugins:
 
