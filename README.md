@@ -38,13 +38,13 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 | [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                   | Deduplicate data items by UUID.                                                          |
 | [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                     | Echoing processing data.                                                                 |
 | [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)           | Expand short URLs.                                                                       |
-| [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                   | Fetch remote data with.                                                                  |
+| [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                   | Fetch remote data.                                                                  |
 | [jq](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/jq.md)                         | Extract JSON elements.                                                                   |
 | [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                   | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                        |
 | [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)         | Find patters in data.                                                                    |
 | [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)       | Match data by patterns.                                                                  |
 | [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md)   | Replace patterns in data.                                                                |
-| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/resty.md)                   | Perform REST requests.                                                                   |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/resty.md)                   | Perform REST queries.                                                                   |
 | [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)                 | Get unique values from data.                                                             |
 | [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)             | Interact with web pages (Firefox and Chrome).                                            |
 | [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                   | Extract HTML elements.                                                                   |
