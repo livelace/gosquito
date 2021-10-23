@@ -135,7 +135,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				somethingWasFound := false
 
 				for i := 0; i < ri.Len(); i++ {
-					result, err := applyQueryToText(p.OptionQuery[index], ri.String())
+					result, err := applyQueryToText(p.OptionQuery[index], ri.Index(i).String())
 					if err != nil {
 						logQueryError(p, err)
 					}
