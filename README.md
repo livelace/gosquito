@@ -5,9 +5,6 @@
 gathering, data processing and data transmitting to various destinations. 
 Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge.
 
-<img align="right" src="assets/gosquito.png">
-
-
 ### Main features:
 
 * Pluggable architecture. Data processing organized as chains of plugins.
@@ -17,6 +14,8 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Consider data as new by configurable signature (data timestamp by default).
 * Dependencies between process plugins. Plugin "B" will process data only if plugin "A" derived some data.
 * Export metrics to [Prometheus](https://prometheus.io/).
+
+<img align="right" src="assets/gosquito.png">
 
 <br><br><br><br><br><br>
 
