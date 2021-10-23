@@ -17,7 +17,9 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Dependencies between process plugins. Plugin "B" will process data only if plugin "A" derived some data.
 * Export metrics to [Prometheus](https://prometheus.io/).
 
-<br><br><br><br><br><br>
+<br><br><br>
+<br><br><br>
+<br><br><br>
 
 ### Input plugins:
 
