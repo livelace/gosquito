@@ -25,149 +25,40 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela) [plugin](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md).
 
 
-### Build dependencies:
 
-* Kafka support: [librdkafka](https://github.com/edenhill/librdkafka)
-* Telegram support: [TDLib](https://github.com/tdlib/td)
+### Input plugins:
 
-```shell script
-go build -tags dynamic "github.com/livelace/gosquito/cmd/gosquito"
-```
+| Plugin                                                                                        | Description                                                                        |
+| :-------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------    |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/resty.md)         | [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) data source. |
+| [rss](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)             | [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feeds (text, urls) data source.      |
+| [telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)   | [Telegram](https://telegram.org/) chats (text, image, video) data source.          |
+| [twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)     | [Twitter](https://twitter.com/) tweets (media, tags, text, urls) data source.      |
 
-### AppImage dependencies:
+### Process plugins:
 
-* [FUSE](https://github.com/libfuse/libfuse)
-* [Glibc](https://www.gnu.org/software/libc/) >= 2.29 (Ubuntu 20.04)
+| Plugin                                                                                                    | Description                                                                              |
+| :-------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------- |
+| [dedup](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/dedup.md)                   | Deduplicate [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md)'s. |
+| [echo](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/echo.md)                     | Echoing processing data.                                                                 |
+| [expandurl](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/expandurl.md)           | Expand short urls.                                                                       |
+| [fetch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/fetch.md)                   | Fetch remote data.                                                                       |
+| [jq](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/jq.md)                         | Extract JSON elements with [gojq](https://github.com/itchyny/gojq).                                                                       |
+| [minio](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/minio.md)                   | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                        |
+| [regexpfind](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpfind.md)         | Find patters in data.                                                                    |
+| [regexpmatch](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpmatch.md)       | Match data by patterns.                                                                  |
+| [regexpreplace](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/regexpreplace.md)   | Replace patterns in data.                                                                |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/resty.md)                   | Perform REST requests with data.                                                         |
+| [unique](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/unique.md)                 | Remove duplicates from data.                                                             |
+| [webchela](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md)             | Interact with web pages, fetch data.                                                     |
+| [xpath](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/xpath.md)                   | Extract HTML elements with [htmlquery](https://github.com/antchfx/htmlquery).                    |
 
-### Quick start:
+### Output plugins:
 
-```shell script
-# Docker:
-user@localhost /tmp $ docker run -ti --rm ghcr.io/livelace/gosquito:v2.4.0 bash
-gosquito@fa388e89e10e ~ $ gosquito 
-INFO[03.11.2020 14:44:15.806] gosquito v2.4.0   
-INFO[03.11.2020 14:44:15.807] config init        path="/home/gosquito/.gosquito"
-ERRO[03.11.2020 14:44:15.807] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
-gosquito@fa388e89e10e ~ $
-
-# AppImage:
-user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v2.4.0/gosquito-v2.4.0.appimage" -o "/tmp/gosquito-v2.4.0.appimage" && chmod +x "/tmp/gosquito-v2.4.0.appimage"
-user@localhost ~ $ /tmp/gosquito-v2.4.0.appimage 
-INFO[04.11.2020 16:59:00.228] gosquito v2.4.0   
-INFO[04.11.2020 16:59:00.230] config init        path="/home/user/.gosquito"
-ERRO[04.11.2020 16:59:00.233] flow read          path="/home/user/.gosquito/flow/conf" error="no valid flow"
-```
-
-### Flow example ([options](https://github.com/livelace/gosquito/blob/master/docs/flow.md)):
-
-```yaml
-flow:
-  name: "flow-example"
-  params:
-    interval: "10m"
-
-  input:
-    plugin: "twitter"
-    params:
-      cred: "creds.twitter.default"
-      input: [
-          "izvestia_ru", "IA_REGNUM", "rianru", "tass_agency",
-          "AP", "BBCNews", "BBCWorld", "business", "independent"
-      ]
-      force: true
-      force_count: 10
-
-  process:
-    - id: 0
-      alias: "match russia"
-      plugin: "regexpmatch"
-      params:
-        input: ["twitter.text"]
-        regexp: ["regexps.words"]
-
-    - id: 1
-      alias: "clean text"
-      plugin: "regexpreplace"
-      params:
-        require: [0]
-        include: false
-        input:  ["twitter.text"]
-        output: ["data.text0"]
-        regexp: ["regexps.urls"]
-        replace: [""]
-
-    - id: 2
-      alias: "fetch media"
-      plugin: "fetch"
-      params:
-        require: [1]
-        include: false
-        input:  ["twitter.media"]
-        output: ["data.array0"]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.twitter.smtp.default"
-```
-
-### Config example ([options](https://github.com/livelace/gosquito/blob/master/docs/config.md)):
-
-```toml
-[default]
-
-#log_level = "DEBUG"
-time_format = "15:04 02.01.2006"
-time_zone = "Europe/Moscow"
-
-[creds.twitter.default]
-access_token = "<ACCESS_TOKEN>"
-access_secret = "<ACCESS_SECRET>"
-consumer_key = "<CONSUMER_KEY>"
-consumer_secret = "<CONSUMER_SECRET>"
-
-[regexps.urls]
-regexp = [
-  'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
-  'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
-]
-
-[regexps.words]
-regexp = [
-  "Россия", "Russia"
-]
-
-[templates.twitter.smtp.default]
-server = "mail.example.com"
-port = 25
-ssl = true
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-
-subject = "{{.DATA.TEXT0}}"
-subject_length = 150
-
-body = """
-<br>
-<div align="right"><b>{{.FLOW}}&nbsp;&nbsp;&nbsp;{{.TIMEFORMAT}}</b></div>
-{{.DATA.TEXT0}}<br><br>
-{{range .TWITTER.URLS}}{{printf "%s<br>" .}}{{end}}
-"""
-
-body_html = true
-body_length = 1000
-
-attachments = ["data.array0"]
-
-[templates.twitter.smtp.default.headers]
-x-gosquito-flow   = "flow"
-x-gosquito-plugin = "plugin"
-x-gosquito-source = "source"
-x-gosquito-time   = "time"
-x-gosquito-uuid   = "uuid"
-```
-
-### Grafana charts:
-
-![grafana](https://github.com/livelace/gosquito/blob/master/assets/grafana.png)
+| Plugin                                                                                             | Description                                                                                   |
+| :------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------                          |
+| [kafka](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/kafka.md)             | Send data to [Kafka](https://kafka.apache.org/) topics.                                       |
+| [mattermost](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/mattermost.md)   | Send data to [Mattermost](https://mattermost.org/) channels/users.                            |
+| [resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/resty.md)             | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints. |
+| [slack](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/slack.md)             | Send data to [Slack](https://slack.com) channels/users.                                       |
+| [smtp](https://github.com/livelace/gosquito/blob/master/docs/plugins/output/smtp.md)               | Send data as emails with custom attachments/headers.                                          |
