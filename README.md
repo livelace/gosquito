@@ -8,21 +8,15 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 <img align="right" src="assets/gosquito.png">
 
 
-### Features:
+### Main features:
 
-* [Pluggable](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md)
-  architecture.
-  [Data processing](https://github.com/livelace/gosquito/blob/master/docs/data.md)
-  organized as chains of plugins.
-* Flow approach. Flow consists of: input plugin (grab), process plugins (transform/enrich), output
+* Pluggable architecture. Data processing organized as chains of plugins.
+* Flow approach. Flow consists of: input plugin (receive), process plugins (filter/transform), output
   plugin (send).
-* Plugins dependencies. Plugin "B" will process data only if plugin "A"
-  derived some data.
-* Include/exclude data from all or specific [plugins](https://github.com/livelace/gosquito/blob/master/docs/plugins/plugins.md).
 * Declarative YAML configurations with templates support.
-* Export flow statistics to [Prometheus](https://prometheus.io/).
-* Send only new data or send all fetched data every time.
-* Fetch a fully initialized web page with [Webchela](https://github.com/livelace/webchela) [plugin](https://github.com/livelace/gosquito/blob/master/docs/plugins/process/webchela.md).
+* Consider data as new by configurable signature (data timestamp by default).
+* Dependencies between process plugins. Plugin "B" will process data only if plugin "A" derived some data.
+* Export metrics to [Prometheus](https://prometheus.io/).
 
 <br><br><br><br><br><br>
 
