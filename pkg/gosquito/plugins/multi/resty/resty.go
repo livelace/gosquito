@@ -201,10 +201,30 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		return temp, nil
 	}
 
-	// perform request func.
-	makeRequest := func(body string) (*resty.Response, error) {
+	// Perform request func.
+	makeRequest := func(item *core.DataItem) (*resty.Response, error) {
 		var resp *resty.Response
 		var err error
+
+		// Format body.
+		body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
+		if err != nil {
+			return resp, err
+		}
+
+		// Format headers.
+		headers, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionHeadersTemplate)
+		if err != nil {
+			return resp, err
+		}
+		p.RestyClient.SetHeaders(headers)
+
+		// Format params.
+		params, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionParamsTemplate)
+		if err != nil {
+			return resp, err
+		}
+		p.RestyClient.SetQueryParams(params)
 
 		switch p.OptionMethod {
 		case "GET":
@@ -215,57 +235,50 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			break
 		}
 
+		if err == nil {
+			logResponseDebug(p, p.OptionTarget, resp)
+		} else {
+			logResponseError(p, p.OptionTarget, err)
+		}
+
 		return resp, err
 	}
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		// Format body.
-		body, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
-		if err != nil {
-			return temp, err
-		}
 
-		// Format headers.
-		headers, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionHeadersTemplate)
-		if err != nil {
-			return temp, err
-		}
-		p.RestyClient.SetHeaders(headers)
+		for index, input := range p.OptionInput {
+			ri, _ := core.ReflectDataField(item, input)
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
-		// Format params.
-		params, err := core.ExtractTemplateMapIntoStringMap(item, p.OptionParamsTemplate)
-		if err != nil {
-			return temp, err
-		}
-		p.RestyClient.SetQueryParams(params)
+			switch ri.Kind() {
+			case reflect.String:
+				item.ITER.INDEX = 0
+				item.ITER.VALUE = ri.String()
 
-		// Perform request.
-		if len(p.OptionOutput) > 0 {
-			for _, output := range p.OptionOutput {
-				ro, _ := core.ReflectDataField(item, output)
-				resp, err := makeRequest(body)
+				resp, err := makeRequest(item)
 
 				if err == nil {
 					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
-					logResponseDebug(p, p.OptionTarget, resp)
 				} else {
 					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
-					logResponseError(p, p.OptionTarget, err)
+				}
+
+			case reflect.Slice:
+				for i := 0; i < ri.Len(); i++ {
+					item.ITER.INDEX = i
+					item.ITER.VALUE = ri.Index(i).String()
+
+					resp, err := makeRequest(item)
+
+					if err == nil {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
+					} else {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
+					}
 				}
 			}
-
-		} else {
-			resp, err := makeRequest(body)
-
-			if err == nil {
-				logResponseDebug(p, p.OptionTarget, resp)
-			} else {
-				logResponseError(p, p.OptionTarget, err)
-			}
 		}
-
-		temp = append(temp, item)
 	}
 
 	return temp, nil
@@ -594,7 +607,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["match_ttl"] = -1
 		break
 	case "process":
-		availableParams["output"] = -1
+		availableParams["input"] = 1
+		availableParams["output"] = 1
 		availableParams["target"] = 1
 		break
 	case "output":
@@ -744,6 +758,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		break
 
 	case "process":
+		// input.
+		setInput := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["input"] = 0
+				plugin.OptionInput = v
+			}
+		}
+		setInput((*pluginConfig.PluginParams)["input"])
+		showParam("input", plugin.OptionInput)
+
 		// output.
 		setOutput := func(p interface{}) {
 			if v, b := core.IsSliceOfString(p); b {
@@ -963,6 +987,25 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Additional checks.
+
+	// 1. "input, output" must have equal size.
+	// 2. "input, output" values must have equal types.
+
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+		return &Plugin{}, fmt.Errorf(
+			"%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+
+	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		return &Plugin{}, err
+
+	} else {
+		core.SliceStringToUpper(&plugin.OptionInput)
+		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

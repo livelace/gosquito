@@ -171,6 +171,11 @@ type Data struct {
 	TEXT9  string
 }
 
+type Iter struct {
+	INDEX int
+	VALUE string
+}
+
 type RestyData struct {
 	BODY       string
 	PROTO      string
@@ -219,6 +224,7 @@ type DataItem struct {
 	UUID       uuid.UUID
 
 	DATA     Data
+	ITER     Iter
 	RESTY    RestyData
 	RSS      RssData
 	TELEGRAM TelegramData
