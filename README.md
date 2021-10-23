@@ -2,15 +2,7 @@
 
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data
-gathering from different sources
-([RSS](https://en.wikipedia.org/wiki/RSS),
-[Twitter](https://twitter.com), [Telegram](https://telegram.org/) etc.),
-data processing (fetch, [minio](https://min.io/), regexp,
-[webchela](https://github.com/livelace/webchela) etc.) and data
-transmitting to various destinations
-([SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol),
-[Mattermost](https://mattermost.org/),
-[Kafka](https://kafka.apache.org/) etc.).
+gathering, data processing and data transmitting to various destinations.
 
 <img align="right" src="assets/gosquito.png">
 
