@@ -13,8 +13,9 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Flow approach. Flow consists of: input plugin (receive), process plugins (filter/transform), output
   plugin (send).
 * Declarative YAML configurations with templates support.
-* Consider data as new by configurable signature (data timestamp by default).
+* Consider data as new by configurable signature (data timestamp by default). Force fetching is supported.
 * Dependencies between process plugins. Plugin "B" will process data only if plugin "A" derived some data.
+* Parallel executions limits. 
 * Export metrics to [Prometheus](https://prometheus.io/).
 
 <br><br><br>
