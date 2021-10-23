@@ -12,6 +12,8 @@ transmitting to various destinations
 [Mattermost](https://mattermost.org/),
 [Kafka](https://kafka.apache.org/) etc.).
 
+<img align="right" src="assets/gosquito.png">
+
 ### Main goal:
 
 To replace various in-house automated tasks for data gathering with
