@@ -259,9 +259,9 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				resp, err := makeRequest(item)
 
 				if err == nil {
-					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
+					ro.SetString(fmt.Sprintf("%s", resp.Body()))
 				} else {
-					ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
+					ro.SetString(fmt.Sprintf("%s", err))
 				}
 
 			case reflect.Slice:

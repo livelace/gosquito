@@ -24,6 +24,7 @@ type DataItem struct {
 	UUID       uuid.UUID        // "Unique" id of data item.
 
 	DATA     Data               // Temporary structure for keeping process plugins results.
+	ITER     Iter               // Temporary structure for keeping intermediate results of array objects.
 	RESTY    RestyData          // Contains nested Resty plugin structure.
 	RSS      RssData            // Contains nested RSS plugin structure.
 	TELEGRAM TelegramData       // Contains nested Telegram plugin structure.
@@ -42,6 +43,13 @@ type Data struct {
 	TEXT0   string
         // ...
 	TEXT9  string
+}
+```
+
+```go
+type Iter struct {
+	INDEX int
+	VALUE string
 }
 ```
 
