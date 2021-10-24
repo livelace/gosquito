@@ -39,7 +39,7 @@ const (
 	LOG_CONFIG_ERROR               = "config error"
 	LOG_FLOW_IGNORE                = "flow ignore"
 	LOG_FLOW_INVALID               = "flow invalid"
-	LOG_FLOW_LOCK_WARNING          = "--- flow lock warning"
+	LOG_FLOW_LOCK                  = "--- flow lock"
 	LOG_FLOW_SEND_NO_DATA          = "no data for sending"
 	LOG_FLOW_SEND_NO_DATA_INCLUDED = "no data included for sending"
 	LOG_FLOW_PROCESS               = "process data ..."

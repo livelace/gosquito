@@ -86,6 +86,9 @@ type Flow struct {
 }
 
 func (f *Flow) GetInstance() int {
+	f.m.Lock()
+	defer f.m.Unlock()
+
 	return f.instance
 }
 
@@ -104,9 +107,9 @@ func (f *Flow) Lock() bool {
 	if f.instance == 0 || f.instance < f.FlowInstance {
 		f.instance += 1
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 func (f *Flow) Unlock() bool {
@@ -115,10 +118,10 @@ func (f *Flow) Unlock() bool {
 
 	if f.instance <= 0 {
 		return false
-	} else {
-		f.instance -= 1
-		return true
 	}
+
+	f.instance -= 1
+	return true
 }
 
 type FlowCandidate struct {

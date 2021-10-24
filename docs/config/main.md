@@ -1,8 +1,8 @@
-### Available configuration options:
+### Main configuration:
 
 ```toml
 [default]
-# Configuration file might be placed:
+# Places where configuration file might be:
 # 1. /etc/gosquito/config.toml
 # 2. $HOME/.gosquito/config.toml
 # 3. $(pwd)/config.toml

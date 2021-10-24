@@ -939,7 +939,7 @@ func SliceStringToUpper(s *[]string) {
 func SortLogFields(s []string) {
 	// Ordered fields list.
 	order := []string{
-		"time", "level", "msg", "path", "hash", "flow", "file", "plugin",
+		"time", "level", "msg", "path", "hash", "flow", "instance", "file", "plugin",
 		"type", "value", "source", "id", "alias", "data", "error", "message",
 	}
 
