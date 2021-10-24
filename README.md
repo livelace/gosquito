@@ -20,9 +20,8 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 * Parallel executions limits. 
 * Export metrics to [Prometheus](https://prometheus.io/).
 
-<br><br>
-<br><br>
-<br><br>
+<br><br><br><br>
+<br><br><br><br>
 
 ### Input plugins:
 
