@@ -7,7 +7,7 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 
 <img align="right" src="assets/gosquito.png">
 
-<br><br>
+<br>
 ### Main features:
 
 * Pluggable architecture. Data processing organized as chains of plugins.
