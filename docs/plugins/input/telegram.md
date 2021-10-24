@@ -25,7 +25,7 @@ type Telegram struct {
 }
 ```
 
-&ast; - may be used with **match_signature** parameter.
+&ast; - field may be used with **match_signature** parameter.
 
 ### Generic parameters:
 
