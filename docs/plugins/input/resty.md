@@ -5,7 +5,7 @@
 ### Data structure:
 
 ```go
-type RestyData struct {
+type Resty struct {
 	BODY*       string
 	PROTO*      string
 	STATUS*     string

@@ -275,7 +275,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 					UUID:       u,
 
-					RSS: core.RssData{
+					RSS: core.Rss{
 						CATEGORIES:  item.Categories,
 						CONTENT:     item.Content,
 						DESCRIPTION: item.Description,

@@ -176,14 +176,14 @@ type Iter struct {
 	VALUE string
 }
 
-type RestyData struct {
+type Resty struct {
 	BODY       string
 	PROTO      string
 	STATUS     string
 	STATUSCODE string
 }
 
-type RssData struct {
+type Rss struct {
 	CATEGORIES  []string
 	CONTENT     string
 	DESCRIPTION string
@@ -192,7 +192,7 @@ type RssData struct {
 	TITLE       string
 }
 
-type TelegramData struct {
+type Telegram struct {
 	USERID   string
 	USERNAME string
 	USERTYPE string
@@ -206,7 +206,7 @@ type TelegramData struct {
 	URL   string
 }
 
-type TwitterData struct {
+type Twitter struct {
 	LANG  string
 	MEDIA []string
 	TAGS  []string
@@ -225,10 +225,10 @@ type DataItem struct {
 
 	DATA     Data
 	ITER     Iter
-	RESTY    RestyData
-	RSS      RssData
-	TELEGRAM TelegramData
-	TWITTER  TwitterData
+	RESTY    Resty
+	RSS      Rss
+	TELEGRAM Telegram
+	TWITTER  Twitter
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 ### Data structure:
 
 ```go
-type RssData struct {
+type Rss struct {
 	CATEGORIES   []string
 	CONTENT*     string
 	DESCRIPTION* string

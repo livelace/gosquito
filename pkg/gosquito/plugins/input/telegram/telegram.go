@@ -274,7 +274,7 @@ func receiveMessages(p *Plugin) {
 								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
-								TELEGRAM: core.TelegramData{
+								TELEGRAM: core.Telegram{
 									USERID:   messageUserId,
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,
@@ -313,7 +313,7 @@ func receiveMessages(p *Plugin) {
 								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
-								TELEGRAM: core.TelegramData{
+								TELEGRAM: core.Telegram{
 									USERID:   messageUserId,
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,
@@ -350,7 +350,7 @@ func receiveMessages(p *Plugin) {
 								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 								UUID:       u,
 
-								TELEGRAM: core.TelegramData{
+								TELEGRAM: core.Telegram{
 									USERID:   messageUserId,
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,

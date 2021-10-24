@@ -13,7 +13,7 @@ client, separated from others (different phone numbers can be used).
 ### Data structure:
 
 ```go
-type TelegramData struct {
+type Telegram struct {
 	FIRSTNAME* string
 	LASTNAME*  string
 	MEDIA      []string

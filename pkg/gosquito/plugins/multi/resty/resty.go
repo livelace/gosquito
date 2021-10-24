@@ -405,7 +405,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 					UUID:       u,
 
-					RESTY: core.RestyData{
+					RESTY: core.Resty{
 						BODY:       fmt.Sprintf("%s", resp.Body()),
 						PROTO:      fmt.Sprintf("%s", resp.Proto()),
 						STATUS:     fmt.Sprintf("%s", resp.Status()),

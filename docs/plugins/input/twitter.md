@@ -6,7 +6,7 @@
 ### Data structure:
 
 ```go
-type TwitterData struct {
+type Twitter struct {
 	LANG* string
 	MEDIA []string
 	TAGS  []string

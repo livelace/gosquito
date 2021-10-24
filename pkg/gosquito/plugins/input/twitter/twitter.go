@@ -288,7 +288,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					TIMEFORMAT: itemTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 					UUID:       u,
 
-					TWITTER: core.TwitterData{
+					TWITTER: core.Twitter{
 						LANG:  item.Lang,
 						MEDIA: core.UniqueSliceValues(&media),
 						TAGS:  core.UniqueSliceValues(&tags),
