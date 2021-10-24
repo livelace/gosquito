@@ -53,12 +53,11 @@ flow:
     - id: 0                                 # Plugins must be ordered.
       alias: "first step"                   # Stage description.
       plugin: "plugin"                      # Plugin name.
-      
       params:                               
-        include: false                      # All filtered/matched/transformed (by this plugin) data will be included 
-        ...                                 # for sending (with output plugin, if declared) by default. 
-                                            # This plugin's data may be omitted if data only needs for other 
-                                            # plugins (require option).
+        include: false                      # All filtered/matched/transformed (by this plugin) data will not be 
+                                            # included for sending (with output plugin, if declared) by default. 
+                                            # Plugin data may be used only by other plugins (require option) and 
+                                            # sending is not needed.
 
     - id: 1
       alias: "second step"
@@ -71,6 +70,7 @@ flow:
       alias: "third step"
       plugin: "plugin"
       params:
+        include: true                       # Plugin's data will be sent with output plugin.
         require: [1, 0]                     # Require option allows choosing data for processing by this plugin.
         ...                                 # In this example we work with data of two previous plugins.
                                             # This allows to organize separate processing within one flow.

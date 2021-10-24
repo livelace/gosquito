@@ -2,7 +2,7 @@
 
 ```toml
 [default]
-# Places where configuration file might be:
+# Configuration file might be placed:
 # 1. /etc/gosquito/config.toml
 # 2. $HOME/.gosquito/config.toml
 # 3. $(pwd)/config.toml
@@ -48,8 +48,8 @@
 
 #log_level               = "DEBUG"
 
-# Results of process plugins will be included for sending by default.
-#plugin_include          = true
+# Should flow send results of processing plugins with output plugin by default.
+#plugin_include          = false
 
 # Maximum plugin execution time (seconds). Some plugins ignore this value and use their own timeout.
 #plugin_timeout          = 60
