@@ -7,13 +7,14 @@ flow:
   params:
     instance: 1                             # How many flow's instances should run in parallel.
                                             # WARNING: Default parallelism is achieved by dedicated flows, 
-                                            # not by flow's instance amount. There are no atomic operations over data.
+                                            # not by flow's instance amount. 
+                                            # There are no atomic operations over data.
                                             # Use with cautions. 
     
     interval: "5m"                          # How often flow should run (1s minimum).
 
   # Input plugin parameters:
-  # 1. Strictly required.
+  # 1. Section is strictly required.
   # 2. Only single plugin is allowed.
   input:
     plugin: "plugin"                        # Input plugin name.
@@ -46,16 +47,18 @@ flow:
       # Other plugin parameters see on plugin page.
       
   # Process plugins parameters:
-  # 1. Not strictly required.
+  # 1. Section is not strictly required.
   # 2. Multiple plugins allowed.
   process:
     - id: 0                                 # Plugins must be ordered.
-      alias: "first step"                   # Step note.
+      alias: "first step"                   # Stage description.
       plugin: "plugin"                      # Plugin name.
       
-      params:                               # Plugin parameters, might or might not contain config template.
-        include: false                      # Include plugin produced results to output plugin. 
-        ...                                 # Not included results can be used inside other plugins. 
+      params:                               
+        include: false                      # All filtered/matched/transformed (by this plugin) data will be included 
+        ...                                 # for sending (with output plugin, if declared) by default. 
+                                            # This plugin's data may be omitted if data only needs for other 
+                                            # plugins (require option).
 
     - id: 1
       alias: "second step"
@@ -68,16 +71,12 @@ flow:
       alias: "third step"
       plugin: "plugin"
       params:
-      
-        # Plugin requires data results from Plugin 0 and 1. 
-        # Different plugins could require any combinations of plugin results.
-        require: [1, 0]
-        cred: "creds.process.example"
-        template: "templates.process.example"
-        ...
+        require: [1, 0]                     # Require option allows choosing data for processing by this plugin.
+        ...                                 # In this example we work with data of two previous plugins.
+                                            # This allows to organize separate processing within one flow.
 
   # Output plugin parameters:
-  # 1. Not strictly required.
+  # 1. Section is not strictly required.
   # 2. Only single plugin is allowed.
   output:
     plugin: "plugin"

@@ -482,6 +482,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 
+	var err error
+
 	if flow.Lock() {
 		log.WithFields(log.Fields{
 			"hash":     flow.FlowHash,
@@ -502,17 +504,14 @@ func runFlow(flow *core.Flow) {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Cleanup flow temp dir.
+	// Cleanup temp dir func.
 
 	cleanFlowTemp := func() {
 		_ = os.RemoveAll(flow.FlowTempDir)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	var err error
-
-	// -----------------------------------------------------------------------------------------------------------------
-	// Logging.
+	// Logging func.
 
 	logFlowDebug := func(msg interface{}) {
 		log.WithFields(log.Fields{
@@ -705,24 +704,27 @@ func runFlow(flow *core.Flow) {
 			"type":   flow.OutputPlugin.GetType(),
 		}).Info(core.LOG_FLOW_SEND)
 
-		// 1. Pass data from "process" plugins to "output" plugin.
-		// 2. Pass data from "input" plugin to "output" plugin directly.
-		if len(processResults) > 0 {
-			included := false
-			hasData := false
+		// 1. Send processed data.
+		// 2. Send input plugin data if there are no processing plugins.
+		// 3. Show "no data" message.
+		if len(flow.ProcessPlugins) > 0 && len(processResults) > 0 {
+			dataIncluded := false
+			dataExist := false
 
-			for index := 0; index < len(processResults); index++ {
-				data := processResults[index]
+			for pluginID := 0; pluginID < len(processResults); pluginID++ {
+				pluginData := processResults[pluginID]
 
 				// Send only needed data (param "include" is "true").
-				if flow.ProcessPlugins[index].GetInclude() {
-					included = true
+				if flow.ProcessPlugins[pluginID].GetInclude() {
+					dataIncluded = true
 
 					// Send only not empty data (some plugins can produce zero data).
-					if len(data) > 0 {
-						hasData = true
-						err = flow.OutputPlugin.Send(data)
+					if len(pluginData) > 0 {
+						dataExist = true
 
+						err = flow.OutputPlugin.Send(pluginData)
+
+						// Skip flow if there are problems with sending.
 						if err != nil {
 							atomic.AddInt32(&flow.MetricError, 1)
 							logOutputWarn(flow.OutputPlugin, err)
@@ -730,29 +732,31 @@ func runFlow(flow *core.Flow) {
 							return
 
 						} else {
-							atomic.AddInt32(&flow.MetricSend, int32(len(data)))
-							logOutputDebug(flow.OutputPlugin, fmt.Sprintf("process plugin id: %d, send data: %d", index, len(data)))
+							atomic.AddInt32(&flow.MetricSend, int32(len(pluginData)))
+							logOutputDebug(flow.OutputPlugin,
+								fmt.Sprintf("process plugin id: %d, send data: %d",
+									pluginID, len(pluginData)))
 						}
 					}
 				}
 			}
 
-			// More informative messages.
-			if !included {
+			if !dataIncluded {
 				logFlowDebug(core.LOG_FLOW_SEND_NO_DATA_INCLUDED)
 			}
 
-			if !hasData {
+			if !dataExist {
 				logFlowDebug(core.LOG_FLOW_SEND_NO_DATA)
 			}
 
-		} else if len(inputData) > 0 {
+		} else if len(flow.ProcessPlugins) == 0 && len(inputData) > 0 {
 			err = flow.OutputPlugin.Send(inputData)
 
+			// Skip flow if there are problems with sending.
 			if err != nil {
 				atomic.AddInt32(&flow.MetricError, 1)
-				logFlowWarn(err)
 				cleanFlowTemp()
+				logFlowWarn(err)
 				return
 
 			} else {
@@ -760,8 +764,9 @@ func runFlow(flow *core.Flow) {
 				logFlowDebug(fmt.Sprintf("input plugin: %s, send data: %d",
 					flow.InputPlugin.GetName(), len(inputData)))
 			}
+
 		} else {
-			logFlowDebug(fmt.Sprintf("no data for sending"))
+			logFlowDebug(core.LOG_FLOW_SEND_NO_DATA)
 		}
 	}
 
