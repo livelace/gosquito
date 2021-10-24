@@ -43,7 +43,7 @@ func logResponseWarning(p *Plugin, target string, resp *resty.Response) {
 		"type":   p.PluginType,
 		"id":     p.PluginID,
 		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
+		"data":   fmt.Sprintf("%s %s %v, %v", p.OptionMethod, target, resp.StatusCode()),
 	}).Warn(core.LOG_PLUGIN_DATA)
 }
 
@@ -236,7 +236,11 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		}
 
 		if err == nil {
-			logResponseDebug(p, p.OptionTarget, resp)
+			if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
+				logResponseWarning(p, p.OptionTarget, resp)
+			} else {
+				logResponseDebug(p, p.OptionTarget, resp)
+			}
 		} else {
 			logResponseError(p, p.OptionTarget, err)
 		}
@@ -246,7 +250,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-
 		for index, input := range p.OptionInput {
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
@@ -258,10 +261,8 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 				resp, err := makeRequest(item)
 
-				if err == nil {
+				if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
 					ro.SetString(fmt.Sprintf("%s", resp.Body()))
-				} else {
-					ro.SetString(fmt.Sprintf("%s", err))
 				}
 
 			case reflect.Slice:
@@ -271,12 +272,14 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 					resp, err := makeRequest(item)
 
-					if err == nil {
+					if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", resp.Body()))))
-					} else {
-						ro.Set(reflect.Append(ro, reflect.ValueOf(fmt.Sprintf("%s", err))))
 					}
 				}
+			}
+
+			if ro.Len() > 0 {
+				temp = append(temp, item)
 			}
 		}
 	}

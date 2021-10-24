@@ -294,7 +294,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// 1. "input, output, query" must have equal size.
-	// 2. "input, output" values must have equal types.
 	minLength := 10000
 	maxLength := 0
 	lengths := []int{len(plugin.OptionInput), len(plugin.OptionOutput), len(plugin.OptionQuery)}

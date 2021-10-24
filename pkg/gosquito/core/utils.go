@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	b64 "encoding/base64"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
@@ -27,19 +28,26 @@ import (
 
 var (
 	TemplateFuncMap = tmpl.FuncMap{
-		"ToLower": strings.ToLower,
-		"ToUpper": strings.ToUpper,
-		"FromBase64": func(s string) string {
-			result, err := b64.StdEncoding.DecodeString(s)
-			if err != nil {
-				return fmt.Sprintf("decode error: %s", err)
-			} else {
-				return fmt.Sprintf("%s", result)
-			}
-		},
-		"ToBase64": func(s string) string { return b64.StdEncoding.EncodeToString([]byte(s)) },
+		"FromBase64": Base64Decode,
+		"ToEscape":   JsonEscape,
+		"ToBase64":   Base64Encode,
+		"ToLower":    strings.ToLower,
+		"ToUpper":    strings.ToUpper,
 	}
 )
+
+func Base64Decode(s string) (string, error) {
+	result, err := b64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return fmt.Sprintf("decode error: %s", err), err
+	}
+
+	return fmt.Sprintf("%s", result), err
+}
+
+func Base64Encode(s string) string {
+	return b64.StdEncoding.EncodeToString([]byte(s))
+}
 
 func CheckPluginParams(availableParams *map[string]int, params *map[string]interface{}) error {
 	paramsRequired := make([]string, 0)
@@ -756,6 +764,15 @@ func PluginLoadData(database string, data interface{}) error {
 	}
 
 	return nil
+}
+
+func JsonEscape(s string) (string, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return fmt.Sprintf("escape error: %s", err), err
+	}
+
+	return string(result[1 : len(result)-1]), err
 }
 
 func PluginLoadState(database string, data *map[string]time.Time) error {
