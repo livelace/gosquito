@@ -6,8 +6,8 @@ flow:
   name: "flow1"                             # DNS compatible flow name, must be unique.
   params:
     instance: 1                             # How many flow's instances should run in parallel.
-                                            # WARNING: Default parallelism is achieved by multiple dedicated flows, 
-                                            # not by instance amount. There are no atomic operations over data.
+                                            # WARNING: Default parallelism is achieved by dedicated flows, 
+                                            # not by flow's instance amount. There are no atomic operations over data.
                                             # Use with cautions. 
     
     interval: "5m"                          # How often flow should run (1s minimum).
@@ -50,7 +50,7 @@ flow:
   # 2. Multiple plugins allowed.
   process:
     - id: 0                                 # Plugins must be ordered.
-      alias: "first step"                   # Human note about this step.
+      alias: "first step"                   # Step note.
       plugin: "plugin"                      # Plugin name.
       
       params:                               # Plugin parameters, might or might not contain config template.
