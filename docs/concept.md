@@ -8,7 +8,7 @@ gosquito is a relatively lightweight tool for fetching/preprocessing data at the
 2. Data items are usual structs with fields.
 3. Process plugins use data items as a data source (input plugins fields) and as destination for saving data (data and iter fields).
 4. Process plugins don't make copies of input plugin data, they always work with the same set of data items (through pointers), but different process plugins use different data fields for saving data.
-5. Process plugins can reuse results of other process plugins through "require" option. Those results are not copy, but always the same set of original data items.
+5. Process plugins can reuse results of other process plugins through "require" option. Those results are not copies, but always the same set of original data items.
 6. Process plugins should explicitly include data (include option) for sending data with output plugin.
 7. Output plugin sends data to destinations.
 
