@@ -331,18 +331,18 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		// ---------------------------------------------------------------------------------------------------------
 		// Map "process" plugins.
 
-		for index := 0; index < len(flowBody.Flow.Process); index++ {
-			item := flowBody.Flow.Process[index]
+		for pluginIndex := 0; pluginIndex < len(flowBody.Flow.Process); pluginIndex++ {
+			pluginItem := flowBody.Flow.Process[pluginIndex]
 
-			var pluginId int
 			var plugin core.ProcessPlugin
+			var pluginId int
 			var pluginName string
 
 			// Validate "process" plugins items declaration.
-			pluginId, a := core.IsPluginId(item["id"])
-			pluginName, b := core.IsString(item["plugin"])
-			pluginParams, c := core.IsMapWithStringAsKey(item["params"])
-			pluginAlias, _ := core.IsString(item["alias"])
+			pluginId, a := core.IsPluginId(pluginItem["id"])
+			pluginName, b := core.IsString(pluginItem["plugin"])
+			pluginParams, c := core.IsMapWithStringAsKey(pluginItem["params"])
+			pluginAlias, _ := core.IsString(pluginItem["alias"])
 
 			// Logging.
 			logProcessPluginError := func(err error) {
@@ -362,7 +362,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}
 
 			// All "process" plugins ids must be ordered.
-			if pluginId != index {
+			if pluginId != pluginIndex {
 				logProcessPluginError(fmt.Errorf("%s: %d", core.ERROR_PLUGIN_PROCESS_ORDER, pluginId))
 				break
 			}

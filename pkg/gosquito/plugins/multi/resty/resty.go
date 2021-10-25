@@ -21,20 +21,18 @@ const (
 	DEFAULT_SSL_VERIFY = true
 )
 
-func logResponseDebug(p *Plugin, target string, resp *resty.Response) {
+func logInputOutputDebug(p *Plugin, target string, resp *resty.Response) {
 	log.WithFields(log.Fields{
 		"hash":   p.Flow.FlowHash,
 		"flow":   p.Flow.FlowName,
 		"file":   p.Flow.FlowFile,
 		"plugin": p.PluginName,
 		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
 		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
 	}).Debug(core.LOG_PLUGIN_DATA)
 }
 
-func logResponseWarning(p *Plugin, target string, resp *resty.Response) {
+func logInputOutputWarning(p *Plugin, target string, resp *resty.Response) {
 	log.WithFields(log.Fields{
 		"hash":   p.Flow.FlowHash,
 		"flow":   p.Flow.FlowName,
@@ -47,7 +45,46 @@ func logResponseWarning(p *Plugin, target string, resp *resty.Response) {
 	}).Warn(core.LOG_PLUGIN_DATA)
 }
 
-func logResponseError(p *Plugin, target string, err error) {
+func logInputOutputError(p *Plugin, target string, err error) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, err),
+	}).Error(core.LOG_PLUGIN_DATA)
+}
+
+func logProcessDebug(p *Plugin, target string, resp *resty.Response) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
+	}).Debug(core.LOG_PLUGIN_DATA)
+}
+
+func logProcessWarning(p *Plugin, target string, resp *resty.Response) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   fmt.Sprintf("%s %s %v, %v", p.OptionMethod, target, resp.StatusCode()),
+	}).Warn(core.LOG_PLUGIN_DATA)
+}
+
+func logProcessError(p *Plugin, target string, err error) {
 	log.WithFields(log.Fields{
 		"hash":   p.Flow.FlowHash,
 		"flow":   p.Flow.FlowName,
@@ -237,12 +274,12 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 		if err == nil {
 			if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
-				logResponseWarning(p, p.OptionTarget, resp)
+				logProcessWarning(p, p.OptionTarget, resp)
 			} else {
-				logResponseDebug(p, p.OptionTarget, resp)
+				logProcessDebug(p, p.OptionTarget, resp)
 			}
 		} else {
-			logResponseError(p, p.OptionTarget, err)
+			logProcessError(p, p.OptionTarget, err)
 		}
 
 		return resp, err
@@ -414,10 +451,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 				})
 			}
 
-			flowStates[source] = sourceLastTime
-
-			logResponseDebug(p, source, resp)
-
+			logInputOutputDebug(p, source, resp)
+			// TODO: Replace logging.
 			log.WithFields(log.Fields{
 				"hash":   p.Flow.FlowHash,
 				"flow":   p.Flow.FlowName,
@@ -429,19 +464,11 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					sourceLastTime, 1, itemNew),
 			}).Debug(core.LOG_PLUGIN_DATA)
 
+			flowStates[source] = sourceLastTime
+
 		} else {
 			failedSources = append(failedSources, source)
-
-			log.WithFields(log.Fields{
-				"hash":   p.Flow.FlowHash,
-				"flow":   p.Flow.FlowName,
-				"file":   p.Flow.FlowFile,
-				"plugin": p.PluginName,
-				"type":   p.PluginType,
-				"source": source,
-				"error":  err,
-			}).Error(core.LOG_PLUGIN_DATA)
-
+			logInputOutputError(p, source, err)
 			continue
 		}
 	}
@@ -549,13 +576,13 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 			if err == nil {
 				if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
-					logResponseWarning(p, output, resp)
+					logInputOutputWarning(p, output, resp)
 				} else {
-					logResponseDebug(p, output, resp)
+					logInputOutputDebug(p, output, resp)
 				}
 
 			} else {
-				logResponseError(p, output, err)
+				logInputOutputError(p, output, err)
 			}
 		}
 	}
@@ -995,20 +1022,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// 1. "input, output" must have equal size.
-	// 2. "input, output" values must have equal types.
+	if pluginConfig.PluginType == "process" {
+		// 1. "input, output" must have equal size.
+		// 2. "input, output" values must have equal types.
 
-	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
-		return &Plugin{}, fmt.Errorf(
-			"%s: %v, %v",
-			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+		if len(plugin.OptionInput) != len(plugin.OptionOutput) {
+			return &Plugin{}, fmt.Errorf(
+				"%s: %v, %v",
+				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
-		return &Plugin{}, err
-
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
+		} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+			return &Plugin{}, err
+		}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

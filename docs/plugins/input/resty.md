@@ -1,6 +1,6 @@
 ### Description:
 
-**resty** input plugin is intended for data gathering from [REST](https://en.wikipedia.org/wiki/Representational_state_transfer).
+**resty** input plugin is intended for data gathering from [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints.
 
 ### Data structure:
 
@@ -36,7 +36,7 @@ type Resty struct {
 | bearer_token    | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                              |
 | body            | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                              |
 | headers         | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.           |
-| **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://www.pcweek.ru/rss/"]   | List of REST endpoints.                    |
+| **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://freegeoip.app/json/"]   | List of REST endpoints.                    |
 | match_signature | -          | array    | -     | +          | -             | "[]"                | ["body", "statuscode"]           | Match new articles by signature.           |
 | match_ttl       | -          | string   | -     | +          | -             | "1d"                | "24h"                            | TTL (Time To Live) for matched signatures. |
 | method          | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).                |
@@ -59,13 +59,23 @@ flow:
     plugin: "resty"
     params:
       template: "templates.resty.input"
-      input: ["https://freegeoip.app/json/"]
+      input: ["https://www.drupal.org/api-d7/user.json"]
 
   process:
     - id: 0
-      plugin: "echo"
+      plugin: "jq"
+      alias: "extract users"
       params:
-        input: ["resty.body"]
+        input:  ["resty.body"]
+        output: ["data.array0"]
+        query:  [".list[].name"]
+
+    - id: 1
+      plugin: "echo"
+      alias: "show users"
+      params:
+        input: ["data.array0"]
+
 ```
 
 ### Config sample:
@@ -75,13 +85,6 @@ flow:
 method = "GET"
 proxy = "http://127.0.0.1:8081"
 ssl_verify = false
-
-[templates.resty.input.headers]
-foo = "bar"
-
-[templates.resty.input.params]
-foo = "bar"
-
 ```
 
 

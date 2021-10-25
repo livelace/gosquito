@@ -51,7 +51,7 @@ flow:
   # 2. Multiple plugins allowed.
   process:
     - id: 0                                 # Plugins must be ordered.
-      alias: "first step"                   # Stage description.
+      alias: "first step"                   # Additional info shown in logs.
       plugin: "plugin"                      # Plugin name.
       params:                               
         include: false                      # All filtered/matched/transformed (by this plugin) data will not be 
