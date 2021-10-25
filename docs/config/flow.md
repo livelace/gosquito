@@ -55,7 +55,7 @@ flow:
       plugin: "plugin"                      # Plugin name.
       params:                               
         include: false                      # All filtered/matched/transformed (by this plugin) data will not be 
-                                            # included for sending (with output plugin, if declared) by default. 
+        ...                                 # included for sending (with output plugin, if declared) by default. 
                                             # Plugin data may be used only by other plugins (require option) and 
                                             # sending is not needed.
 
@@ -72,8 +72,9 @@ flow:
       params:
         include: true                       # Plugin's data will be sent with output plugin.
         require: [1, 0]                     # Require option allows choosing data for processing by this plugin.
-        ...                                 # In this example we work with data of two previous plugins.
+        ...                                 # In this example we work with data of two previous plugins. 
                                             # This allows to organize separate processing within one flow.
+                                            # WARNING: by default every process plugin works with input plugin data.
 
   # Output plugin parameters:
   # 1. Section is not strictly required.

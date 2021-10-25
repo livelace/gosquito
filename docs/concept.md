@@ -1,21 +1,23 @@
-### Data processing:
+### Concept:
 
-Typical flow steps:
+gosquito is a relatively lightweight tool for fetching/preprocessing data at the edge. It doesn't intend to be a comprehensive tool for everything, instead it uses easy-to-use plugins primitives for base operation over data and transmitting produced data further.
 
-1. *Input plugin* gathers data and produces set of *DataItem*.
-2. *Process plugins* handle *DataItem* set and fill chosen fields with
-   produced data (no copies of *DataItem* are created).
-3. Finally, *Output plugin* constructs messages with selected *DataItem*
-   fields and send messages to destinations.
+### Base workflow:
+
+1. Input plugin receives data and forming data items.
+2. Data items are usual structs with fields.
+3. Process plugins use data items as a data source (input plugins fields) and as destination for saving data (data and iter fields).
+4. Process plugins don't make copies of input plugin data, they always work with the same set of data items (through pointers), but different process plugins use different data fields for saving data.
+5. Process plugins can reuse results of other process plugins through "require" option. Those results are not copy, but always the same set of original data items.
+6. Process plugins should explicitly include data (include option) for sending data with output plugin.
+7. Output plugin sends data to destinations.
 
 
-*DataItem* is a data structure with specific fields, it contains common
-fields for all plugins and plugin specific fields. Typical flow consists
-of plugins with *DataItem* fields as parameters.
+### Data item structure:
 
 ```go
 type DataItem struct {
-	FLOW       string           // Flow name (common field).
+	FLOW       string           // Flow name.
 	PLUGIN     string           // Input plugin name (rss, twitter, telegram etc.).
 	SOURCE     string           // Input plugin source (feed url, twitter channel, telegram chat etc.).
 	TIME       time.Time        // Time of article, tweet, message.
@@ -25,26 +27,25 @@ type DataItem struct {
 
 	DATA     Data               // Temporary structure for keeping process plugins results.
 	ITER     Iter               // Temporary structure for keeping intermediate results of array objects.
-	RESTY    RestyData          // Contains nested Resty plugin structure.
-	RSS      RssData            // Contains nested RSS plugin structure.
-	TELEGRAM TelegramData       // Contains nested Telegram plugin structure.
-	TWITTER  TwitterData        // Contains nested Twitter plugin structure.
+	RESTY    Resty              // Contains nested Resty plugin structure.
+	RSS      Rss                // Contains nested RSS plugin structure.
+	TELEGRAM Telegram           // Contains nested Telegram plugin structure.
+	TWITTER  Twitter            // Contains nested Twitter plugin structure.
 }
 ```
 
-Temporary **DataItem.Data** structure for process plugins results:
+### Structure for keeping static data:
 
 ```go
 type Data struct {
-	ARRAY0  []string
-        // ...
+	ARRAY0 []string
 	ARRAY9 []string
-
-	TEXT0   string
-        // ...
+	TEXT0  string
 	TEXT9  string
 }
 ```
+
+### Structure for keeping iterated data:
 
 ```go
 type Iter struct {
@@ -53,8 +54,9 @@ type Iter struct {
 }
 ```
 
-Plugin specific data structures:
-[Resty](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md),
+### Plugin specific data structures:
+
+[RESTY](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md),
 [RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md),
-[Telegram](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md),
-[Twitter](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
+[TELEGRAM](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md),
+[TWITTER](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
