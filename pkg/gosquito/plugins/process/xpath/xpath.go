@@ -140,7 +140,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			case reflect.String:
 				if result, ok := findXpath(p, p.OptionXpath[index], ri.String()); ok {
 					found[index] = true
-					ro.Set(reflect.Append(ro, reflect.ValueOf(result)))
+					ro.SetString(result)
 				}
 
 			case reflect.Slice:
@@ -257,10 +257,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["output"] = 0
-				plugin.OptionOutput = v
-			}
+			availableParams["output"] = 0
+			plugin.OptionOutput = v
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])

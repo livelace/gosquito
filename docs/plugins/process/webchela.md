@@ -32,7 +32,7 @@
 | cpu_load                 | -          | int      | +          | 25            | 50                                  | Maximum CPU load on a server.                          |
 | **input**                | +          | array    | +          | []            | ["twitter.urls", "data.array0"]     | List of [DataItem](../../concept.md) fields with URLs. |
 | mem_free                 | -          | string   | +          | "1g"          | "3g"                                | Minimum free MEM size on a server.                     |
-| output                   | -          | array    | +          | []            | ["data.array1", "data.array2"]      | List of target [DataItem](../../concept.md) fields.    |
+| **output**               | -          | array    | +          | []            | ["data.array1", "data.array2"]      | List of target [DataItem](../../concept.md) fields.    |
 | request_timeout          | -          | int      | +          | 10            | 30                                  | Server GRPC request timeout.                           |
 | script                   | -          | array    | +          | []            | ["scripts.clicker", "return 42;"]   | List of config templates/raw javascript code.          |
 | **server**               | +          | array    | +          | []            | ["server1.example.com:8080"]        | List of Webchela servers.                              |
@@ -61,9 +61,17 @@ flow:
         output: ["data.text0"]
 
     - id: 1
+      alias: "extract title"
+      plugin: "xpath"
+      params:
+        input:  ["data.text0"]
+        output: ["data.text1"]
+        xpath:  ["//div[contains(@class, 'news-header')]"]
+
+    - id: 2
       plugin: "echo"
       params:
-        input: ["data.text0"]
+        input: ["data.text0", "data.text1"]
 ```
 
 ### Config sample:
@@ -76,7 +84,7 @@ browser_instance = 1
 browser_instance_tab = 3
 browser_extension = ["bypass-paywalls-1.7.6.xpi", "ublock-origin-1.30.6.xpi"]
 cpu_load = 25
-server = ["172.17.0.2:50051"]
+server = ["172.17.0.3:50051"]
 timeout = 900
 ```
 

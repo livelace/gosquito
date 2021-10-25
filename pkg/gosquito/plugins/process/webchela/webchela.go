@@ -390,30 +390,34 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		}).Error(core.LOG_PLUGIN_DATA)
 	}
 
-	// Gather input data from all data items into one flat slice.
-	// This needed for batch slicing (process URLs in sized blocks/batches).
+	// Extract URLs from data items into single flat slice.
+	// This is needed for batch slicing (process URLs in sized blocks/batches).
 	// Example: every "DataItem" has filled ["data.array0", "data.array1"] with URLs,
 	// we extract all URLs from all "DataItems" into one flat slice: [url0, url1 ... urlN].
 	// To recognize boundaries between DataItems in slice we save "metadata".
 	// Example metadata: [0] = [20, 300].
 	// that means: [DataItem 0] = [data.array0 = 20 urls, data.array1 = 300 urls].
-	inputData := make([]string, 0)
-	inputMeta := make(map[int][]int, 0)
+	allURL := make([]string, 0)
+	itemURLMeta := make(map[int][]int, 0)
 
 	for itemIndex, itemData := range data {
-		inputMeta[itemIndex] = make([]int, len(p.OptionInput))
+		itemURLMeta[itemIndex] = make([]int, len(p.OptionInput))
 
 		for inputIndex, inputField := range p.OptionInput {
-			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(itemData, inputField)
 
-			// fill metadata.
-			inputMeta[itemIndex][inputIndex] = ri.Len()
+			// 1. Set amount of URLs for specific data item and input.
+			// 2. Append URLs to flat slice.
+			switch ri.Kind() {
+			case reflect.String:
+				itemURLMeta[itemIndex][inputIndex] = 1
+				allURL = append(allURL, ri.String())
 
-			// append urls to flat slice.
-			for i := 0; i < ri.Len(); i++ {
-				inputData = append(inputData, ri.Index(i).String())
+			case reflect.Slice:
+				itemURLMeta[itemIndex][inputIndex] = ri.Len()
+				for i := 0; i < ri.Len(); i++ {
+					allURL = append(allURL, ri.Index(i).String())
+				}
 			}
 		}
 	}
@@ -421,12 +425,12 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	// Split input data into batches.
 	batches := make([][]string, 0)
 
-	for i := 0; i < len(inputData); i += p.OptionBatchSize {
+	for i := 0; i < len(allURL); i += p.OptionBatchSize {
 		end := i + p.OptionBatchSize
-		if end > len(inputData) {
-			end = len(inputData)
+		if end > len(allURL) {
+			end = len(allURL)
 		}
-		batches = append(batches, inputData[i:end])
+		batches = append(batches, allURL[i:end])
 	}
 
 	// Send batches to webchela servers concurrently.
@@ -502,21 +506,21 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		outputData = append(outputData, batchResult[i].Output...)
 	}
 
-	// amount of input and output data must be the same,
-	// even if some pages were opened with errors (timeouts, not known DNS names etc.).
-	if len(inputData) != len(outputData) {
+	// Amount of input and output data must be equal, even if some pages were processed
+	// with errors (timeouts, not known DNS names etc.).
+	if len(allURL) != len(outputData) {
 		logError(fmt.Sprintf("main loop: received data not equal sent data: %d != %d",
-			len(outputData), len(inputData)))
+			len(outputData), len(allURL)))
 		return temp, nil
 	}
 
-	// fill corresponding DataItem with output data.
+	// Fill corresponding DataItem with output data.
 	outputOffset := 0
 
-	for itemIndex := 0; itemIndex < len(inputMeta); itemIndex++ {
+	for itemIndex := 0; itemIndex < len(itemURLMeta); itemIndex++ {
 		grabbed := false
 
-		itemMeta := inputMeta[itemIndex]
+		itemMeta := itemURLMeta[itemIndex]
 
 		for index, value := range itemMeta {
 			if value > 0 {
@@ -525,8 +529,15 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 			ro, _ := core.ReflectDataField(data[itemIndex], p.OptionOutput[index])
 
-			for offset := outputOffset; offset < outputOffset+value; offset++ {
-				ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
+			switch ro.Kind() {
+			case reflect.String:
+				for offset := outputOffset; offset < outputOffset+value; offset++ {
+					ro.SetString(outputData[offset])
+				}
+			case reflect.Slice:
+				for offset := outputOffset; offset < outputOffset+value; offset++ {
+					ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
+				}
 			}
 
 			outputOffset += value
@@ -797,10 +808,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["input"] = 0
-				plugin.OptionInput = v
-			}
+			availableParams["input"] = 0
+			plugin.OptionInput = v
 		}
 	}
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
@@ -822,10 +831,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["output"] = 0
-				plugin.OptionOutput = v
-			}
+			availableParams["output"] = 0
+			plugin.OptionOutput = v
 		}
 	}
 	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
@@ -918,6 +925,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
 		return &Plugin{}, fmt.Errorf("%s: %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+	}
+
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
