@@ -2,7 +2,7 @@
 
 **telegram** input plugin is intended for data gathering from [Telegram](https://telegram.org/) chats.    
   
-This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Telegram Bot API](https://core.telegram.org/bots/api)). Right now plugin supports only [public chats](https://core.telegram.org/tdlib/getting-started) (find, join, receive messages and files). Registration as a client (see sessions in your mobile app) happens during first start (type phone number and code). Only single client is supported right now. 
+This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Telegram Bot API](https://core.telegram.org/bots/api)). Right now plugin supports only [public chats](https://core.telegram.org/tdlib/getting-started) (find, join, receive messages and files). Registration as a client (see sessions in your mobile app) happens during first start (type phone number and code). Only single client (per gosquito application) is supported right now. 
 
 ### Data structure:
 
