@@ -25,7 +25,7 @@ const (
 	DEFAULT_LOG_LEVEL             = "INFO"
 	DEFAULT_LOG_TIME_FORMAT       = "02.01.2006 15:04:05.000"
 	DEFAULT_LOOP_SLEEP            = 300
-	DEFAULT_PLUGIN_INCLUDE        = true
+	DEFAULT_PLUGIN_INCLUDE        = false
 	DEFAULT_PLUGIN_TIMEOUT        = 60
 	DEFAULT_STATE_DIR             = "state"
 	DEFAULT_TEMP_DIR              = "temp"
@@ -126,8 +126,8 @@ const (
 
 #log_level               = "DEBUG"
 
-# Results of process plugins will be included for sending by default.
-#plugin_include          = true
+# Should flow send results of processing plugins with output plugin by default.
+#plugin_include          = false
 
 # Maximum plugin execution time (seconds). Some plugins ignore this value and use their own timeout.
 #plugin_timeout          = 60

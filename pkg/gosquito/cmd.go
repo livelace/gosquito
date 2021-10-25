@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	flowError = prometheus.NewCounterVec(
+	flowMetricError = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_error",
 			Help: "",
@@ -23,7 +23,7 @@ var (
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
-	flowExpire = prometheus.NewCounterVec(
+	flowMetricExpire = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_expire",
 			Help: "",
@@ -31,7 +31,7 @@ var (
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
-	flowNoData = prometheus.NewCounterVec(
+	flowMetricNoData = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_nodata",
 			Help: "",
@@ -39,7 +39,7 @@ var (
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
-	flowReceive = prometheus.NewCounterVec(
+	flowMetricReceive = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_receive",
 			Help: "",
@@ -47,7 +47,7 @@ var (
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
 
-	flowSend = prometheus.NewCounterVec(
+	flowMetricSend = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_send",
 			Help: "",
@@ -57,11 +57,11 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(flowError)
-	prometheus.MustRegister(flowExpire)
-	prometheus.MustRegister(flowNoData)
-	prometheus.MustRegister(flowReceive)
-	prometheus.MustRegister(flowSend)
+	prometheus.MustRegister(flowMetricError)
+	prometheus.MustRegister(flowMetricExpire)
+	prometheus.MustRegister(flowMetricNoData)
+	prometheus.MustRegister(flowMetricReceive)
+	prometheus.MustRegister(flowMetricSend)
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: false,
@@ -78,7 +78,7 @@ func RunApp() {
 	// Greetings.
 	log.Info(fmt.Sprintf("%s %s", core.APP_NAME, core.APP_VERSION))
 
-	// Get user config.
+	// Get app config.
 	appConfig := core.GetAppConfig()
 
 	// Set maximum number of threads.
@@ -158,11 +158,11 @@ func RunApp() {
 					"output_values":   fmt.Sprintf("%v", outputValues),
 				}
 
-				flowError.With(labels).Add(float64(flow.MetricError))
-				flowExpire.With(labels).Add(float64(flow.MetricExpire))
-				flowNoData.With(labels).Add(float64(flow.MetricNoData))
-				flowReceive.With(labels).Add(float64(flow.MetricReceive))
-				flowSend.With(labels).Add(float64(flow.MetricSend))
+				flowMetricError.With(labels).Add(float64(flow.MetricError))
+				flowMetricExpire.With(labels).Add(float64(flow.MetricExpire))
+				flowMetricNoData.With(labels).Add(float64(flow.MetricNoData))
+				flowMetricReceive.With(labels).Add(float64(flow.MetricReceive))
+				flowMetricSend.With(labels).Add(float64(flow.MetricSend))
 
 				flow.ResetMetric()
 			}
