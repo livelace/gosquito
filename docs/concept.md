@@ -25,8 +25,8 @@ type DataItem struct {
 	TIMEZONE   *time.Location   // User defined timezone (common field).
 	UUID       uuid.UUID        // "Unique" id of data item.
 
-	DATA     Data               // Temporary structure for keeping process plugins results.
-	ITER     Iter               // Temporary structure for keeping intermediate results of array objects.
+	DATA     Data               // Temporary structure for keeping static data.
+	ITER     Iter               // Temporary structure for keeping iterated data.
 	RESTY    Resty              // Contains nested Resty plugin structure.
 	RSS      Rss                // Contains nested RSS plugin structure.
 	TELEGRAM Telegram           // Contains nested Telegram plugin structure.
@@ -56,7 +56,7 @@ type Iter struct {
 
 ### Plugin specific data structures:
 
-[RESTY](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md),
-[RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md),
-[TELEGRAM](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md),
-[TWITTER](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)
+[RESTY](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md)    
+[RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)  
+[TELEGRAM](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)  
+[TWITTER](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)  
