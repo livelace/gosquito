@@ -5,24 +5,24 @@
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Template | Default | Example |
-|:--------|:--------:|:-----:|:--------:|:-------:|:-------:|
-| include |    -     | bool  |    +     |  true   |  false  |
-| require |    -     | array |    +     |   []    | [1, 2]  |
-| timeout |    -     |  int  |    +     |   60    |   300   |
+| Param     | Required   | Type    | Template   | Default   | Example   |
+| :-------- | :--------: | :-----: | :--------: | :-------: | :-------: |
+| include   | -          | bool    | +          | true      | false     |
+| require   | -          | array   | +          | []        | [1, 2]    |
+| timeout   | -          | int     | +          | 60        | 300       |
 
 ### Plugin parameters:
 
-| Param          | Required |  Type  | Cred | Template | Default |      Example       | Description                                                                                                |
-|:---------------|:--------:|:------:|:----:|:--------:|:-------:|:------------------:|:-----------------------------------------------------------------------------------------------------------|
-| **access_key** |    +     | string |  +   |    -     |   ""    |         ""         | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html)                              |
-| **action**     |    +     | string |  -   |    +     |   ""    |       "put"        | Perform action ("put" - implemented, "get" - TODO).                                                        |
-| **bucket**     |    +     | string |  -   |    +     |   ""    |       "news"       | Bucket name.                                                                                               |
-| **input**      |    +     | array  |  -   |    +     |   []    |  ["data.array0"]   | List of [DataItem](../../concept.md) fields with files paths. |
-| **output**     |    +     | array  |  -   |    +     |   []    |         []         | List of target [DataItem](../../concept.md) fields.           |
-| **secret_key** |    +     | string |  +   |    -     |   ""    |         ""         | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html)                              |
-| **server**     |    +     | string |  +   |    -     |   ""    | "host.example.com" | Minio server.                                                                                              |
-| ssl            |    -     |  bool  |  -   |    +     |  true   |       false        | Use SSL for connection.                                                                                    |
+| Param            | Required   | Type     | Cred   | Template   | Default   | Example              | Description                                                                                                  |
+| :--------------- | :--------: | :------: | :----: | :--------: | :-------: | :------------------: | :----------------------------------------------------------------------------------------------------------- |
+| **access_key**   | +          | string   | +      | -          | ""        | ""                   | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html)                                |
+| **action**       | +          | string   | -      | +          | ""        | "put"                | Perform action (only "put" is supported).                                                                    |
+| **bucket**       | +          | string   | -      | +          | ""        | "news"               | Bucket name.                                                                                                 |
+| **input**        | +          | array    | -      | +          | []        | ["data.array0"]      | List of [DataItem](../../concept.md) fields with files paths.                                                |
+| **output**       | +          | array    | -      | +          | []        | []                   | List of target [DataItem](../../concept.md) fields.                                                          |
+| **secret_key**   | +          | string   | +      | -          | ""        | ""                   | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html)                                |
+| **server**       | +          | string   | +      | -          | ""        | "host.example.com"   | Minio server.                                                                                                |
+| ssl              | -          | bool     | -      | +          | true      | false                | Use SSL for connection.                                                                                      |
 
 ### Flow sample:
 

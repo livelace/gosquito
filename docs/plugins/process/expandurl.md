@@ -5,21 +5,21 @@
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example |
-|:--------|:--------:|:-----:|:-------:|:-------:|
-| include |    -     | bool  |  true   |  false  |
-| require |    -     | array |   []    | [1, 2]  |
-| timeout |    -     |  int  |    2    |    3    |
+| Param     | Required   | Type    | Default   | Example   |
+| :-------- | :--------: | :-----: | :-------: | :-------: |
+| include   | -          | bool    | true      | false     |
+| require   | -          | array   | []        | [1, 2]    |
+| timeout   | -          | int     | 2         | 3         |
 
 
 ### Plugin parameters:
 
-| Param      | Required |  Type  |      Default      |     Example      | Description                                                                                         |
-|:-----------|:--------:|:------:|:-----------------:|:----------------:|:----------------------------------------------------------------------------------------------------|
-| depth      |    -     |  int   |        10         |        5         | Maximum depth of HTTP redirects.                                                                    |
-| **input**  |    +     | array  |        []         | ["twitter.urls"] | List of [DataItem](../../concept.md) fields with URLs. |
-| **output** |    +     | array  |        []         | ["data.array0"]  | List of target [DataItem](../../concept.md) fields.    |
-| user_agent |    -     | string | "gosquito v3.0.0" |  "webchela 1.0"  | Custom User-Agent for HTTP requests.                                                                |
+| Param        | Required   | Type     | Default             | Example            | Description                                                                                           |
+| :----------- | :--------: | :------: | :-----------------: | :----------------: | :---------------------------------------------------------------------------------------------------- |
+| depth        | -          | int      | 10                  | 5                  | Maximum depth of HTTP redirects.                                                                      |
+| **input**    | +          | array    | []                  | ["twitter.urls"]   | List of [DataItem](../../concept.md) fields with URLs.                                                |
+| **output**   | +          | array    | []                  | ["data.array0"]    | List of target [DataItem](../../concept.md) fields.                                                   |
+| user_agent   | -          | string   | "gosquito v3.0.0"   | "webchela 1.0"     | Custom User-Agent for HTTP requests.                                                                  |
 
 ### Flow sample:
 

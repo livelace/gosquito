@@ -6,22 +6,22 @@ data.
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Templates | Default | Example |
-|:--------|:--------:|:-----:|:---------:|:-------:|:-------:|
-| include |    -     | bool  |     -     |  true   |  false  |
-| require |    -     | array |     -     |   []    | [1, 2]  |
+| Param     | Required   | Type    | Templates   | Default   | Example   |
+| :-------- | :--------: | :-----: | :---------: | :-------: | :-------: |
+| include   | -          | bool    | -           | true      | false     |
+| require   | -          | array   | -           | []        | [1, 2]    |
 
 
 ### Plugin parameters:
 
-| Param           | Required |  Type  | Template | Default |     Example     | Description                                                                                         |
-|:----------------|:--------:|:------:|:--------:|:-------:|:---------------:|:----------------------------------------------------------------------------------------------------|
-| **input**       |    +     | array  |    -     |   []    | ["data.array0"] | List of [DataItem](../../concept.md) fields with data. |
-| **output**      |    +     | array  |    -     |   []    | ["data.array0"] | List of target [DataItem](../../concept.md) fields.    |
-| **xpath**       |    +     | array  |    +     |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                       |
-| xpath_html      |    -     |  bool  |    -     |  true   |      false      | Get nodes with HTML tags (only text by default).                                                      |
-| xpath_html_self |    -     |  bool  |    -     |  true   |      false      | Include HTML tags of Xpath node.                                                                    |
-| xpath_separator |    -     | string |    -     |  "\n"   |      false      | Add a custom separator between found nodes.                                                           |
+| Param             | Required   | Type     | Template   | Default   | Example           | Description                                                                                           |
+| :---------------- | :--------: | :------: | :--------: | :-------: | :---------------: | :---------------------------------------------------------------------------------------------------- |
+| **input**         | +          | array    | -          | []        | ["data.array0"]   | List of [DataItem](../../concept.md) fields with data.                                                |
+| **output**        | +          | array    | -          | []        | ["data.array0"]   | List of target [DataItem](../../concept.md) fields.                                                   |
+| **xpath**         | +          | array    | +          | []        | ["//a/@href"]     | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                         |
+| xpath_html        | -          | bool     | -          | true      | false             | Get nodes with HTML tags (only text by default).                                                      |
+| xpath_html_self   | -          | bool     | -          | true      | false             | Include HTML tags of Xpath node.                                                                      |
+| xpath_separator   | -          | string   | -          | "\n"      | false             | Add a custom separator between found nodes.                                                           |
 
 ### Flow sample:
 
