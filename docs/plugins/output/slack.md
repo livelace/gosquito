@@ -1,36 +1,35 @@
 ### Description:
 
-**slack** output plugin is intended for sending data to [Slack](https://slack.com)
-users/channels.
+**slack** output plugin is intended for sending data to [Slack](https://slack.com)  users/channels.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type | Template | Default |
-|:--------|:--------:|:----:|:--------:|:-------:|
-| timeout |    -     | int  |    +     |    3    |
+| Param     | Required   | Type   | Template   | Default   |
+| :-------- | :--------: | :----: | :--------: | :-------: |
+| timeout   | -          | int    | +          | 3         |
 
 
 ### Plugin parameters:
 
-| Param       | Required |  Type  | Cred | Template | Text Template | Default |        Example        | Description                                                                                                        |
-|:------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:---------------------:|:-------------------------------------------------------------------------------------------------------------------|
-| attachments |    -     |  map   |  -   |    +     |       -       |  map[]  |      see example      | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)                                     |
-| files       |    -     | array  |  -   |    +     |       -       |   ""    |    ["data.array0"]    | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths.         |
-| message     |    -     | string |  -   |    +     |       +       |   ""    |   "{{.DATA.TEXT0}}"   | Message text.                                                                                                      |
-| **output**  |    +     | array  |  -   |    +     |       -       |   []    | ["news", "@livelace"] | List of channels/users.                                                                                            |
-| **token**   |    +     | string |  +   |    -     |       -       |   ""    |     "xoxp-1-2-3"      | [Slack Internal App Token](https://slack.com/intl/en-ru/help/articles/215770388-Create-and-regenerate-API-tokens). |
+| Param         | Required   | Type     | Cred   | Template   | Text Template   | Default   | Example                 | Description                                                                                                          |
+| :------------ | :--------: | :------: | :----: | :--------: | :-------------: | :-------: | :---------------------: | :------------------------------------------------------------------------------------------------------------------- |
+| attachments   | -          | map      | -      | +          | -               | map[]     | see example             | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)                                       |
+| files         | -          | array    | -      | +          | -               | ""        | ["data.array0"]         | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with files paths.           |
+| message       | -          | string   | -      | +          | +               | ""        | "{{ .DATA.TEXT0 }}"     | Message text.                                                                                                        |
+| **output**    | +          | array    | -      | +          | -               | []        | ["news", "@livelace"]   | List of channels/users.                                                                                              |
+| **token**     | +          | string   | +      | -          | -               | ""        | "xoxp-1-2-3"            | [Slack Internal App Token](https://slack.com/intl/en-ru/help/articles/215770388-Create-and-regenerate-API-tokens).   |
 
 
 ### Attachments parameters:
 
-| Param      | Required |  Type  | Template | Text Template |  Default  |          Example          | Description                                                                    |
-|:-----------|:--------:|:------:|:--------:|:-------------:|:---------:|:-------------------------:|:-------------------------------------------------------------------------------|
-| color      |    -     | string |    +     |       -       | "#00C100" |         "#E40303"         | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts) |
-| pretext    |    -     | string |    +     |       +       |    ""     | "Pretext {{.TIMEFORMAT}}" | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts) |
-| text       |    -     | string |    +     |       +       |    ""     |     "{{.DATA.TEXT0}}"     | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts) |
-| title      |    -     | string |    +     |       +       |    ""     |    "Hello, {{.FLOW}}!"    | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts) |
-| title_link |    -     | string |    +     |       -       |    ""     |   "https://example.com"   | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts) |
+| Param        | Required   | Type     | Template   | Text Template   | Default     | Example                     | Description                                                                      |
+| :----------- | :--------: | :------: | :--------: | :-------------: | :---------: | :-------------------------: | :------------------------------------------------------------------------------- |
+| color        | -          | string   | +          | -               | "#00C100"   | "#E40303"                   | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)   |
+| pretext      | -          | string   | +          | +               | ""          | "Pretext {{.TIMEFORMAT}}"   | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)   |
+| text         | -          | string   | +          | +               | ""          | "{{ .DATA.TEXT0 }}"         | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)   |
+| title        | -          | string   | +          | +               | ""          | "Hello, {{.FLOW}}!"         | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)   |
+| title_link   | -          | string   | +          | -               | ""          | "https://example.com"       | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)   |
 
 ### Flow sample:
 
@@ -87,7 +86,6 @@ consumer_secret = "<CONSUMER_SECRET>"
 
 [regexps.urls]
 regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
     'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
 ]
 
