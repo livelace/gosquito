@@ -1,7 +1,6 @@
 ### Description:
 
-**twitter** input plugin is intended for data gathering from
-[Twitter](https://twitter.com/) channels.
+**twitter** input plugin is intended for data gathering from [Twitter](https://twitter.com/) channels.
 
 ### Data structure:
 
@@ -41,7 +40,7 @@ type Twitter struct {
 | **consumer_key**      | +          | string   | +      | -          | ""                  | ""                | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
 | **consumer_secret**   | +          | string   | +      | -          | ""                  | ""                | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
 | **input**             | +          | array    | -      | +          | []                  | ["tass_agency"]   | List of Twitter channels.                                                 |
-| match_signature       | -          | array    | -      | +          | "[]"                | ["text", "time"]  | Match new tweets by signature.                                          |
+| match_signature       | -          | array    | -      | +          | "[]"                | ["text"]          | Match new tweets by signature.                                            |
 | match_ttl             | -          | string   | -      | +          | "1d"                | "24h"             | TTL (Time To Live) for matched signatures.                                |
 | user_agent            | -          | string   | -      | +          | "gosquito v3.0.0"   | "webchela 1.0"    | Custom User-Agent for API access.                                         |
 
@@ -65,32 +64,17 @@ flow:
       alias: "clean text"
       plugin: "regexpreplace"
       params:
-        input:  ["twitter.text"]
-        output: ["data.text0"]
-        regexp: ["regexps.urls"]
-        replacement: [ "" ]
+        input:   ["twitter.text"]
+        output:  ["data.text0"]
+        regexp:  ["regexps.urls"]
+        replace: [""]
 
     - id: 1
-      alias: "search urls"
-      plugin: "regexpfind"
+      plugin: "echo"
+      alias: "show original and cleaned text"
       params:
-        include: false
-        input:  ["twitter.urls"]
-        output: ["data.array0"]
-        regexp: ["https://ria.ru/.*"]
+        input: ["twitter.text", "data.text0"]
 
-    - id: 2
-      alias: "fetch media"
-      plugin: "fetch"
-      params:
-        include: false
-        input:  ["twitter.media"]
-        output: ["data.array1"]
-
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.twitter.smtp.default"
 ```
 
 ### Config sample:
@@ -104,25 +88,8 @@ consumer_secret = "<CONSUMER_SECRET>"
 
 [regexps.urls]
 regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
     'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
 ]
-
-[templates.twitter.smtp.default]
-server = "mail.example.com"
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-
-subject = "{{ .DATA.TEXT0 }}"
-
-body = """
-<div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
-{{.DATA.TEXT0}}<br><br>
-{{range .DATA.ARRAY0}}{{printf "%s<br>" .}}{{end}}
-"""
-
-attachments = ["data.array1"]
 ```
 
 
