@@ -1,14 +1,9 @@
 ### Description:
 
-**telegram** input plugin is intended for data gathering from
-[Telegram](https://telegram.org/) chats. This plugin uses
-[TDLib client API](https://core.telegram.org/tdlib), not
-[Telegram Bot API](https://core.telegram.org/bots/api).  
-Right now plugin supports only
-[public chats](https://core.telegram.org/tdlib/getting-started) (find,
-join, receive messages). Plugin registration happens during first flow
-start (phone number + verify code), every flow has its own Telegram
-client, separated from others (different phone numbers can be used).
+**telegram** input plugin is intended for data gathering from [Telegram](https://telegram.org/) chats.    
+This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Telegram Bot API](https://core.telegram.org/bots/api)).  
+Right now plugin supports only [public chats](https://core.telegram.org/tdlib/getting-started) (find, join, receive messages and files).  
+Registration as a client happens during first start (type phone number and verify code). Only one client/phone may be used per application (not flow).
 
 ### Data structure:
 
