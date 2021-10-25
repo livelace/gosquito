@@ -40,7 +40,7 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["http://tass.ru/rss/v2.xml"]
+      input: ["https://tass.ru/rss/v2.xml"]
       force: true
       force_count: 10
 
