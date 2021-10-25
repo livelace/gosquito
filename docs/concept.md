@@ -56,7 +56,7 @@ type Iter struct {
 
 ### Plugin specific data structures:
 
-[RESTY](https://github.com/livelace/gosquito/blob/master/docs/plugins/multi/resty.md)    
-[RSS](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/rss.md)  
-[TELEGRAM](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/telegram.md)  
-[TWITTER](https://github.com/livelace/gosquito/blob/master/docs/plugins/input/twitter.md)  
+1. [RESTY](plugins/input/resty.md)    
+2. [RSS](plugins/input/rss.md)  
+3. [TELEGRAM](plugins/input/telegram.md)  
+4. [TWITTER](plugins/input/twitter.md)  
