@@ -33,7 +33,7 @@
 | **input**                | +          | array    | +          | []            | ["twitter.urls", "data.array0"]     | List of [DataItem](../../concept.md) fields with URLs.                                          |
 | mem_free                 | -          | string   | +          | "1g"          | "3g"                                | Minimum free MEM size on a server.                                                              |
 | **output**               | -          | array    | +          | []            | ["data.array1", "data.array2"]      | List of target [DataItem](../../concept.md) fields.                                             |
-| output_filename          | -          | string   | +          | ""            | "page_body.html"                    | Append file name to path of output directory (webchela saves multiple files into directory by default). |
+| output_filename          | -          | string   | +          | ""            | "page_body.html"                    | Append file name to path of output directory (webchela saves multiple files into single directory by default). |
 | request_timeout          | -          | int      | +          | 10            | 30                                  | Server GRPC request timeout.                                                                    |
 | script                   | -          | array    | +          | []            | ["scripts.clicker", "return 42;"]   | List of config templates/raw javascript code.                                                   |
 | **server**               | +          | array    | +          | []            | ["server1.example.com:8080"]        | List of Webchela servers.                                                                       |
