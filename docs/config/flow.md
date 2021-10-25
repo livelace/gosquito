@@ -56,8 +56,8 @@ flow:
       params:                               
         include: false                      # All filtered/matched/transformed (by this plugin) data will not be 
         ...                                 # included for sending (with output plugin, if declared) by default. 
-                                            # Plugin data may be used only by other plugins (require option) and 
-                                            # sending is not needed.
+                                            # Produced data may be used only by other plugins and there is no need 
+                                            # to send this data to destination. 
 
     - id: 1
       alias: "second step"
