@@ -21,20 +21,7 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	var doc *html.Node
 	var err error
 
-	temp := ""
-
-	logError := func(data string, err error) {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"id":     p.PluginID,
-			"data":   data,
-			"error":  err,
-		}).Error(core.LOG_PLUGIN_DATA)
-	}
+	result := ""
 
 	// Read document from file/string.
 	if core.IsFile(text, "") {
@@ -43,32 +30,46 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 		doc, err = htmlquery.Parse(strings.NewReader(text))
 	}
 
-	// Find xpaths.
-	if err == nil {
-		for _, xpath := range xpaths {
-			nodes, err := htmlquery.QueryAll(doc, xpath)
-
-			if err == nil {
-				for _, node := range nodes {
-					if p.OptionXpathHtml {
-						temp += fmt.Sprintf(
-							"%s%s", htmlquery.OutputHTML(node, p.OptionXpathHtmlSelf), p.OptionXpathSeparator)
-					} else {
-						temp += fmt.Sprintf("%s%s", htmlquery.InnerText(node), p.OptionXpathSeparator)
-					}
-				}
-			} else {
-				logError(fmt.Sprintf("xpath: %s", xpath), err)
-				return "", false
-			}
-		}
-
-	} else {
-		logError(fmt.Sprintf("xpath parse error"), err)
+	if err != nil {
+		logProcessError(p, fmt.Errorf("xpath parse error: %s", err))
 		return "", false
 	}
 
-	return temp, len(temp) > 0
+	// Find xpaths.
+	for _, xpath := range xpaths {
+		nodes, err := htmlquery.QueryAll(doc, xpath)
+
+		if err != nil {
+			logProcessError(p, fmt.Errorf("xpath node error: %s", err))
+			return "", false
+		}
+
+		for _, node := range nodes {
+			if p.OptionXpathHtml {
+				result += fmt.Sprintf("%s%s",
+					htmlquery.OutputHTML(node, p.OptionXpathHtmlSelf), p.OptionXpathSeparator)
+
+			} else {
+				result += fmt.Sprintf("%s%s",
+					htmlquery.InnerText(node), p.OptionXpathSeparator)
+			}
+		}
+	}
+
+	return result, len(result) > 0
+}
+
+func logProcessError(p *Plugin, err error) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"error":  err,
+	}).Error(core.LOG_PLUGIN_DATA)
 }
 
 type Plugin struct {
@@ -130,31 +131,25 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		found := make([]bool, len(p.OptionInput))
 
 		for index, input := range p.OptionInput {
-			var ro reflect.Value
-
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always check fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
-			ro, _ = core.ReflectDataField(item, p.OptionOutput[index])
+			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
-			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if s, b := findXpath(p, p.OptionXpath[index], ri.String()); b {
+				if result, ok := findXpath(p, p.OptionXpath[index], ri.String()); ok {
 					found[index] = true
-					ro.SetString(s)
-				} else {
-					ro.SetString(s)
+					ro.Set(reflect.Append(ro, reflect.ValueOf(result)))
 				}
+
 			case reflect.Slice:
 				somethingWasFound := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if s, b := findXpath(p, p.OptionXpath[index], ri.Index(i).String()); b {
+					if result, ok := findXpath(p, p.OptionXpath[index], ri.Index(i).String()); ok {
 						somethingWasFound = true
-						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
-					} else {
-						ro.Set(reflect.Append(ro, reflect.ValueOf(s)))
+						ro.Set(reflect.Append(ro, reflect.ValueOf(result)))
 					}
 				}
 
@@ -339,10 +334,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
-	}
-
-	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
-		return &Plugin{}, err
 	}
 
 	return &plugin, nil

@@ -3,7 +3,6 @@ package fetchProcess
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-getter"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
@@ -44,6 +43,32 @@ func fetchData(url string, dst string, timeout int) error {
 	}
 
 	return nil
+}
+
+func logProcessError(p *Plugin, err error) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"error":  err,
+	}).Error(LOG_FETCH_ERROR)
+}
+
+func logProcessDebug(p *Plugin, message string) {
+	log.WithFields(log.Fields{
+		"hash":   p.Flow.FlowHash,
+		"flow":   p.Flow.FlowName,
+		"file":   p.Flow.FlowFile,
+		"plugin": p.PluginName,
+		"type":   p.PluginType,
+		"id":     p.PluginID,
+		"alias":  p.PluginAlias,
+		"data":   message,
+	}).Debug(core.LOG_PLUGIN_DATA)
 }
 
 type Plugin struct {
@@ -96,68 +121,44 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		return temp, nil
 	}
 
+	outputDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
+	_ = core.CreateDirIfNotExist(outputDir)
+
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
-		fetched := false
-
 		for index, input := range p.OptionInput {
-			outputDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
-			_ = core.CreateDirIfNotExist(outputDir)
-
-			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
-			// Every downloaded item is placed into individual directory.
-			// Items with similar names don't overwrite each other.
-			fetch := func(url string) {
-				u, _ := uuid.NewRandom()
-				fileName := path.Base(url)
-				savePath := filepath.Join(outputDir, u.String(), fileName)
-
-				if err := fetchData(url, savePath, p.OptionTimeout); err == nil {
-					fetched = true
-
-					ro.Set(reflect.Append(ro, reflect.ValueOf(savePath)))
-
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"id":     p.PluginID,
-						"alias":  p.PluginAlias,
-						"data":   fmt.Sprintf("%s -> %s", url, savePath),
-					}).Debug(core.LOG_PLUGIN_DATA)
-
-				} else {
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"id":     p.PluginID,
-						"alias":  p.PluginAlias,
-						"error":  err,
-					}).Debug(LOG_FETCH_ERROR)
-				}
-			}
-
 			switch ri.Kind() {
 			case reflect.String:
-				fetch(ri.String())
+				savePath := filepath.Join(outputDir, item.UUID.String(), path.Base(ri.String()))
+				err := fetchData(ri.String(), savePath, p.OptionTimeout)
+
+				if err == nil {
+					ro.SetString(savePath)
+					logProcessDebug(p, fmt.Sprintf("%s -> %s", ri.String(), savePath))
+				} else {
+					logProcessError(p, err)
+				}
+
 			case reflect.Slice:
 				for i := 0; i < ri.Len(); i++ {
-					fetch(ri.Index(i).String())
+					savePath := filepath.Join(outputDir, item.UUID.String(), path.Base(ri.Index(i).String()))
+					err := fetchData(ri.Index(i).String(), savePath, p.OptionTimeout)
+
+					if err == nil {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(savePath)))
+						logProcessDebug(p, fmt.Sprintf("%s -> %s", ri.Index(i).String(), savePath))
+					} else {
+						logProcessError(p, err)
+					}
 				}
 			}
-		}
 
-		if fetched {
-			temp = append(temp, item)
+			if ro.Len() > 0 {
+				temp = append(temp, item)
+			}
 		}
 	}
 
@@ -230,10 +231,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["output"] = 0
-				plugin.OptionOutput = v
-			}
+			availableParams["output"] = 0
+			plugin.OptionOutput = v
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])

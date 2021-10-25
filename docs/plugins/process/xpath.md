@@ -15,7 +15,8 @@
 
 | Param             | Required   | Type     | Template   | Default   | Example           | Description                                                                                           |
 | :---------------- | :--------: | :------: | :--------: | :-------: | :---------------: | :---------------------------------------------------------------------------------------------------- |
-| **input**         | +          | array    | -          | []        | ["data.array0"]   | List of [DataItem](../../concept.md) fields with data.                                                |
+| find_all          | -          | bool     | -          | false     | true              | Patterns must be found in all selected [DataItem](../../concept.md) fields.                           |
+| **input**         | +          | array    | -          | []        | ["data.array0"]   | List of [DataItem](../../concept.md) fields with data. Might be text or file path.                                               |
 | **output**        | +          | array    | -          | []        | ["data.array0"]   | List of target [DataItem](../../concept.md) fields.                                                   |
 | **xpath**         | +          | array    | +          | []        | ["//a/@href"]     | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                                         |
 | xpath_html        | -          | bool     | -          | true      | false             | Get nodes with HTML tags (only text by default).                                                      |
@@ -32,10 +33,10 @@ flow:
     plugin: "rss"
     params:
       input: [
-        "https://spb.hh.ru/search/vacancy/rss?area=1&clusters=true&enable_snippets=true&search_period=1&specialization=1&text=."
+        "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=."
       ]
       force: true
-      force_count: 10
+      force_count: 1
 
   process:
     - id: 0
@@ -43,44 +44,27 @@ flow:
       plugin: "fetch"
       params:
         input:  ["rss.link"]
-        output: ["data.array0"]
+        output: ["data.text0"]
 
     - id: 1
-      alias: "xpath description"
+      alias: "extract xpath"
       plugin: "xpath"
       params:
-        input:  ["data.array0"]
-        output: ["data.array1"]
-        xpath:  ["templates.xpath.hh.ru"]
-
-    - id: 2
-      alias: "xpath tags"
-      plugin: "xpath"
-      params:
-        input:  ["data.array0"]
-        output: ["data.array2"]
-        xpath:  ["//span[contains(@data-qa, 'bloko-tag__text')]"]
+        input:  ["data.text0", "data.text0"]
+        output: ["data.array1", "data.array2"]
+        xpath:  ["//div[contains(@data-qa, 'vacancy-description')]", "//span[contains(@data-qa, 'bloko-tag__text')]"]
         xpath_html: false
 
-    - id: 3
+    - id: 2
       alias: "echo description"
       plugin: "echo"
       params:
         input:  ["data.array1"]
         
-    - id: 4
+    - id: 3
       alias: "echo tags"
       plugin: "echo"
       params:
         input:  ["data.array2"]
-```
-
-### Config sample:
-
-```toml
-[templates.xpath.hh.ru]
-xpath = [
-  "//div[contains(@data-qa, 'vacancy-description')]"
-]
 ```
 
