@@ -42,7 +42,7 @@ type Telegram struct {
 | **api_hash**    | +          | string   | +      | -          | ""        | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                              |
 | file_max_size   | -          | size     | -      | +          | "10m"     | "1g"               | Maximum file size for download.                                                                              |
 | **input**       | +          | array    | -      | +          | []        | ["breakingmash"]   | List of Telegram chats.                                                                                      |
-| match_signature | -          | array    | -      | +          | "[]"      | ["text", "time"]   | Match new messages by signature.                                                                               |
+| match_signature | -          | array    | -      | +          | "[]"      | ["text"]           | Match new messages by signature.                                                                             |
 | match_ttl       | -          | string   | -      | +          | "1d"      | "24h"              | TTL (Time To Live) for matched signatures.                                                                   |
 | log_level       | -          | int      | -      | +          | 0         | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html)   |
 
@@ -69,26 +69,20 @@ flow:
 
   process:
     - id: 0
-      alias: "match all"
-      plugin: "regexpmatch"
-      params:
-        input:  ["telegram.text"]
-        regexp: [".*"]
-
-    - id: 1
       alias: "replace newline"
       plugin: "regexpreplace"
       params:
-        include: false
         input:  ["telegram.text"]
         output: ["data.text0"]
         regexp: ["\n"]
         replace: ["<br>"]
 
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.telegram.smtp.default"
+    - id: 1
+      plugin: "echo"
+      alias: "show replaced text"
+      params:
+        input: ["data.text0"]
+
 ```
 
 
@@ -102,21 +96,6 @@ api_hash = "<API_HASH>"
 [templates.telegram.default]
 #file_max_size = "30m"
 #log_level = 90
-
-[templates.telegram.smtp.default]
-server = "mail.example.com"
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-
-subject = "{{.TELEGRAM.TEXT}}"
-
-body = """
-    <div align="right"><b>{{.FLOW}}&nbsp;&nbsp;&nbsp;{{.TIMEFORMAT}}</b></div>
-    {{ .DATA.TEXT0 }}<br><br>
-    {{ .TELEGRAM.URL }}
-    """
-attachments = ["telegram.media"]
 ```
 
 
