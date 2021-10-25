@@ -52,34 +52,17 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["http://tass.ru/rss/v2.xml"]
+      input: ["https://tass.ru/rss/v2.xml"]
       force: true
       force_count: 10
 
-  output:
-    plugin: "smtp"
-    params:
-      template: "templates.rss.smtp.default"
-```
+  process:
+    - id: 0
+      plugin: "echo"
+      alias: "show title and url"
+      params:
+        input: ["rss.title", "rss.link"]
 
-### Config sample:
-
-```toml
-[templates.rss.smtp.default]
-server = "mail.example.com"
-
-from = "gosquito@example.com"
-output = ["user@example.com"]
-
-subject = "{{ .RSS.TITLE }}"
-
-body = """
-    <div align="right"><b>{{ .FLOW }}&nbsp;&nbsp;&nbsp;{{ .TIMEFORMAT }}</b></div>
-    {{ .RSS.TITLE }}<br>
-    {{ if .RSS.DESCRIPTION }}{{ .RSS.DESCRIPTION }}<br>{{end}}
-    {{ if .RSS.CONTENT }}{{ .RSS.CONTENT }}<br><br>{{else}}<br>{{end}}
-    {{ if .RSS.LINK }}{{ .RSS.LINK }}{{end}}
-    """
 ```
 
 
