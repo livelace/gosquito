@@ -1,6 +1,6 @@
 ### Description:
 
-**resty** process plugin is intended for [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) requests.
+**resty** process plugin is intended for [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) queries.
 
 
 ### Generic parameters:

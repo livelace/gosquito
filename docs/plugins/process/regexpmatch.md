@@ -30,42 +30,23 @@ flow:
   name: "regexpmatch-example"
 
   input:
-    plugin: "twitter"
+    plugin: "rss"
     params:
-      cred: "creds.twitter.default"
-      input: ["rianru"]
+      input: ["https://www.interfax.ru/rss.asp", "https://tass.ru/rss/v2.xml"]
       force: true
-      force_count: 10
+      force_count: 100
 
   process:
     - id: 0
       plugin: "regexpmatch"
       params:
-        input:  ["twitter.text", "twitter.urls"]
-        output: ["data.text0", "data.array0"]
-        regexp: ["Россия", "regexps.urls"]
-        match_all: true
+        input:  ["rss.description"]
+        regexp: [".*Росси.*"]
 
     - id: 1
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.text0", "data.array0"]
-```
-
-### Config sample:
-
-```toml
-[creds.twitter.default]
-access_token = "<ACCESS_TOKEN>"
-access_secret = "<ACCESS_SECRET>"
-consumer_key = "<CONSUMER_KEY>"
-consumer_secret = "<CONSUMER_SECRET>"
-
-[regexps.urls]
-regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
-    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
-]
+        input: ["rss.description"]
 ```
 

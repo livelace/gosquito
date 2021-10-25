@@ -270,16 +270,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
 		}
 
+		if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+			return &Plugin{}, err
+		}
+
 	} else {
 		if len(plugin.OptionInput) != len(plugin.OptionRegexp) {
 			return &Plugin{}, fmt.Errorf(
-				"%s: %v, %v, %v",
+				"%s: %v, %v",
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionRegexp)
 		}
-	}
-
-	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
-		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

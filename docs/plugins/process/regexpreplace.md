@@ -30,44 +30,25 @@ flow:
   name: "regexpreplace-example"
 
   input:
-    plugin: "twitter"
+    plugin: "rss"
     params:
-      cred: "creds.twitter.default"
-      input: ["AP"]
+      input: ["https://www.interfax.ru/rss.asp"]
       force: true
-      force_count: 10
+      force_count: 1
 
   process:
     - id: 0
       plugin: "regexpreplace"
       params:
-        input:  ["twitter.text", "twitter.urls"]
-        output: ["data.text0", "data.array0"]
-        regexp:  ["for", "regexps.urls"]
-        replace: ["FOR", "<URL>"]
-        replace_all: true
+        input:   ["rss.title"]
+        output:  ["data.text0"]
+        regexp:  [" "]
+        replace: ["_"]
 
     - id: 1
-      alias: "echo text"
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.text0", "data.array0"]
-```
-
-### Config sample:
-
-```toml
-[creds.twitter.default]
-access_token = "<ACCESS_TOKEN>"
-access_secret = "<ACCESS_SECRET>"
-consumer_key = "<CONSUMER_KEY>"
-consumer_secret = "<CONSUMER_SECRET>"
-
-[regexps.urls]
-regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
-    'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
-]
+        input: ["data.text0"]
 ```
 
