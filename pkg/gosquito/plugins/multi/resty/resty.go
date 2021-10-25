@@ -1023,15 +1023,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	if pluginConfig.PluginType == "process" {
-		// 1. "input, output" must have equal size.
-		// 2. "input, output" values must have equal types.
-
 		if len(plugin.OptionInput) != len(plugin.OptionOutput) {
 			return &Plugin{}, fmt.Errorf(
 				"%s: %v, %v",
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+		}
 
-		} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 			return &Plugin{}, err
 		}
 	}

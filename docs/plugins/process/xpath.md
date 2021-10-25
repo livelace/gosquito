@@ -1,7 +1,6 @@
 ### Description:
 
-**xpath** process plugin is intended for finding HTML elements inside
-data.
+**xpath** process plugin is intended for finding HTML elements inside data.
 
 
 ### Generic parameters:
@@ -47,7 +46,7 @@ flow:
         output: ["data.array0"]
 
     - id: 1
-      alias: "xpath desc"
+      alias: "xpath description"
       plugin: "xpath"
       params:
         input:  ["data.array0"]
@@ -64,7 +63,7 @@ flow:
         xpath_html: false
 
     - id: 3
-      alias: "echo desc"
+      alias: "echo description"
       plugin: "echo"
       params:
         input:  ["data.array1"]
