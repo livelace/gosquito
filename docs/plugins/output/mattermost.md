@@ -1,7 +1,6 @@
 ### Description:
 
-**mattermost** output plugin is intended for sending data to [Mattermost](https://mattermost.org/)
-users/channels.
+**mattermost** output plugin is intended for sending data to [Mattermost](https://mattermost.org/) users/channels.
 
 
 ### Generic parameters:
@@ -93,7 +92,6 @@ consumer_secret = "<CONSUMER_SECRET>"
 
 [regexps.urls]
 regexp = [
-    'http?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)',
     'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
 ]
 

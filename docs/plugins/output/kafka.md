@@ -1,9 +1,8 @@
 ### Description:
 
-**kafka** output plugin is intended for sending data to [Kafka](https://kafka.apache.org/) topics.
-Kafka messages are generated in
-[Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an
-arbitrary schema (flat, no nested objects).
+**kafka** output plugin is intended for sending data to [Kafka](https://kafka.apache.org/) topics.  
+
+Kafka messages are generated in [Avro](https://en.wikipedia.org/wiki/Apache_Avro) format with an arbitrary schema (flat, no nested objects).
 
 
 ### Generic parameters:
@@ -39,7 +38,7 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["http://tass.ru/rss/v2.xml"]
+      input: ["https://tass.ru/rss/v2.xml"]
       force: true
       force_count: 10
 
