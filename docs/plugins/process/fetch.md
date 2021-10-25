@@ -40,6 +40,7 @@ flow:
         input:  ["twitter.media"]
         output: ["data.array0"]
 
+    # Flow temp files will be cleaned at the end.
     - id: 1
       plugin: "echo"
       params:
