@@ -29,6 +29,7 @@ const (
 	DEFAULT_CHUNK_SIZE             = "3M"
 	DEFAULT_CPU_LOAD               = 25
 	DEFAULT_MEM_FREE               = "1G"
+	DEFAULT_OUTPUT_FILENAME        = ""
 	DEFAULT_PAGE_BODY_FILENAME     = "page_body.html"
 	DEFAULT_PAGE_TITLE_FILENAME    = "page_title.txt"
 	DEFAULT_PAGE_URL_FILENAME      = "page_url.txt"
@@ -301,7 +302,7 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 			"data":   fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir),
 		}).Debug(core.LOG_PLUGIN_DATA)
 
-		b.Output = append(b.Output, outputDir)
+		b.Output = append(b.Output, filepath.Join(outputDir, p.OptionOutputFilename))
 	}
 
 	return nil
@@ -335,6 +336,7 @@ type Plugin struct {
 	OptionInput                []string
 	OptionMemFree              int64
 	OptionOutput               []string
+	OptionOutputFilename       string
 	OptionRequestTimeout       int
 	OptionRequire              []int
 	OptionScript               []string
@@ -591,6 +593,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"input":                  1,
 		"mem_free":               -1,
 		"output":                 -1,
+		"output_filename":        -1,
 		"request_timeout":        -1,
 		"script":                 -1,
 		"server":                 1,
@@ -838,6 +841,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 	setOutput((*pluginConfig.PluginParams)["output"])
 	showParam("output", plugin.OptionOutput)
+
+	// output_filename.
+	setOutputFilename := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["output_filename"] = 0
+			plugin.OptionOutputFilename = v
+		}
+	}
+	setOutputFilename(DEFAULT_OUTPUT_FILENAME)
+	setOutputFilename(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.output_filename", template)))
+	setOutputFilename((*pluginConfig.PluginParams)["output_filename"])
+	showParam("output_filename", plugin.OptionOutputFilename)
 
 	// request_timeout.
 	setRequestTimeout := func(p interface{}) {
