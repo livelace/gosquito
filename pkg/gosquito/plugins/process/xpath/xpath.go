@@ -352,14 +352,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if minLength != maxLength {
 		return &Plugin{}, fmt.Errorf(
-			"%s: %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
+			"%s: %v, %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
 
 	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
-
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	return &plugin, nil

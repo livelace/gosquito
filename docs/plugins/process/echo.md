@@ -1,21 +1,20 @@
 ### Description:
 
-**echo** process plugin is intended for echoing processing data into
-console.
+**echo** process plugin is intended for echoing processing data into console.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type  | Default | Example |
-|:--------|:--------:|:-----:|:-------:|:-------:|
-| require |    -     | array |   []    | [1, 2]  |
+| Param     | Required   | Type    | Default   | Example   |
+| :-------- | :--------: | :-----: | :-------: | :-------: |
+| require   | -          | array   | []        | [1, 2]    |
 
 
 ### Plugin parameters:
 
-| Param     | Required | Type  | Default |             Example             | Description                          |
-|:----------|:--------:|:-----:|:-------:|:-------------------------------:|:-------------------------------------|
-| **input** |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of [DataItem](../../concept.md) fields for echoing. |
+| Param       | Required   | Type    | Default   | Example                           | Description                                              |
+| :---------- | :--------: | :-----: | :-------: | :-------------------------------: | :-------------------------------------                   |
+| **input**   | +          | array   | []        | ["rss.title"]                     | List of [DataItem](../../concept.md) fields for echoing. |
 
 ### Flow sample:
 
@@ -24,10 +23,9 @@ flow:
   name: "echo-example"
 
   input:
-    plugin: "twitter"
+    plugin: "rss"
     params:
-      cred: "creds.twitter.default"
-      input: ["rianru"]
+      input: ["https://tass.ru/rss/v2.xml"]
       force: true
       force_count: 10
 
@@ -35,18 +33,8 @@ flow:
     - id: 0
       plugin: "echo"
       params:
-        input: ["twitter.urls"]
+        input: ["rss.title"]
 
-```
-
-### Config sample:
-
-```toml
-[creds.twitter.default]
-access_token = "<ACCESS_TOKEN>"
-access_secret = "<ACCESS_SECRET>"
-consumer_key = "<CONSUMER_KEY>"
-consumer_secret = "<CONSUMER_SECRET>"
 ```
 
 

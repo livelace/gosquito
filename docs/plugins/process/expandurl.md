@@ -1,7 +1,6 @@
 ### Description:
 
-**expandurl** process plugin is intended for expanding short URLs into
-full URLs.
+**expandurl** process plugin is intended for expanding short URLs into full URLs.
 
 
 ### Generic parameters:

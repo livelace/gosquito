@@ -75,7 +75,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 		for index, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
+			// Error ignored because we always check fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
@@ -107,7 +107,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"depth":  -1,
+		"depth": -1,
+
 		"input":  1,
 		"output": 1,
 	}
@@ -175,10 +176,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// input and output must have equal size.
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
