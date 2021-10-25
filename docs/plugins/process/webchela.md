@@ -45,49 +45,30 @@ flow:
   name: "webchela-example"
 
   input:
-    plugin: "twitter"
+    plugin: "rss"
     params:
-      cred: "creds.twitter.default"
-      input: ["rianru"]
+      input: ["https://tass.ru/rss/v2.xml"]
       force: true
-      force_count: 10
+      force_count: 1
 
   process:
     - id: 0
-      alias: "search urls"
-      plugin: "regexpfind"
-      params:
-        include: false
-        input:  ["twitter.urls"]
-        output: ["data.array0"]
-        regexp: ["https://ria.ru/.*"]
-
-    - id: 1
       alias: "grab pages"
       plugin: "webchela"
       params:
-        require: [0]
-        include: false
         template: "templates.webchela.default"
-        input:  ["data.array0"]
-        output: ["data.array1"]
+        input:  ["rss.link"]
+        output: ["data.text0"]
 
-    - id: 2
+    - id: 1
       plugin: "echo"
       params:
-        require: [1]
-        input: ["data.array1"]
+        input: ["data.text0"]
 ```
 
 ### Config sample:
 
 ```toml
-[creds.twitter.default]
-access_token = "<ACCESS_TOKEN>"
-access_secret = "<ACCESS_SECRET>"
-consumer_key = "<CONSUMER_KEY>"
-consumer_secret = "<CONSUMER_SECRET>"
-
 [templates.webchela.default]
 batch_size = 3
 browser_type = "firefox"
@@ -95,7 +76,7 @@ browser_instance = 1
 browser_instance_tab = 3
 browser_extension = ["bypass-paywalls-1.7.6.xpi", "ublock-origin-1.30.6.xpi"]
 cpu_load = 25
-server = ["host.example.com:50051"]
+server = ["172.17.0.2:50051"]
 timeout = 900
 ```
 

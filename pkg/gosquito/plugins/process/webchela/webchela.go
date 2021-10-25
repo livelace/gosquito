@@ -916,11 +916,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
-
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

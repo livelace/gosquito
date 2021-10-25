@@ -498,6 +498,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
+	// Additional checks.
+
+	if !core.IsValueInSlice(strings.ToUpper(plugin.OptionSchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
+		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.OptionSchemaSubjectStrategy)
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
 	// Kafka.
 
 	// Set client id for identification.
@@ -518,15 +525,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	plugin.KafkaConfig = &kafkaConfig
-
-	// -----------------------------------------------------------------------------------------------------------------
-	// Additional checks.
-
-	if !core.IsValueInSlice(strings.ToUpper(plugin.OptionSchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
-		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.OptionSchemaSubjectStrategy)
-	} else {
-		plugin.OptionSchemaSubjectStrategy = strings.ToUpper(plugin.OptionSchemaSubjectStrategy)
-	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 

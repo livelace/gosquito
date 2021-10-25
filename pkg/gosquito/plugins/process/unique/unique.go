@@ -178,11 +178,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if len(plugin.OptionOutput) > 1 {
 		return &Plugin{}, ERROR_OUTPUT_SIZE
-
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
 
 	return &plugin, nil
 }

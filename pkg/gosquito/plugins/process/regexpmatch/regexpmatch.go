@@ -263,45 +263,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// If output is set:
-	// 1. "input, output, regexp" must have equal size.
-	// 2. "input, output" values must have equal types.
-	minLength := 10000
-	maxLength := 0
-	var lengths []int
-
 	if availableParams["output"] == 0 {
-		lengths = []int{len(plugin.OptionInput), len(plugin.OptionOutput), len(plugin.OptionRegexp)}
-	} else {
-		lengths = []int{len(plugin.OptionInput), len(plugin.OptionRegexp)}
-	}
-
-	for _, length := range lengths {
-		if length > maxLength {
-			maxLength = length
-		}
-		if length < minLength {
-			minLength = length
-		}
-	}
-
-	if availableParams["output"] == 0 {
-		if minLength != maxLength {
+		if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
 			return &Plugin{}, fmt.Errorf(
-				"%s %v, %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
+				"%s: %v, %v, %v",
+				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
 		}
-
-		if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
-			return &Plugin{}, err
-		}
-
-	} else if minLength != maxLength {
-		return &Plugin{}, fmt.Errorf(
-			"%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionRegexp)
 
 	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
+		if len(plugin.OptionInput) != len(plugin.OptionRegexp) {
+			return &Plugin{}, fmt.Errorf(
+				"%s: %v, %v, %v",
+				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionRegexp)
+		}
+	}
+
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		return &Plugin{}, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

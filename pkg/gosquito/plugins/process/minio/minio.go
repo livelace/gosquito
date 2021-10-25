@@ -385,14 +385,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// input and output must have equal size.
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
-		return &Plugin{}, fmt.Errorf("%s: %v, %v", core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+	}
 
-	} else if plugin.OptionAction != "put" {
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		return &Plugin{}, err
+	}
+
+	if plugin.OptionAction != "put" {
 		return &Plugin{}, fmt.Errorf(ERROR_ACTION_UNKNOWN.Error(), plugin.OptionAction)
-
-	} else {
-		core.SliceStringToUpper(&plugin.OptionInput)
-		core.SliceStringToUpper(&plugin.OptionOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

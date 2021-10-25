@@ -324,8 +324,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
 		return &Plugin{}, fmt.Errorf("%s: %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
+	}
 
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 	}
 

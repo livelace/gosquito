@@ -335,27 +335,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// 1. "input, output, xpath" must have equal size.
-	// 2. "input, output" values must have equal types.
-	minLength := 10000
-	maxLength := 0
-	lengths := []int{len(plugin.OptionInput), len(plugin.OptionOutput), len(plugin.OptionXpath)}
-
-	for _, length := range lengths {
-		if length > maxLength {
-			maxLength = length
-		}
-		if length < minLength {
-			minLength = length
-		}
-	}
-
-	if minLength != maxLength {
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionXpath) {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
+	}
 
-	} else if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 	}
 
