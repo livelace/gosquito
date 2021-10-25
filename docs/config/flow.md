@@ -44,7 +44,7 @@ flow:
         "tass_agency"
       ]
       
-      # Other plugin parameters see on plugin page.
+      # Other plugin parameters see on a specific plugin page.
       
   # Process plugins parameters:
   # 1. Section is not strictly required.
