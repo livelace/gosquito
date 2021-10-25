@@ -30,9 +30,9 @@
 | chunk_size             |    -     | string |    +     |    "3m"     |               "1m"                | Split large messages into sized chunks.        |
 | client_id              |    -     | string |    +     | <FLOW_NAME> |          "group1-flow1"           | Custom client identification.                  |
 | cpu_load               |    -     |  int   |    +     |     25      |                50                 | Maximum CPU load on a server.                  |
-| **input**              |    +     | array  |    +     |     []      |  ["twitter.urls", "data.array0"]  | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs.             |
+| **input**              |    +     | array  |    +     |     []      |  ["twitter.urls", "data.array0"]  | List of [DataItem](../../concept.md) fields with URLs.             |
 | mem_free               |    -     | string |    +     |    "1g"     |               "3g"                | Minimum free MEM size on a server.             |
-| output                 |    -     | array  |    +     |     []      |  ["data.array1", "data.array2"]   | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                |
+| output                 |    -     | array  |    +     |     []      |  ["data.array1", "data.array2"]   | List of target [DataItem](../../concept.md) fields.                |
 | request_timeout        |    -     |  int   |    +     |     10      |                30                 | Server GRPC request timeout.                   |
 | script                 |    -     | array  |    +     |     []      | ["scripts.clicker", "return 42;"] | List of config templates/raw javascript code.  |
 | **server**             |    +     | array  |    +     |     []      |   ["server1.example.com:8080"]    | List of Webchela servers.                      |

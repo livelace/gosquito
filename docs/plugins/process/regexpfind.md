@@ -16,10 +16,10 @@ data.
 
 | Param      | Required | Type  | Template | Default |         Example          | Description                                                                                                              |
 |:-----------|:--------:|:-----:|:--------:|:-------:|:------------------------:|:-------------------------------------------------------------------------------------------------------------------------|
-| find_all   |    -     | bool  |    -     |  false  |           true           | Patterns must be found in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
-| **input**  |    +     | array |    -     |   []    |     ["twitter.urls"]     | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                      |
+| find_all   |    -     | bool  |    -     |  false  |           true           | Patterns must be found in all selected [DataItem](../../concept.md) fields. |
+| **input**  |    +     | array |    -     |   []    |     ["twitter.urls"]     | List of [DataItem](../../concept.md) fields with data.                      |
 | match_case |    -     | array |    -     |  true   |          false           | Case sensitive/insensitive.                      |
-| **output** |    +     | array |    -     |   []    |     ["data.array0"]      | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                         |
+| **output** |    +     | array |    -     |   []    |     ["data.array0"]      | List of target [DataItem](../../concept.md) fields.                         |
 | **regexp** |    +     | array |    +     |   []    | ["http://go.tass.ru/.*"] | List of config templates/raw regexps for searching.                                                                      |
 
 ### Flow sample:

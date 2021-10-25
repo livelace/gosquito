@@ -18,8 +18,8 @@ full URLs.
 | Param      | Required |  Type  |      Default      |     Example      | Description                                                                                         |
 |:-----------|:--------:|:------:|:-----------------:|:----------------:|:----------------------------------------------------------------------------------------------------|
 | depth      |    -     |  int   |        10         |        5         | Maximum depth of HTTP redirects.                                                                    |
-| **input**  |    +     | array  |        []         | ["twitter.urls"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with URLs. |
-| **output** |    +     | array  |        []         | ["data.array0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.    |
+| **input**  |    +     | array  |        []         | ["twitter.urls"] | List of [DataItem](../../concept.md) fields with URLs. |
+| **output** |    +     | array  |        []         | ["data.array0"]  | List of target [DataItem](../../concept.md) fields.    |
 | user_agent |    -     | string | "gosquito v3.0.0" |  "webchela 1.0"  | Custom User-Agent for HTTP requests.                                                                |
 
 ### Flow sample:

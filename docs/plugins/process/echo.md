@@ -15,7 +15,7 @@ console.
 
 | Param     | Required | Type  | Default |             Example             | Description                          |
 |:----------|:--------:|:-----:|:-------:|:-------------------------------:|:-------------------------------------|
-| **input** |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields for echoing. |
+| **input** |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of [DataItem](../../concept.md) fields for echoing. |
 
 ### Flow sample:
 

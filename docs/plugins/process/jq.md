@@ -15,9 +15,9 @@
 
 | Param        | Required   | Type    | Template   | Default   | Example                    | Description                                                                                                                |
 | :----------- | :--------: | :-----: | :--------: | :-------: | :------------------------: | :------------------------------------------------------------------------------------------------------------------------- |
-| find_all     | -          | bool    | -          | false     | true                       | Query must be found in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.   |
-| **input**    | +          | array   | -          | []        | ["data.array0"]            | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                        |
-| **output**   | +          | array   | -          | []        | ["data.array1"]            | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                           |
+| find_all     | -          | bool    | -          | false     | true                       | Query must be found in all selected [DataItem](../../concept.md) fields.   |
+| **input**    | +          | array   | -          | []        | ["data.array0"]            | List of [DataItem](../../concept.md) fields with data.                        |
+| **output**   | +          | array   | -          | []        | ["data.array1"]            | List of target [DataItem](../../concept.md) fields.                           |
 | **query**    | +          | array   | +          | []        | [".foo", ".bar"]           | List of config templates/raw queries for searching.                                                                                                    |
 
 ### Flow sample:

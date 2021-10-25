@@ -16,10 +16,10 @@ data.
 
 | Param      | Required | Type  | Template | Default |     Example      | Description                                                                                                                |
 |:-----------|:--------:|:-----:|:--------:|:-------:|:----------------:|:---------------------------------------------------------------------------------------------------------------------------|
-| **input**  |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields with data.                        |
-| match_all  |    -     | bool  |    -     |  false  |       true       | Patterns must be matched in all selected [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields. |
+| **input**  |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](../../concept.md) fields with data.                        |
+| match_all  |    -     | bool  |    -     |  false  |       true       | Patterns must be matched in all selected [DataItem](../../concept.md) fields. |
 | match_case |    -     | array |    -     |  true   |      false       | Case sensitive/insensitive.                                                                                                |
-| output     |    -     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](https://github.com/livelace/gosquito/blob/master/docs/data.md) fields.                           |
+| output     |    -     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](../../concept.md) fields.                           |
 | **regexp** |    +     | array |    +     |   []    |    ["Россия"]    | List of config templates/raw regexps for matching.                                                                         |
 
 
