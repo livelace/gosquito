@@ -1,21 +1,22 @@
 ### Description:
 
-**dedup** process plugin is intended for deduplication
-[DataItem](../../concept.md) sets.
+**dedup** process plugin is intended for deduplication [DataItem](../../concept.md) sets.  
+
+Deduplication is performed over [DataItem](../../concept.md) UUID.
 
 
 ### Generic parameters:
 
-| Param   | Required | Type | Default | Example |
-|:--------|:--------:|:----:|:-------:|:-------:|
-| include |    -     | bool |  true   |  false  |
+| Param     | Required   | Type   | Default   | Example   |
+| :-------- | :--------: | :----: | :-------: | :-------: |
+| include   | -          | bool   | true      | false     |
 
 
 ### Plugin parameters:
 
-| Param       | Required | Type  | Default | Example | Description                                    |
-|:------------|:--------:|:-----:|:-------:|:-------:|:-----------------------------------------------|
-| **require** |    +     | array |   []    | [1, 2]  | List of process plugins ids for deduplication. |
+| Param         | Required   | Type    | Default   | Example   | Description                                      |
+| :------------ | :--------: | :-----: | :-------: | :-------: | :----------------------------------------------- |
+| **require**   | +          | array   | []        | [1, 2]    | List of process plugins IDs for deduplication.   |
 
 
 ### Flow sample:
@@ -35,25 +36,27 @@ flow:
   process:
     - id: 0
       plugin: "regexpmatch"
+      alias: "match tweets with a"
       params:
         input: ["twitter.text"]
         regexp: ["a"]
 
     - id: 1
       plugin: "regexpmatch"
+      alias: "match tweets with c"
       params:
         input: ["twitter.text"]
         regexp: ["c"]
 
     - id: 2
-      alias: "dedup tweets"
       plugin: "dedup"
+      alias: "dedup tweets"
       params:
         require: [0, 1]
 
-    # Duplicates shouldn't exist.
     - id: 3
       plugin: "echo"
+      alias: "show deduplicated tweets"
       params:
         require: [2]
         input: ["twitter.text"]
