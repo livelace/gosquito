@@ -28,10 +28,10 @@ type DataItem struct {
 	DATA     Data               // Temporary structure for keeping static data.
 	ITER     Iter               // Temporary structure for keeping iterated data.
 	
-	RESTY    Resty              // Contains nested Resty plugin structure.
-	RSS      Rss                // Contains nested RSS plugin structure.
-	TELEGRAM Telegram           // Contains nested Telegram plugin structure.
-	TWITTER  Twitter            // Contains nested Twitter plugin structure.
+	RESTY    Resty              // Resty plugin structure.
+	RSS      Rss                // RSS plugin structure.
+	TELEGRAM Telegram           // Telegram plugin structure.
+	TWITTER  Twitter            // Twitter plugin structure.
 }
 ```
 
