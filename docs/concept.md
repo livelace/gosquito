@@ -46,7 +46,7 @@ type Data struct {
 }
 ```
 
-### #Structure for keeping iterated data:
+#### Structure for keeping iterated data:
 
 ```go
 type Iter struct {
