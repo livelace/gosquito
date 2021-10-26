@@ -13,7 +13,7 @@ gosquito is a relatively lightweight tool for fetching/preprocessing data at the
 7. Output plugin sends data to destinations.
 
 
-### Data item structure:
+#### Data item structure:
 
 ```go
 type DataItem struct {
@@ -35,7 +35,7 @@ type DataItem struct {
 }
 ```
 
-### Structure for keeping static data:
+#### Structure for keeping static data:
 
 ```go
 type Data struct {
@@ -46,7 +46,7 @@ type Data struct {
 }
 ```
 
-### Structure for keeping iterated data:
+### #Structure for keeping iterated data:
 
 ```go
 type Iter struct {
@@ -55,7 +55,7 @@ type Iter struct {
 }
 ```
 
-### Plugin specific data structures:
+#### Plugin specific data structures:
 
 1. [RESTY](plugins/input/resty.md)    
 2. [RSS](plugins/input/rss.md)  
