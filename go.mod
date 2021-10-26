@@ -40,7 +40,7 @@ require (
 	github.com/slack-go/slack v0.7.2
 	github.com/spf13/viper v1.7.1
 	github.com/xhit/go-simple-mail/v2 v2.5.1
-	github.com/zelenin/go-tdlib v0.4.0
+	github.com/zelenin/go-tdlib v0.4.1
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	google.golang.org/grpc v1.29.1
