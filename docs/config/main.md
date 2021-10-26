@@ -24,7 +24,7 @@
 # Source will be considered as expired (interval).
 #expire_interval         = "7d"
 
-# Bind prometheus exporter.
+# Bind prometheus metrics exporter.
 #exporter_listen         = ":8080"
 
 # Should temp data be cleaned up at the end of flow execution.
