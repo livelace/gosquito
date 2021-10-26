@@ -50,7 +50,7 @@ flow:
     params:
       input: ["https://iz.ru/xml/rss/all.xml"]
       force: true
-      force_count: 1
+      force_count: 10
 
   process:
     - id: 0
@@ -82,10 +82,10 @@ flow:
 
 ```toml
 [templates.webchela.default]
-batch_size = 3
+batch_size = 10
 browser_type = "firefox"
 browser_instance = 1
-browser_instance_tab = 3
+browser_instance_tab = 10
 browser_extension = ["bypass-paywalls-1.7.6.xpi", "ublock-origin-1.30.6.xpi"]
 cpu_load = 25
 server = ["172.17.0.3:50051"]

@@ -129,6 +129,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		var flowHash = core.GenFlowHash()
 		var flowName string
 
+		var flowCleanup bool
 		var flowInstance int
 		var flowInterval int64
 
@@ -228,6 +229,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		// Every flow has these parameters.
 		flowParamsAvailable := map[string]int{
+			"cleanup":  -1,
 			"instance": -1,
 			"interval": -1,
 		}
@@ -244,6 +246,15 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}).Error(core.ERROR_PARAM_ERROR)
 			logFlowInvalid(flowName)
 			continue
+		}
+
+		// Set flow cleanup.
+		if v, b := core.IsBool(flowParams["cleanup"]); b {
+			flowCleanup = v
+			logFlowParam("cleanup", v)
+		} else {
+			flowCleanup = appConfig.GetBool(core.VIPER_DEFAULT_FLOW_CLEANUP)
+			logFlowParam("cleanup", flowCleanup)
 		}
 
 		// Set flow instance limit.
@@ -277,6 +288,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			FlowStateDir: filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_STATE_DIR),
 			FlowTempDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_TEMP_DIR),
 
+			FlowCleanup:  flowCleanup,
 			FlowInstance: flowInstance,
 			FlowInterval: flowInterval,
 		}
@@ -507,7 +519,9 @@ func runFlow(flow *core.Flow) {
 	// Cleanup temp dir func.
 
 	cleanFlowTemp := func() {
-		_ = os.RemoveAll(flow.FlowTempDir)
+		if flow.FlowCleanup {
+			_ = os.RemoveAll(flow.FlowTempDir)
+		}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

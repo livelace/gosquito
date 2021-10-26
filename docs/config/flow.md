@@ -5,6 +5,7 @@ flow:
   # Flow parameters.
   name: "flow1"                             # DNS compatible flow name, must be unique.
   params:
+    cleanup: true                           # Flow temp data will be cleaned up at the end of flow execution.
     instance: 1                             # How many flow's instances should run in parallel.
                                             # WARNING: Default parallelism is achieved by dedicated flows, 
                                             # not by flow's instance amount. 

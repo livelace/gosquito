@@ -15,6 +15,7 @@ const (
 	DEFAULT_EXPIRE_ACTION_TIMEOUT = 30
 	DEFAULT_EXPIRE_INTERVAL       = "7d"
 	DEFAULT_EXPORTER_LISTEN       = ":8080"
+	DEFAULT_FLOW_CLEANUP          = true
 	DEFAULT_FLOW_CONF_DIR         = "conf"
 	DEFAULT_FLOW_DATA_DIR         = "data"
 	DEFAULT_FLOW_INSTANCE         = 1
@@ -62,6 +63,7 @@ const (
 	VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT = "default.expire_action_timeout"
 	VIPER_DEFAULT_EXPIRE_INTERVAL       = "default.expire_interval"
 	VIPER_DEFAULT_EXPORTER_LISTEN       = "default.exporter_listen"
+	VIPER_DEFAULT_FLOW_CLEANUP          = "default.flow_cleanup"
 	VIPER_DEFAULT_FLOW_CONF             = "default.flow_conf"
 	VIPER_DEFAULT_FLOW_DATA             = "default.flow_data"
 	VIPER_DEFAULT_FLOW_DISABLE          = "default.flow_disable"
@@ -104,6 +106,9 @@ const (
 
 # Bind prometheus exporter.
 #exporter_listen         = ":8080"
+
+# Should temp data be cleaned up at the end of flow execution.
+#flow_cleanup            = true
 
 # Path to flow configurations.
 #flow_conf               = "/path/to/conf"

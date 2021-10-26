@@ -27,6 +27,9 @@
 # Bind prometheus exporter.
 #exporter_listen         = ":8080"
 
+# Should temp data be cleaned up at the end of flow execution.
+#flow_cleanup            = true
+
 # Path to flow configurations.
 #flow_conf               = "/path/to/conf"
 

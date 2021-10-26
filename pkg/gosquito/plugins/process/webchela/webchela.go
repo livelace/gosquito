@@ -132,7 +132,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	}
 
 	if bestServer != "" {
-		logDebug("data", fmt.Sprintf("batch: %d, best server: %s, batch failed: %d, score: %d",
+		logDebug("data", fmt.Sprintf("batch: %d, best server: %s, failed batch: %d, score: %d",
 			batchId, bestServer, bestFail, bestScore))
 	} else {
 		logDebug("error", fmt.Sprintf("batch: %d, servers not ready!", batchId))

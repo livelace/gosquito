@@ -70,6 +70,7 @@ type Flow struct {
 	FlowStateDir string
 	FlowTempDir  string
 
+	FlowCleanup  bool
 	FlowInstance int
 	FlowInterval int64
 
@@ -226,8 +227,9 @@ type DataItem struct {
 	TIMEZONE   *time.Location
 	UUID       uuid.UUID
 
-	DATA     Data
-	ITER     Iter
+	DATA Data
+	ITER Iter
+
 	RESTY    Resty
 	RSS      Rss
 	TELEGRAM Telegram
