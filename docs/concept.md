@@ -2,7 +2,7 @@
 
 gosquito is a relatively lightweight tool for fetching/preprocessing data at the edge. It doesn't intend to be a comprehensive tool for everything, instead it uses easy-to-use plugins primitives for base operation over data and transmitting produced data further.
 
-### Base workflow:
+### Basic workflow:
 
 1. Input plugin receives data and forming data items.
 2. Data items are usual structs with fields.

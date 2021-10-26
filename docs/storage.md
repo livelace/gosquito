@@ -2,7 +2,7 @@
 
 gosquito uses [badger](https://github.com/dgraph-io/badger) (key/value storage) as a storage for keeping flow states.  
 
-### Base workflow:  
+### Basic workflow:  
 
 1. Input plugin receives data.
 2. If match_signature is not specified (default value), gosquito compares input data timestamp with saved source timestamp.<br>Database record: <SOURCE\>:\<TIMESTAMP\>.
