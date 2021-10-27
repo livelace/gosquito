@@ -115,11 +115,11 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		fileName := filepath.Base(file)
 
 		// Logging.
-		logFlowError := func(msg string, err error) {
+		logFlowFileError := func(err error) {
 			log.WithFields(log.Fields{
 				"file":  fileName,
 				"error": err,
-			}).Error(msg)
+			}).Error(core.LOG_FLOW_READ)
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
@@ -146,38 +146,38 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		// Skip flow if we cannot read flow.
 		data, err := ioutil.ReadFile(file)
 		if err != nil {
-			logFlowError(core.LOG_FLOW_READ, err)
+			logFlowFileError(err)
 			continue
 		}
 
 		// Skip flow if we cannot unmarshal flow yaml.
 		err = yaml.Unmarshal(data, &flowBody)
 		if err != nil {
-			logFlowError(core.ERROR_FLOW_PARSE.Error(), err)
+			logFlowFileError(err)
 			continue
 		}
 
 		// Flow name must be compatible.
 		if !core.IsFlowName(flowBody.Flow.Name) {
-			logFlowError(core.LOG_FLOW_READ,
-				fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowBody.Flow.Name))
+			logFlowFileError(fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowBody.Flow.Name))
 			continue
 		}
 
 		// Flow name must be unique.
 		if v, ok := flowsNames[flowBody.Flow.Name]; ok {
-			logFlowError(core.LOG_FLOW_READ,
-				fmt.Errorf(core.ERROR_FLOW_NAME_UNIQUE.Error(), v))
+			logFlowFileError(fmt.Errorf(core.ERROR_FLOW_NAME_UNIQUE.Error(), v))
 			continue
 		}
 
 		// Exclude disabled flows.
 		if (len(flowsEnabled) > 0 && !core.IsValueInSlice(flowBody.Flow.Name, &flowsEnabled)) ||
 			(len(flowsDisabled) > 0 && core.IsValueInSlice(flowBody.Flow.Name, &flowsDisabled)) {
+
 			log.WithFields(log.Fields{
 				"flow":  flowBody.Flow.Name,
 				"error": core.ERROR_FLOW_DISABLED,
 			}).Warn(core.LOG_FLOW_IGNORE)
+
 			continue
 		}
 
@@ -213,7 +213,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			}).Debug(core.LOG_SET_VALUE)
 		}
 
-		logInputOutputPluginError := func(plugin string, pluginType string, msg string, err error) {
+		logInputOutputPluginError := func(plugin string, pluginType string, kind string, err error) {
 			log.WithFields(log.Fields{
 				"hash":   flowHash,
 				"flow":   flowName,
@@ -221,7 +221,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				"plugin": plugin,
 				"type":   pluginType,
 				"error":  err,
-			}).Error(msg)
+			}).Error(kind)
 		}
 
 		// ---------------------------------------------------------------------------------------------------------
