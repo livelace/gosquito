@@ -15,6 +15,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "webchela"
+
 	DEFAULT_BATCH_RETRY            = 0 // no retries.
 	DEFAULT_BATCH_SIZE             = 100
 	DEFAULT_BROWSER_GEOMETRY       = "1024x768"
@@ -59,7 +61,8 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 
 		conn, err := grpc.DialContext(dialCtx, server, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			logging(p, fmt.Errorf("batch: %d, server is not available: %s, %s", batchId, server, err))
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf("batch: %d, server is not available: %s, %s", batchId, server, err))
 			continue
 		}
 
@@ -71,14 +74,14 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 
 		load, err := client.GetLoad(funcCtx, &pb.Empty{})
 		if err != nil {
-			logging(p, fmt.Errorf("batch: %d, cannot get server load: %s, %s",
+			core.LogProcessPlugin(p.LogFields, fmt.Errorf("batch: %d, cannot get server load: %s, %s",
 				batchId, server, err))
 			continue
 		}
 
 		// Check server metrics.
 		if load.CpuLoad == 0 || load.MemFree == 0 || load.Score == 0 {
-			logging(p, fmt.Errorf(
+			core.LogProcessPlugin(p.LogFields, fmt.Errorf(
 				"batch: %d, server return invalid metrics: %s, cpu_load: %d%%, mem_free: %d, score: %d",
 				batchId, server, load.CpuLoad, load.MemFree, load.Score))
 			continue
@@ -87,7 +90,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 		if load.CpuLoad <= p.OptionCpuLoad && load.MemFree >= p.OptionMemFree {
 			serverLoad[server] = load.Score
 		} else {
-			logging(p, fmt.Sprintf(
+			core.LogProcessPlugin(p.LogFields, fmt.Sprintf(
 				"batch: %d, server is not ready: %s, cpu_load: %d%%, mem_free: %d, score: %d",
 				batchId, server, load.CpuLoad, load.MemFree, load.Score))
 		}
@@ -117,52 +120,21 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	}
 
 	if bestServer != "" {
-		logging(p, fmt.Sprintf("batch: %d, best server: %s, failed batch: %d, score: %d",
+		core.LogProcessPlugin(p.LogFields, fmt.Sprintf("batch: %d, best server: %s, failed batch: %d, score: %d",
 			batchId, bestServer, bestFail, bestScore))
 	} else {
-		logging(p, fmt.Errorf("batch: %d, servers not ready", batchId))
+		core.LogProcessPlugin(p.LogFields, fmt.Errorf("batch: %d, servers not ready", batchId))
 	}
 
 	return bestServer
 }
 
-func logging(p *Plugin, message interface{}) {
-	_, ok := message.(error)
-
-	if ok {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"error":   fmt.Sprintf("%v", message),
-		}).Error(core.LOG_PLUGIN_DATA)
-
-	} else {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"data":    fmt.Sprintf("%v", message),
-		}).Debug(core.LOG_PLUGIN_DATA)
-	}
-}
-
 func processBatch(p *Plugin, batchTask *BatchTask) {
 	// Quick fail.
-	logAndSetFail := func(msg string) {
+	logAndSetFail := func(message string) {
 		batchTask.Status = "fail"
 		p.OptionBatchChannel <- batchTask
-		logging(p, fmt.Errorf("%s", msg))
+		core.LogProcessPlugin(p.LogFields, fmt.Errorf("%s", message))
 	}
 
 	// Connect to server.
@@ -301,7 +273,8 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 
 		b.Output = append(b.Output, filepath.Join(outputDir, p.OptionOutputFilename))
 
-		logging(p, fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir))
+		core.LogProcessPlugin(p.LogFields,
+			fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir))
 	}
 
 	return nil
@@ -309,6 +282,8 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -432,8 +407,9 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	for {
 		if timeoutCounter > p.OptionTimeout {
-			logging(p, fmt.Errorf("main loop: timeout reached: total batches: %d, timeout: %d",
-				len(batches), p.OptionTimeout))
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf("main loop: timeout reached: total batches: %d, timeout: %d",
+					len(batches), p.OptionTimeout))
 			return temp, nil
 		}
 
@@ -498,7 +474,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	// Amount of input and output data must be equal, even if some pages were processed
 	// with errors (timeouts, not known DNS names etc.).
 	if len(allURL) != len(outputData) {
-		logging(p, fmt.Errorf("main loop: received data not equal sent data: %d != %d",
+		core.LogProcessPlugin(p.LogFields, fmt.Errorf("main loop: received data not equal sent data: %d != %d",
 			len(outputData), len(allURL)))
 		return temp, nil
 	}
@@ -544,10 +520,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "webchela",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -591,20 +576,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin settings or set defaults.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// -----------------------------------------------------------------------------------------------------------------
-
-	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// batch_retry.
 	setBatchRetry := func(p interface{}) {
@@ -616,7 +590,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBatchRetry(DEFAULT_BATCH_RETRY)
 	setBatchRetry(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.batch_retry", template)))
 	setBatchRetry((*pluginConfig.PluginParams)["batch_retry"])
-	showParam("batch_retry", plugin.OptionBatchRetry)
+	core.ShowPluginParam(plugin.LogFields, "batch_retry", plugin.OptionBatchRetry)
 
 	// batch_size.
 	setBatchSize := func(p interface{}) {
@@ -628,7 +602,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBatchSize(DEFAULT_BATCH_SIZE)
 	setBatchSize(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.batch_size", template)))
 	setBatchSize((*pluginConfig.PluginParams)["batch_size"])
-	showParam("batch_size", plugin.OptionBatchSize)
+	core.ShowPluginParam(plugin.LogFields, "batch_size", plugin.OptionBatchSize)
 
 	// browser_type.
 	setBrowserType := func(p interface{}) {
@@ -640,7 +614,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserType(DEFAULT_BROWSER_TYPE)
 	setBrowserType(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_type", template)))
 	setBrowserType((*pluginConfig.PluginParams)["browser_type"])
-	showParam("browser_type", plugin.OptionBrowserType)
+	core.ShowPluginParam(plugin.LogFields, "browser_type", plugin.OptionBrowserType)
 
 	// browser_argument.
 	setBrowserArgument := func(p interface{}) {
@@ -651,7 +625,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setBrowserArgument(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.browser_argument", template)))
 	setBrowserArgument((*pluginConfig.PluginParams)["browser_argument"])
-	showParam("browser_argument", plugin.OptionBrowserArgument)
+	core.ShowPluginParam(plugin.LogFields, "browser_argument", plugin.OptionBrowserArgument)
 
 	// browser_extension.
 	setBrowserExtensions := func(p interface{}) {
@@ -662,7 +636,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setBrowserExtensions(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.browser_extension", template)))
 	setBrowserExtensions((*pluginConfig.PluginParams)["browser_extension"])
-	showParam("browser_extension", plugin.OptionBrowserExtension)
+	core.ShowPluginParam(plugin.LogFields, "browser_extension", plugin.OptionBrowserExtension)
 
 	// browser_geometry.
 	setBrowserGeometry := func(p interface{}) {
@@ -674,7 +648,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserGeometry(DEFAULT_BROWSER_GEOMETRY)
 	setBrowserGeometry(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_geometry", template)))
 	setBrowserGeometry((*pluginConfig.PluginParams)["browser_geometry"])
-	showParam("browser_geometry", plugin.OptionBrowserGeometry)
+	core.ShowPluginParam(plugin.LogFields, "browser_geometry", plugin.OptionBrowserGeometry)
 
 	// browser_instance.
 	setBrowserInstance := func(p interface{}) {
@@ -686,7 +660,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserInstance(DEFAULT_BROWSER_INSTANCE)
 	setBrowserInstance(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_instance", template)))
 	setBrowserInstance((*pluginConfig.PluginParams)["browser_instance"])
-	showParam("browser_instance", plugin.OptionBrowserInstance)
+	core.ShowPluginParam(plugin.LogFields, "browser_instance", plugin.OptionBrowserInstance)
 
 	// browser_instance_tab.
 	setBrowserInstanceTab := func(p interface{}) {
@@ -698,7 +672,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserInstanceTab(DEFAULT_BROWSER_INSTANCE_TAB)
 	setBrowserInstanceTab(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_instance_tab", template)))
 	setBrowserInstanceTab((*pluginConfig.PluginParams)["browser_instance_tab"])
-	showParam("browser_instance_tab", plugin.OptionBrowserInstanceTab)
+	core.ShowPluginParam(plugin.LogFields, "browser_instance_tab", plugin.OptionBrowserInstanceTab)
 
 	// browser_page_size.
 	setBrowserPageSize := func(p interface{}) {
@@ -710,7 +684,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserPageSize(DEFAULT_BROWSER_PAGE_SIZE)
 	setBrowserPageSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_page_size", template)))
 	setBrowserPageSize((*pluginConfig.PluginParams)["browser_page_size"])
-	showParam("browser_page_size", plugin.OptionBrowserPageSize)
+	core.ShowPluginParam(plugin.LogFields, "browser_page_size", plugin.OptionBrowserPageSize)
 
 	// browser_page_timeout.
 	setBrowserPageTimeout := func(p interface{}) {
@@ -722,7 +696,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserPageTimeout(DEFAULT_BROWSER_PAGE_TIMEOUT)
 	setBrowserPageTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_page_timeout", template)))
 	setBrowserPageTimeout((*pluginConfig.PluginParams)["browser_page_timeout"])
-	showParam("browser_page_timeout", plugin.OptionBrowserPageTimeout)
+	core.ShowPluginParam(plugin.LogFields, "browser_page_timeout", plugin.OptionBrowserPageTimeout)
 
 	// browser_proxy.
 	setBrowserProxy := func(p interface{}) {
@@ -734,7 +708,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserProxy(DEFAULT_BROWSER_PROXY)
 	setBrowserProxy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_proxy", template)))
 	setBrowserProxy((*pluginConfig.PluginParams)["browser_proxy"])
-	showParam("browser_proxy", plugin.OptionBrowserProxy)
+	core.ShowPluginParam(plugin.LogFields, "browser_proxy", plugin.OptionBrowserProxy)
 
 	// browser_script_timeout.
 	setBrowserScriptTimeout := func(p interface{}) {
@@ -746,7 +720,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserScriptTimeout(DEFAULT_BROWSER_SCRIPT_TIMEOUT)
 	setBrowserScriptTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_script_timeout", template)))
 	setBrowserScriptTimeout((*pluginConfig.PluginParams)["browser_script_timeout"])
-	showParam("browser_script_timeout", plugin.OptionBrowserScriptTimeout)
+	core.ShowPluginParam(plugin.LogFields, "browser_script_timeout", plugin.OptionBrowserScriptTimeout)
 
 	// chunk_size.
 	setChunkSize := func(p interface{}) {
@@ -758,7 +732,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setChunkSize(DEFAULT_CHUNK_SIZE)
 	setChunkSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chunk_size", template)))
 	setChunkSize((*pluginConfig.PluginParams)["chunk_size"])
-	showParam("chunk_size", plugin.OptionChunkSize)
+	core.ShowPluginParam(plugin.LogFields, "chunk_size", plugin.OptionChunkSize)
 
 	// client_id.
 	setClientId := func(p interface{}) {
@@ -769,7 +743,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setClientId(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.client_id", template)))
 	setClientId((*pluginConfig.PluginParams)["client_id"])
-	showParam("client_id", plugin.OptionClientId)
+	core.ShowPluginParam(plugin.LogFields, "client_id", plugin.OptionClientId)
 
 	// cpu_load.
 	setBrowserCpuLoad := func(p interface{}) {
@@ -781,7 +755,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserCpuLoad(DEFAULT_CPU_LOAD)
 	setBrowserCpuLoad(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.cpu_load", template)))
 	setBrowserCpuLoad((*pluginConfig.PluginParams)["cpu_load"])
-	showParam("cpu_load", plugin.OptionCpuLoad)
+	core.ShowPluginParam(plugin.LogFields, "cpu_load", plugin.OptionCpuLoad)
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -793,7 +767,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.include", template)))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -804,7 +778,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// mem_free.
 	setBrowserMemFree := func(p interface{}) {
@@ -816,7 +790,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserMemFree(DEFAULT_MEM_FREE)
 	setBrowserMemFree(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.mem_free", template)))
 	setBrowserMemFree((*pluginConfig.PluginParams)["mem_free"])
-	showParam("mem_free", plugin.OptionMemFree)
+	core.ShowPluginParam(plugin.LogFields, "mem_free", plugin.OptionMemFree)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -827,7 +801,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// output_filename.
 	setOutputFilename := func(p interface{}) {
@@ -839,7 +813,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOutputFilename(DEFAULT_OUTPUT_FILENAME)
 	setOutputFilename(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.output_filename", template)))
 	setOutputFilename((*pluginConfig.PluginParams)["output_filename"])
-	showParam("output_filename", plugin.OptionOutputFilename)
+	core.ShowPluginParam(plugin.LogFields, "output_filename", plugin.OptionOutputFilename)
 
 	// request_timeout.
 	setRequestTimeout := func(p interface{}) {
@@ -851,7 +825,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRequestTimeout(DEFAULT_SERVER_REQUEST_TIMEOUT)
 	setRequestTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.request_timeout", template)))
 	setRequestTimeout((*pluginConfig.PluginParams)["request_timeout"])
-	showParam("request_timeout", plugin.OptionRequestTimeout)
+	core.ShowPluginParam(plugin.LogFields, "request_timeout", plugin.OptionRequestTimeout)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -862,7 +836,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// script.
 	setScript := func(p interface{}) {
@@ -873,7 +847,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setScript(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.script", template)))
 	setScript((*pluginConfig.PluginParams)["script"])
-	showParam("script", plugin.OptionScript)
+	core.ShowPluginParam(plugin.LogFields, "script", plugin.OptionScript)
 
 	// server.
 	setServer := func(p interface{}) {
@@ -884,7 +858,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setServer(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.server", template)))
 	setServer((*pluginConfig.PluginParams)["server"])
-	showParam("server", plugin.OptionServer)
+	core.ShowPluginParam(plugin.LogFields, "server", plugin.OptionServer)
 
 	// server_timeout.
 	setServerTimeout := func(p interface{}) {
@@ -896,7 +870,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setServerTimeout(DEFAULT_SERVER_CONNECT_TIMEOUT)
 	setServerTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.server_timeout", template)))
 	setServerTimeout((*pluginConfig.PluginParams)["server_timeout"])
-	showParam("server_timeout", plugin.OptionServerTimeout)
+	core.ShowPluginParam(plugin.LogFields, "server_timeout", plugin.OptionServerTimeout)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -908,7 +882,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(DEFAULT_TIMEOUT)
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	showParam("timeout", plugin.OptionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 

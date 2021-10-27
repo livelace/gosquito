@@ -2,6 +2,7 @@ package jqProcess
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/itchyny/gojq"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -10,7 +11,13 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "jq"
+
 	DEFAULT_FIND_ALL = false
+)
+
+var (
+	ERROR_QUERY_ERROR = errors.New("query error: %s")
 )
 
 func applyQueryToText(queries []*gojq.Query, jsonText string) ([]string, error) {
@@ -46,39 +53,10 @@ func applyQueryToText(queries []*gojq.Query, jsonText string) ([]string, error) 
 	return temp, nil
 }
 
-func logging(p *Plugin, message interface{}) {
-	_, ok := message.(error)
-
-	if ok {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"error":   fmt.Sprintf("%v", message),
-		}).Error(core.LOG_PLUGIN_DATA)
-
-	} else {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"data":    fmt.Sprintf("%v", message),
-		}).Debug(core.LOG_PLUGIN_DATA)
-	}
-}
-
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -140,7 +118,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			case reflect.String:
 				result, err := applyQueryToText(p.OptionQuery[index], ri.String())
 				if err != nil {
-					logging(p, fmt.Errorf("query error: %s", err))
+					core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_QUERY_ERROR.Error(), err))
 				}
 
 				if len(result) > 0 {
@@ -157,7 +135,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				for i := 0; i < ri.Len(); i++ {
 					result, err := applyQueryToText(p.OptionQuery[index], ri.Index(i).String())
 					if err != nil {
-						logging(p, fmt.Errorf("query error: %s", err))
+						core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_QUERY_ERROR.Error(), err))
 					}
 
 					if len(result) > 0 {
@@ -198,10 +176,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "jq",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -224,19 +211,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin settings or set defaults.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
-
 	// find_all.
 	setFindAll := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -246,7 +220,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setFindAll(DEFAULT_FIND_ALL)
 	setFindAll((*pluginConfig.PluginParams)["find_all"])
-	showParam("find_all", plugin.OptionFindAll)
+	core.ShowPluginParam(plugin.LogFields, "find_all", plugin.OptionFindAll)
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -257,7 +231,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -267,7 +241,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -279,7 +253,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// query.
 	setQuery := func(p interface{}) {
@@ -289,7 +263,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setQuery((*pluginConfig.PluginParams)["query"])
-	showParam("query", plugin.OptionQuery)
+	core.ShowPluginParam(plugin.LogFields, "query", plugin.OptionQuery)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -299,7 +273,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

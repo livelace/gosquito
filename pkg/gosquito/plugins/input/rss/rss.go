@@ -89,10 +89,10 @@ type Plugin struct {
 
 	Flow *core.Flow
 
+	LogFields log.Fields
+
 	PluginName string
 	PluginType string
-
-	LogFields log.Fields
 
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64

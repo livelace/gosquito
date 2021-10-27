@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "regexpreplace"
+
 	DEFAULT_REPLACE_ALL = false
 	DEFAULT_MATCH_CASE  = true
 )
@@ -30,6 +32,8 @@ func findAndReplace(regexps []*regexp.Regexp, text string, replacement string) (
 
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -143,10 +147,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "regexpreplace",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -170,19 +183,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin settings or set defaults.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
-
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -192,7 +192,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -202,7 +202,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// match_case.
 	setMatchCase := func(p interface{}) {
@@ -213,7 +213,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setMatchCase(DEFAULT_MATCH_CASE)
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
-	showParam("match_case", plugin.OptionMatchCase)
+	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -223,7 +223,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// regexp.
 	setRegexp := func(p interface{}) {
@@ -233,7 +233,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRegexp((*pluginConfig.PluginParams)["regexp"])
-	showParam("regexp", plugin.OptionRegexp)
+	core.ShowPluginParam(plugin.LogFields, "regexp", plugin.OptionRegexp)
 
 	// replace.
 	setReplace := func(p interface{}) {
@@ -243,7 +243,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setReplace((*pluginConfig.PluginParams)["replace"])
-	showParam("replace", plugin.OptionReplace)
+	core.ShowPluginParam(plugin.LogFields, "replace", plugin.OptionReplace)
 
 	// replace_all.
 	setReplaceAll := func(p interface{}) {
@@ -254,7 +254,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setReplaceAll(DEFAULT_REPLACE_ALL)
 	setReplaceAll((*pluginConfig.PluginParams)["replace_all"])
-	showParam("replace_all", plugin.OptionReplaceAll)
+	core.ShowPluginParam(plugin.LogFields, "replace_all", plugin.OptionReplaceAll)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -265,7 +265,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

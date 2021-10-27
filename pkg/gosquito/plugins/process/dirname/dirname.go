@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "dirname"
+
 	DEFAULT_DEPTH = 1
 )
 
@@ -22,6 +24,8 @@ func getDirName(p string, d int) string {
 
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -93,10 +97,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "dirname",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -116,19 +129,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
-
 	// depth.
 	setDepth := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -138,7 +138,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setDepth(DEFAULT_DEPTH)
 	setDepth((*pluginConfig.PluginParams)["depth"])
-	showParam("depth", plugin.OptionDepth)
+	core.ShowPluginParam(plugin.LogFields, "depth", plugin.OptionDepth)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -150,7 +150,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -162,7 +162,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

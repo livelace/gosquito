@@ -2,6 +2,7 @@ package fetchProcess
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/go-getter"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -13,7 +14,11 @@ import (
 )
 
 const (
-	LOG_FETCH_ERROR = "fetch error"
+	PLUGIN_NAME = "fetch"
+)
+
+var (
+	ERROR_FETCH_ERROR = errors.New("fetch error: %s %s %v")
 )
 
 func fetchData(url string, dst string, timeout int) error {
@@ -45,39 +50,10 @@ func fetchData(url string, dst string, timeout int) error {
 	return nil
 }
 
-func logging(p *Plugin, message interface{}) {
-	_, ok := message.(error)
-
-	if ok {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"error":   fmt.Sprintf("%v", message),
-		}).Error(LOG_FETCH_ERROR)
-
-	} else {
-		log.WithFields(log.Fields{
-			"hash":    p.Flow.FlowHash,
-			"flow":    p.Flow.FlowName,
-			"file":    p.Flow.FlowFile,
-			"plugin":  p.PluginName,
-			"type":    p.PluginType,
-			"id":      p.PluginID,
-			"alias":   p.PluginAlias,
-			"include": p.OptionInclude,
-			"data":    fmt.Sprintf("%v", message),
-		}).Debug(core.LOG_PLUGIN_DATA)
-	}
-}
-
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -142,9 +118,10 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 				if err == nil {
 					ro.SetString(savePath)
-					logging(p, fmt.Sprintf("%s -> %s", ri.String(), savePath))
+					core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%s -> %s", ri.String(), savePath))
 				} else {
-					logging(p, err)
+					core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_FETCH_ERROR.Error(),
+						ri.String(), savePath, err))
 				}
 
 			case reflect.Slice:
@@ -154,9 +131,10 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 					if err == nil {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(savePath)))
-						logging(p, fmt.Sprintf("%s -> %s", ri.Index(i).String(), savePath))
+						core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%s -> %s", ri.String(), savePath))
 					} else {
-						logging(p, err)
+						core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_FETCH_ERROR.Error(),
+							ri.String(), savePath, err))
 					}
 				}
 			}
@@ -174,10 +152,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "fetch",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -197,20 +184,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Get plugin settings or set defaults.
-
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -221,7 +194,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -231,7 +204,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -241,7 +214,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -252,7 +225,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -263,7 +236,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	showParam("timeout", plugin.OptionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

@@ -1,14 +1,19 @@
 package dedupProcess
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 )
 
+const (
+	PLUGIN_NAME = "dedup"
+)
+
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -73,10 +78,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "dedup",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -88,25 +102,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	availableParams := map[string]int{
 		"include": -1,
-
 		"require": 1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
-
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -117,18 +117,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInclude(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// require.
 	setRequire := func(p interface{}) {
 		if v, b := core.IsSliceOfInt(p); b {
 			availableParams["require"] = 0
 			plugin.OptionRequire = v
-
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

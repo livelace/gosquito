@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "regexpfind"
+
 	DEFAULT_FIND_ALL   = false
 	DEFAULT_MATCH_CASE = true
 )
@@ -25,6 +27,8 @@ func findPatternsAndReturnSlice(regexps []*regexp.Regexp, text string) []string 
 
 type Plugin struct {
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	PluginID    int
 	PluginAlias string
@@ -131,10 +135,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+			"id":     pluginConfig.PluginID,
+			"alias":  pluginConfig.PluginAlias,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "regexpfind",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
 	}
 
@@ -158,19 +171,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin settings or set defaults.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
-
-	// -----------------------------------------------------------------------------------------------------------------
-
 	// find_all.
 	setFindAll := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -180,7 +180,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setFindAll(DEFAULT_FIND_ALL)
 	setFindAll((*pluginConfig.PluginParams)["find_all"])
-	showParam("find_all", plugin.OptionFindAll)
+	core.ShowPluginParam(plugin.LogFields, "find_all", plugin.OptionFindAll)
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -191,7 +191,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
 	setInclude((*pluginConfig.PluginParams)["include"])
-	showParam("include", plugin.OptionInclude)
+	core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -201,7 +201,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// match_case.
 	setMatchCase := func(p interface{}) {
@@ -212,7 +212,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setMatchCase(DEFAULT_MATCH_CASE)
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
-	showParam("match_case", plugin.OptionMatchCase)
+	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -224,7 +224,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// regexp.
 	setRegexp := func(p interface{}) {
@@ -234,7 +234,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRegexp((*pluginConfig.PluginParams)["regexp"])
-	showParam("regexp", plugin.OptionRegexp)
+	core.ShowPluginParam(plugin.LogFields, "regexp", plugin.OptionRegexp)
 
 	// require.
 	setRequire := func(p interface{}) {
@@ -245,7 +245,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 	}
 	setRequire((*pluginConfig.PluginParams)["require"])
-	showParam("require", plugin.OptionRequire)
+	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

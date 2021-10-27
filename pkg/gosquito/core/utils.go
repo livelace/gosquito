@@ -961,7 +961,7 @@ func ShowPluginParam(fields log.Fields, key string, value interface{}) {
 	}
 
 	f["value"] = fmt.Sprintf("%s: %v", key, value)
-	log.WithFields(fields).Debug(LOG_SET_VALUE)
+	log.WithFields(f).Debug(LOG_SET_VALUE)
 }
 
 func SizeToBytes(s string) (int64, error) {
@@ -1004,7 +1004,7 @@ func SortLogFields(s []string) {
 	// Ordered fields list.
 	order := []string{
 		"time", "level", "msg", "path", "hash", "flow", "instance", "file", "plugin",
-		"type", "value", "source", "destination", "id", "alias", "include", "data", "error", "message",
+		"type", "source", "destination", "id", "alias", "include", "value", "data", "error", "message",
 	}
 
 	// Mark found fields.
