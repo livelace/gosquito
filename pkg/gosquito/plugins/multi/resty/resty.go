@@ -15,87 +15,13 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "resty"
+
 	DEFAULT_MATCH_TTL  = "1d"
 	DEFAULT_METHOD     = "GET"
 	DEFAULT_REDIRECT   = true
 	DEFAULT_SSL_VERIFY = true
 )
-
-func logInputOutputDebug(p *Plugin, target string, resp *resty.Response) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
-	}).Debug(core.LOG_PLUGIN_DATA)
-}
-
-func logInputOutputWarning(p *Plugin, target string, resp *resty.Response) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v, %v", p.OptionMethod, target, resp.StatusCode()),
-	}).Warn(core.LOG_PLUGIN_DATA)
-}
-
-func logInputOutputError(p *Plugin, target string, err error) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, err),
-	}).Error(core.LOG_PLUGIN_DATA)
-}
-
-func logProcessDebug(p *Plugin, target string, resp *resty.Response) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, resp.StatusCode()),
-	}).Debug(core.LOG_PLUGIN_DATA)
-}
-
-func logProcessWarning(p *Plugin, target string, resp *resty.Response) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v, %v", p.OptionMethod, target, resp.StatusCode()),
-	}).Warn(core.LOG_PLUGIN_DATA)
-}
-
-func logProcessError(p *Plugin, target string, err error) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("%s %s %v", p.OptionMethod, target, err),
-	}).Error(core.LOG_PLUGIN_DATA)
-}
 
 func restyClient(p *Plugin) *resty.Client {
 	client := resty.New()
@@ -142,6 +68,8 @@ type Plugin struct {
 	m sync.Mutex
 
 	Flow *core.Flow
+
+	LogFields log.Fields
 
 	RestyClient *resty.Client
 
@@ -272,14 +200,11 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			break
 		}
 
-		if err == nil {
-			if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
-				logProcessWarning(p, p.OptionTarget, resp)
-			} else {
-				logProcessDebug(p, p.OptionTarget, resp)
-			}
+		if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
+			core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%s %s %v",
+				p.OptionMethod, p.OptionTarget, resp.StatusCode()))
 		} else {
-			logProcessError(p, p.OptionTarget, err)
+			core.LogProcessPlugin(p.LogFields, fmt.Errorf("%s %s %v", p.OptionMethod, p.OptionTarget, err))
 		}
 
 		return resp, err
@@ -451,24 +376,13 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 				})
 			}
 
-			logInputOutputDebug(p, source, resp)
-			// TODO: Replace logging.
-			log.WithFields(log.Fields{
-				"hash":   p.Flow.FlowHash,
-				"flow":   p.Flow.FlowName,
-				"file":   p.Flow.FlowFile,
-				"plugin": p.PluginName,
-				"type":   p.PluginType,
-				"source": source,
-				"data": fmt.Sprintf("last update: %s, received data: %d, new data: %v",
-					sourceLastTime, 1, itemNew),
-			}).Debug(core.LOG_PLUGIN_DATA)
-
 			flowStates[source] = sourceLastTime
+			core.LogInputPlugin(p.LogFields, source,
+				fmt.Sprintf("last update: %s, received data: %d, new data: %v", sourceLastTime, 1, itemNew))
 
 		} else {
 			failedSources = append(failedSources, source)
-			logInputOutputError(p, source, err)
+			core.LogInputPlugin(p.LogFields, source, fmt.Errorf("%s %v", p.OptionMethod, err))
 			continue
 		}
 	}
@@ -500,17 +414,9 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"source": source,
-						"data": fmt.Sprintf(
-							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
-							cmd, args, output, err),
-					}).Debug(core.LOG_PLUGIN_DATA)
+					core.LogInputPlugin(p.LogFields, source, fmt.Sprintf(
+						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						cmd, args, output, err))
 				}
 			}
 		}
@@ -574,15 +480,11 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				break
 			}
 
-			if err == nil {
-				if resp.StatusCode() < 200 || resp.StatusCode() >= 300 {
-					logInputOutputWarning(p, output, resp)
-				} else {
-					logInputOutputDebug(p, output, resp)
-				}
-
+			if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
+				core.LogOutputPlugin(p.LogFields, output,
+					fmt.Sprintf("%s %v", p.OptionMethod, resp.StatusCode()))
 			} else {
-				logInputOutputError(p, output, err)
+				core.LogOutputPlugin(p.LogFields, output, fmt.Errorf("%s %v", p.OptionMethod, err))
 			}
 		}
 	}
@@ -594,11 +496,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:        pluginConfig.Flow,
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+		},
 		PluginID:    pluginConfig.PluginID,
 		PluginAlias: pluginConfig.PluginAlias,
-		PluginName:  "resty",
+		PluginName:  PLUGIN_NAME,
 		PluginType:  pluginConfig.PluginType,
+	}
+
+	if pluginConfig.PluginType == "process" {
+		plugin.LogFields["id"] = pluginConfig.PluginID
+		plugin.LogFields["alias"] = pluginConfig.PluginAlias
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -651,20 +565,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	var err error
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
+	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// -----------------------------------------------------------------------------------------------------------------
-
-	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 
 	// bearer_token.
 	setBearerToken := func(p interface{}) {
@@ -698,8 +602,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
-
 	switch pluginConfig.PluginType {
 
 	case "input":
@@ -713,7 +615,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
 		setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
 		setExpireAction((*pluginConfig.PluginParams)["expire_action"])
-		showParam("expire_action", plugin.OptionExpireAction)
+		core.ShowPluginParam(plugin.LogFields, "expire_action", plugin.OptionExpireAction)
 
 		// expire_action_delay.
 		setExpireActionDelay := func(p interface{}) {
@@ -725,7 +627,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
 		setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
 		setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
-		showParam("expire_action_delay", plugin.OptionExpireActionDelay)
+		core.ShowPluginParam(plugin.LogFields, "expire_action_delay", plugin.OptionExpireActionDelay)
 
 		// expire_action_timeout.
 		setExpireActionTimeout := func(p interface{}) {
@@ -737,7 +639,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
 		setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
 		setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
-		showParam("expire_action_timeout", plugin.OptionExpireActionTimeout)
+		core.ShowPluginParam(plugin.LogFields, "expire_action_timeout", plugin.OptionExpireActionTimeout)
 
 		// expire_interval.
 		setExpireInterval := func(p interface{}) {
@@ -749,7 +651,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
 		setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
 		setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
-		showParam("expire_interval", plugin.OptionExpireInterval)
+		core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
 
 		// input.
 		setInput := func(p interface{}) {
@@ -760,7 +662,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 		setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 		setInput((*pluginConfig.PluginParams)["input"])
-		showParam("input", plugin.OptionInput)
+		core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 		// match_signature.
 		setMatchSignature := func(p interface{}) {
@@ -771,7 +673,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
-		showParam("match_signature", plugin.OptionMatchSignature)
+		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
 
 		// match_ttl.
 		setMatchTTL := func(p interface{}) {
@@ -783,7 +685,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchTTL(DEFAULT_MATCH_TTL)
 		setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
 		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
-		showParam("match_ttl", plugin.OptionMatchTTL)
+		core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
 		break
 
@@ -796,7 +698,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			}
 		}
 		setInput((*pluginConfig.PluginParams)["input"])
-		showParam("input", plugin.OptionInput)
+		core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 		// output.
 		setOutput := func(p interface{}) {
@@ -807,7 +709,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 		setOutput((*pluginConfig.PluginParams)["output"])
-		showParam("output", plugin.OptionOutput)
+		core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 		// target.
 		setTarget := func(p interface{}) {
@@ -831,7 +733,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 		setOutput((*pluginConfig.PluginParams)["output"])
-		showParam("output", plugin.OptionOutput)
+		core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 		break
 	}
@@ -845,7 +747,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setAuth(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.auth", template)))
 	setAuth((*pluginConfig.PluginParams)["auth"])
-	showParam("auth", plugin.OptionAuth)
+	core.ShowPluginParam(plugin.LogFields, "auth", plugin.OptionAuth)
 
 	// body.
 	setBody := func(p interface{}) {
@@ -856,7 +758,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setBody(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.body", template)))
 	setBody((*pluginConfig.PluginParams)["body"])
-	showParam("body", plugin.OptionBody)
+	core.ShowPluginParam(plugin.LogFields, "body", plugin.OptionBody)
 
 	// body template.
 	if plugin.OptionBodyTemplate, err = tmpl.New("body").Funcs(core.TemplateFuncMap).Parse(plugin.OptionBody); err != nil {
@@ -888,7 +790,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin.OptionHeaders = mergedHeaders
 	plugin.OptionHeadersTemplate = mergedHeadersTemplate
 
-	showParam("headers", plugin.OptionHeaders)
+	core.ShowPluginParam(plugin.LogFields, "headers", plugin.OptionHeaders)
 
 	// method.
 	setMethod := func(p interface{}) {
@@ -900,7 +802,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMethod(DEFAULT_METHOD)
 	setMethod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.method", template)))
 	setMethod((*pluginConfig.PluginParams)["method"])
-	showParam("method", plugin.OptionMethod)
+	core.ShowPluginParam(plugin.LogFields, "method", plugin.OptionMethod)
 
 	// params.
 	templateParams, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.params", template)))
@@ -927,7 +829,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin.OptionParams = mergedParams
 	plugin.OptionParamsTemplate = mergedParamsTemplate
 
-	showParam("params", plugin.OptionParams)
+	core.ShowPluginParam(plugin.LogFields, "params", plugin.OptionParams)
 
 	// proxy.
 	setProxy := func(p interface{}) {
@@ -938,7 +840,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setProxy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy", template)))
 	setProxy((*pluginConfig.PluginParams)["proxy"])
-	showParam("proxy", plugin.OptionProxy)
+	core.ShowPluginParam(plugin.LogFields, "proxy", plugin.OptionProxy)
 
 	// redirect.
 	setRedirect := func(p interface{}) {
@@ -950,7 +852,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRedirect(DEFAULT_REDIRECT)
 	setRedirect(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.redirect", template)))
 	setRedirect((*pluginConfig.PluginParams)["redirect"])
-	showParam("redirect", plugin.OptionRedirect)
+	core.ShowPluginParam(plugin.LogFields, "redirect", plugin.OptionRedirect)
 
 	// ssl_verify.
 	setSSLVerify := func(p interface{}) {
@@ -962,7 +864,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSSLVerify(DEFAULT_SSL_VERIFY)
 	setSSLVerify(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ssl_verify", template)))
 	setSSLVerify((*pluginConfig.PluginParams)["ssl_verify"])
-	showParam("ssl_verify", plugin.OptionSSLVerify)
+	core.ShowPluginParam(plugin.LogFields, "ssl_verify", plugin.OptionSSLVerify)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -974,7 +876,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	showParam("timeout", plugin.OptionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// time_format.
 	setTimeFormat := func(p interface{}) {
@@ -986,7 +888,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
 	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
 	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
-	showParam("time_format", plugin.OptionTimeFormat)
+	core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
 
 	// time_zone.
 	setTimeZone := func(p interface{}) {
@@ -998,7 +900,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
 	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
 	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
-	showParam("time_zone", plugin.OptionTimeZone)
+	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {
@@ -1010,7 +912,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setUserAgent(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_USER_AGENT))
 	setUserAgent(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_agent", template)))
 	setUserAgent((*pluginConfig.PluginParams)["user_agent"])
-	showParam("user_agent", plugin.OptionUserAgent)
+	core.ShowPluginParam(plugin.LogFields, "user_agent", plugin.OptionUserAgent)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

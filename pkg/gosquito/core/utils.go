@@ -791,18 +791,41 @@ func LogInputPlugin(fields log.Fields, source string, message interface{}) {
 	}
 }
 
-func LogOutputPlugin(fields log.Fields, destination string, message interface{}) {
+func LogProcessPlugin(fields log.Fields, message interface{}) {
+	f := log.Fields{}
+	for k, v := range fields {
+		f[k] = v
+	}
+
 	_, ok := message.(error)
 
-	fields["destination"] = destination
-
 	if ok {
-		fields["error"] = fmt.Sprintf("%v", message)
-		log.WithFields(fields).Error(LOG_PLUGIN_DATA)
+		f["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Error(LOG_PLUGIN_DATA)
 
 	} else {
-		fields["data"] = fmt.Sprintf("%v", message)
-		log.WithFields(fields).Debug(LOG_PLUGIN_DATA)
+		f["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Debug(LOG_PLUGIN_DATA)
+	}
+}
+
+func LogOutputPlugin(fields log.Fields, destination string, message interface{}) {
+	f := log.Fields{}
+	for k, v := range fields {
+		f[k] = v
+	}
+
+	_, ok := message.(error)
+
+	f["destination"] = destination
+
+	if ok {
+		f["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Error(LOG_PLUGIN_DATA)
+
+	} else {
+		f["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Debug(LOG_PLUGIN_DATA)
 	}
 }
 
@@ -932,7 +955,12 @@ func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {
 }
 
 func ShowPluginParam(fields log.Fields, key string, value interface{}) {
-	fields["value"] = fmt.Sprintf("%s: %v", key, value)
+	f := log.Fields{}
+	for k, v := range fields {
+		f[k] = v
+	}
+
+	f["value"] = fmt.Sprintf("%s: %v", key, value)
 	log.WithFields(fields).Debug(LOG_SET_VALUE)
 }
 
