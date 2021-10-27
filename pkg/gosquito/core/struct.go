@@ -12,10 +12,8 @@ import (
 type InputPlugin interface {
 	FlowLog(message interface{})
 
-	GetFile() string
 	GetInput() []string
 	GetName() string
-	GetType() string
 
 	LoadState() (map[string]time.Time, error)
 	SaveState(map[string]time.Time) error
@@ -26,13 +24,6 @@ type InputPlugin interface {
 type ProcessPlugin interface {
 	FlowLog(message interface{})
 
-	GetID() int
-	GetAlias() string
-
-	GetFile() string
-	GetName() string
-	GetType() string
-
 	GetInclude() bool
 	GetRequire() []int
 
@@ -42,10 +33,8 @@ type ProcessPlugin interface {
 type OutputPlugin interface {
 	FlowLog(message interface{})
 
-	GetFile() string
 	GetName() string
 	GetOutput() []string
-	GetType() string
 
 	Send(d []*DataItem) error
 }

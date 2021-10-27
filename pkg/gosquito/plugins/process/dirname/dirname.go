@@ -57,26 +57,6 @@ func (p *Plugin) FlowLog(message interface{}) {
 	}
 }
 
-func (p *Plugin) GetID() int {
-	return p.PluginID
-}
-
-func (p *Plugin) GetAlias() string {
-	return p.PluginAlias
-}
-
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
-func (p *Plugin) GetName() string {
-	return p.PluginName
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
-}
-
 func (p *Plugin) GetInclude() bool {
 	return false
 }

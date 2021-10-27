@@ -202,20 +202,12 @@ func (p *Plugin) FlowLog(message interface{}) {
 	}
 }
 
-func (p *Plugin) GetFile() string {
-	return p.Flow.FlowFile
-}
-
 func (p *Plugin) GetName() string {
 	return p.PluginName
 }
 
 func (p *Plugin) GetOutput() []string {
 	return p.OptionOutput
-}
-
-func (p *Plugin) GetType() string {
-	return p.PluginType
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
