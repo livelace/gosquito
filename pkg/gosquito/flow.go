@@ -496,27 +496,22 @@ func runFlow(flow *core.Flow) {
 
 	var err error
 
-	if flow.Lock() {
-		log.WithFields(log.Fields{
-			"hash":     flow.FlowHash,
-			"flow":     flow.FlowName,
-			"instance": flow.GetInstance(),
-		}).Info(core.LOG_FLOW_START)
+	flowLogFields := log.Fields{
+		"hash": flow.FlowHash,
+		"flow": flow.FlowName,
+	}
 
+	if flow.Lock() {
+		log.WithFields(flowLogFields).Info(core.LOG_FLOW_START)
 		defer flow.Unlock()
 
 	} else {
-		log.WithFields(log.Fields{
-			"hash":     flow.FlowHash,
-			"flow":     flow.FlowName,
-			"instance": flow.GetInstance(),
-		}).Warn(core.LOG_FLOW_LOCK)
-
+		log.WithFields(flowLogFields).Warn(core.LOG_FLOW_LOCK)
 		return
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Cleanup temp dir func.
+	// Helper functions.
 
 	cleanFlowTemp := func() {
 		if flow.FlowCleanup {
@@ -524,83 +519,8 @@ func runFlow(flow *core.Flow) {
 		}
 	}
 
-	// -----------------------------------------------------------------------------------------------------------------
-	// Logging func.
-
-	logFlowDebug := func(msg interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"file":   flow.InputPlugin.GetFile(),
-			"plugin": flow.InputPlugin.GetName(),
-			"type":   flow.InputPlugin.GetType(),
-			"data":   fmt.Sprintf("%v", msg),
-		}).Debug(core.LOG_FLOW_STAT)
-	}
-
 	logFlowStop := func() {
-		log.WithFields(log.Fields{
-			"hash":     flow.FlowHash,
-			"flow":     flow.FlowName,
-			"instance": flow.GetInstance() - 1,
-		}).Info(core.LOG_FLOW_STOP)
-	}
-
-	logFlowWarn := func(err error) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"plugin": flow.InputPlugin.GetName(),
-			"type":   flow.InputPlugin.GetType(),
-			"error":  err,
-		}).Warn(core.LOG_FLOW_WARN)
-	}
-
-	logProcessDebug := func(plugin core.ProcessPlugin, length int) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"file":   plugin.GetFile(),
-			"plugin": plugin.GetName(),
-			"type":   plugin.GetType(),
-			"id":     plugin.GetID(),
-			"alias":  plugin.GetAlias(),
-			"data":   length,
-		}).Debug(core.LOG_FLOW_STAT)
-	}
-
-	logProcessWarn := func(plugin core.ProcessPlugin, err error) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"file":   plugin.GetFile(),
-			"plugin": plugin.GetName(),
-			"type":   plugin.GetType(),
-			"id":     plugin.GetID(),
-			"alias":  plugin.GetAlias(),
-			"error":  err,
-		}).Warn(core.LOG_FLOW_WARN)
-	}
-
-	logOutputDebug := func(plugin core.OutputPlugin, msg interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"file":   plugin.GetFile(),
-			"plugin": plugin.GetName(),
-			"type":   plugin.GetType(),
-			"data":   fmt.Sprintf("%v", msg),
-		}).Debug(core.LOG_FLOW_STAT)
-	}
-
-	logOutputWarn := func(plugin core.OutputPlugin, err error) {
-		log.WithFields(log.Fields{
-			"hash":   flow.FlowHash,
-			"flow":   flow.FlowName,
-			"plugin": plugin.GetName(),
-			"type":   plugin.GetType(),
-			"error":  err,
-		}).Warn(core.LOG_FLOW_WARN)
+		log.WithFields(flowLogFields).Info(core.LOG_FLOW_STOP)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -610,26 +530,25 @@ func runFlow(flow *core.Flow) {
 		"hash":   flow.FlowHash,
 		"flow":   flow.FlowName,
 		"plugin": flow.InputPlugin.GetName(),
-		"type":   flow.InputPlugin.GetType(),
 	}).Info(core.LOG_FLOW_RECEIVE)
 
 	// Get data.
 	inputData, err := flow.InputPlugin.Receive()
-	logFlowDebug(len(inputData))
+	flow.InputPlugin.FlowLog(len(inputData))
 
 	// Process data if flow sources are expired/failed.
 	// Skip flow if we have other problems.
 	if err == core.ERROR_FLOW_EXPIRE {
 		atomic.AddInt32(&flow.MetricExpire, 1)
-		logFlowWarn(err)
+		flow.InputPlugin.FlowLog(err)
 
 	} else if err == core.ERROR_FLOW_SOURCE_FAIL {
 		atomic.AddInt32(&flow.MetricError, 1)
-		logFlowWarn(err)
+		flow.InputPlugin.FlowLog(err)
 
 	} else if err != nil {
 		atomic.AddInt32(&flow.MetricError, 1)
-		logFlowWarn(err)
+		flow.InputPlugin.FlowLog(err)
 		cleanFlowTemp()
 		logFlowStop()
 		return
@@ -638,7 +557,7 @@ func runFlow(flow *core.Flow) {
 	// Skip flow if we don't have new data.
 	if len(inputData) == 0 {
 		atomic.AddInt32(&flow.MetricNoData, 1)
-		logFlowWarn(core.ERROR_NO_NEW_DATA)
+		flow.InputPlugin.FlowLog(core.ERROR_NO_NEW_DATA)
 		cleanFlowTemp()
 		logFlowStop()
 		return
@@ -656,7 +575,6 @@ func runFlow(flow *core.Flow) {
 			"hash":   flow.FlowHash,
 			"flow":   flow.FlowName,
 			"plugin": flow.ProcessPluginsNames,
-			"type":   "process",
 		}).Info(core.LOG_FLOW_PROCESS)
 
 		// Every "process" plugin generates its own dataset.
@@ -695,13 +613,13 @@ func runFlow(flow *core.Flow) {
 			// 1. Skip flow if we have problems with data processing.
 			// 2. Save plugin results.
 			if err != nil {
-				logProcessWarn(plugin, err)
+				plugin.FlowLog(err)
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
 				return
 
 			} else {
-				logProcessDebug(plugin, len(pluginResult))
+				plugin.FlowLog(len(pluginResult))
 				processResults[pluginID] = pluginResult
 			}
 		}
@@ -715,7 +633,6 @@ func runFlow(flow *core.Flow) {
 			"hash":   flow.FlowHash,
 			"flow":   flow.FlowName,
 			"plugin": flow.OutputPlugin.GetName(),
-			"type":   flow.OutputPlugin.GetType(),
 		}).Info(core.LOG_FLOW_SEND)
 
 		// 1. Send processed data.
@@ -741,26 +658,25 @@ func runFlow(flow *core.Flow) {
 						// Skip flow if there are problems with sending.
 						if err != nil {
 							atomic.AddInt32(&flow.MetricError, 1)
-							logOutputWarn(flow.OutputPlugin, err)
+							flow.OutputPlugin.FlowLog(err)
 							cleanFlowTemp()
 							return
 
 						} else {
 							atomic.AddInt32(&flow.MetricSend, int32(len(pluginData)))
-							logOutputDebug(flow.OutputPlugin,
-								fmt.Sprintf("process plugin id: %d, send data: %d",
-									pluginID, len(pluginData)))
+							flow.OutputPlugin.FlowLog(fmt.Sprintf("process plugin id: %d, send data: %d",
+								pluginID, len(pluginData)))
 						}
 					}
 				}
 			}
 
 			if !dataIncluded {
-				logFlowDebug(core.LOG_FLOW_SEND_NO_DATA_INCLUDED)
+				flow.OutputPlugin.FlowLog(core.LOG_FLOW_SEND_NO_DATA_INCLUDED)
 			}
 
 			if !dataExist {
-				logFlowDebug(core.LOG_FLOW_SEND_NO_DATA)
+				flow.OutputPlugin.FlowLog(core.LOG_FLOW_SEND_NO_DATA)
 			}
 
 		} else if len(flow.ProcessPlugins) == 0 && len(inputData) > 0 {
@@ -770,17 +686,16 @@ func runFlow(flow *core.Flow) {
 			if err != nil {
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
-				logFlowWarn(err)
+				flow.OutputPlugin.FlowLog(err)
 				return
 
 			} else {
 				atomic.AddInt32(&flow.MetricSend, int32(len(inputData)))
-				logOutputDebug(flow.OutputPlugin, fmt.Sprintf("input plugin: %s, send data: %d",
-					flow.InputPlugin.GetName(), len(inputData)))
+				flow.OutputPlugin.FlowLog(len(inputData))
 			}
 
 		} else {
-			logFlowDebug(core.LOG_FLOW_SEND_NO_DATA)
+			flow.OutputPlugin.FlowLog(core.LOG_FLOW_SEND_NO_DATA)
 		}
 	}
 

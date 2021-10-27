@@ -777,17 +777,22 @@ func JsonEscape(s string) (string, error) {
 }
 
 func LogInputPlugin(fields log.Fields, source string, message interface{}) {
+	f := log.Fields{}
+	for k, v := range fields {
+		f[k] = v
+	}
+
 	_, ok := message.(error)
 
-	fields["source"] = source
+	f["source"] = source
 
 	if ok {
-		fields["error"] = fmt.Sprintf("%v", message)
-		log.WithFields(fields).Error(LOG_PLUGIN_DATA)
+		f["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Error(LOG_PLUGIN_DATA)
 
 	} else {
-		fields["data"] = fmt.Sprintf("%v", message)
-		log.WithFields(fields).Debug(LOG_PLUGIN_DATA)
+		f["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Debug(LOG_PLUGIN_DATA)
 	}
 }
 

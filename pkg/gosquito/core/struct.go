@@ -10,6 +10,8 @@ import (
 // ---------------------------------------------------------------------------------------------------------------------
 
 type InputPlugin interface {
+	FlowLog(message interface{})
+
 	GetFile() string
 	GetInput() []string
 	GetName() string
@@ -22,6 +24,8 @@ type InputPlugin interface {
 }
 
 type ProcessPlugin interface {
+	FlowLog(message interface{})
+
 	GetID() int
 	GetAlias() string
 
@@ -36,6 +40,8 @@ type ProcessPlugin interface {
 }
 
 type OutputPlugin interface {
+	FlowLog(message interface{})
+
 	GetFile() string
 	GetName() string
 	GetOutput() []string

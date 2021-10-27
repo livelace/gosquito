@@ -39,6 +39,24 @@ type Plugin struct {
 	OptionOutput  []string
 }
 
+func (p *Plugin) FlowLog(message interface{}) {
+	f := make(map[string]interface{}, len(p.LogFields))
+
+	for k, v := range p.LogFields {
+		f[k] = v
+	}
+
+	_, ok := message.(error)
+
+	if ok {
+		f["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Warn(core.LOG_FLOW_WARN)
+	} else {
+		f["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Debug(core.LOG_FLOW_STAT)
+	}
+}
+
 func (p *Plugin) GetID() int {
 	return p.PluginID
 }

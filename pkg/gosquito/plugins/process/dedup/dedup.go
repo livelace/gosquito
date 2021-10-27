@@ -1,6 +1,7 @@
 package dedupProcess
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
@@ -22,6 +23,24 @@ type Plugin struct {
 
 	OptionInclude bool
 	OptionRequire []int
+}
+
+func (p *Plugin) FlowLog(message interface{}) {
+	f := make(map[string]interface{}, len(p.LogFields))
+
+	for k, v := range p.LogFields {
+		f[k] = v
+	}
+
+	_, ok := message.(error)
+
+	if ok {
+		f["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Warn(core.LOG_FLOW_WARN)
+	} else {
+		f["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(f).Debug(core.LOG_FLOW_STAT)
+	}
 }
 
 func (p *Plugin) GetID() int {
