@@ -12,6 +12,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/renameio"
 	"github.com/itchyny/gojq"
+	log "github.com/livelace/logrus"
 	"github.com/spf13/viper"
 	"math/rand"
 	"os"
@@ -775,6 +776,21 @@ func JsonEscape(s string) (string, error) {
 	return string(result[1 : len(result)-1]), err
 }
 
+func LogInputPlugin(fields log.Fields, source string, message interface{}) {
+	_, ok := message.(error)
+
+	fields["source"] = source
+
+	if ok {
+		fields["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(fields).Error(LOG_PLUGIN_DATA)
+
+	} else {
+		fields["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(fields).Debug(LOG_PLUGIN_DATA)
+	}
+}
+
 func PluginLoadState(database string, data *map[string]time.Time) error {
 	// Disable logging.
 	opts := badger.DefaultOptions(database)
@@ -898,6 +914,11 @@ func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {
 	}
 
 	return temp, nil
+}
+
+func ShowPluginParam(fields log.Fields, key string, value interface{}) {
+	fields["value"] = fmt.Sprintf("%s: %v", key, value)
+	log.WithFields(fields).Debug(LOG_SET_VALUE)
 }
 
 func SizeToBytes(s string) (int64, error) {

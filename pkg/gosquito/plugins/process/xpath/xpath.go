@@ -1,6 +1,7 @@
 package xpathProcess
 
 import (
+	"errors"
 	"fmt"
 	"github.com/antchfx/htmlquery"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -17,6 +18,11 @@ const (
 	DEFAULT_XPATH_SEPARATOR = "\n"
 )
 
+var (
+	ERROR_NODE_ERROR  = errors.New("xpath node error: %s")
+	ERROR_PARSE_ERROR = errors.New("xpath parse error: %s")
+)
+
 func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	var doc *html.Node
 	var err error
@@ -31,7 +37,7 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	}
 
 	if err != nil {
-		logProcessError(p, fmt.Errorf("xpath parse error: %s", err))
+		logging(p, fmt.Errorf(ERROR_PARSE_ERROR.Error(), err))
 		return "", false
 	}
 
@@ -40,7 +46,7 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 		nodes, err := htmlquery.QueryAll(doc, xpath)
 
 		if err != nil {
-			logProcessError(p, fmt.Errorf("xpath node error: %s", err))
+			logging(p, fmt.Errorf(ERROR_NODE_ERROR.Error(), err))
 			return "", false
 		}
 
@@ -59,17 +65,35 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 	return result, len(result) > 0
 }
 
-func logProcessError(p *Plugin, err error) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"error":  err,
-	}).Error(core.LOG_PLUGIN_DATA)
+func logging(p *Plugin, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"error":   fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"data":    fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
 }
 
 type Plugin struct {

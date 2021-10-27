@@ -45,6 +45,37 @@ func getLocalFiles(path string) ([]string, error) {
 	return temp, nil
 }
 
+func logging(p *Plugin, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"error":   fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"data":    fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
+}
+
 func minioPut(p *Plugin, file string, object string, timeout int) error {
 	// context.
 	c := make(chan error, 0)
@@ -140,16 +171,13 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		performed := false
 
 		for index, input := range p.OptionInput {
-			// Reflect "input" plugin data fields.
-			// Error ignored because we always checks fields during plugin init.
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
 			for i := 0; i < ri.Len(); i++ {
 				// Upload all found files:
-				// 1. /local/path/to/file -> <bucket>/<item_uuid>/local/path/to/file
-				// 2. /gosquito/temp/dir/<flow_name>/<plugin_type>/<plugin_name>/uuid/file ->
-				// <bucket>/<item_uuid>/<plugin_name>/uuid/file
+				// 1. local/path/to/file -> <bucket>/<item_uuid>/local/path/to/file
+				// 2. gosquito/data/<flow_name>/temp/<plugin_type>/<plugin_name>/uuid/file -> <bucket>/<item_uuid>/<plugin_name>/uuid/file
 				if p.OptionAction == "put" {
 					files, err := getLocalFiles(ri.Index(i).String())
 
@@ -164,17 +192,8 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 						if err := minioPut(p, file, object, p.OptionTimeout); err != nil {
 							return temp, err
 						} else {
-							log.WithFields(log.Fields{
-								"hash":   p.Flow.FlowHash,
-								"flow":   p.Flow.FlowName,
-								"file":   p.Flow.FlowFile,
-								"plugin": p.PluginName,
-								"type":   p.PluginType,
-								"id":     p.PluginID,
-								"alias":  p.PluginAlias,
-								"data":   fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, object),
-							}).Debug(core.LOG_PLUGIN_DATA)
 							ro.Set(reflect.Append(ro, reflect.ValueOf(object)))
+							logging(p, fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, object))
 						}
 					}
 

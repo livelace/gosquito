@@ -48,20 +48,6 @@ type BatchTask struct {
 
 func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	serverLoad := make(map[string]int32, 0)
-
-	// Debug logging.
-	logDebug := func(field, message string) {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"id":     p.PluginID,
-			field:    message,
-		}).Debug(core.LOG_PLUGIN_DATA)
-	}
-
 	connectTimeout := time.Duration(p.OptionServerTimeout) * time.Second
 	requestTimeout := time.Duration(p.OptionRequestTimeout) * time.Second
 
@@ -73,8 +59,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 
 		conn, err := grpc.DialContext(dialCtx, server, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
-			logDebug("error", fmt.Sprintf("batch: %d, server is not available: %s, %s",
-				batchId, server, err))
+			logging(p, fmt.Errorf("batch: %d, server is not available: %s, %s", batchId, server, err))
 			continue
 		}
 
@@ -86,14 +71,14 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 
 		load, err := client.GetLoad(funcCtx, &pb.Empty{})
 		if err != nil {
-			logDebug("error", fmt.Sprintf("batch: %d, cannot get server load: %s, %s",
+			logging(p, fmt.Errorf("batch: %d, cannot get server load: %s, %s",
 				batchId, server, err))
 			continue
 		}
 
 		// Check server metrics.
 		if load.CpuLoad == 0 || load.MemFree == 0 || load.Score == 0 {
-			logDebug("error", fmt.Sprintf(
+			logging(p, fmt.Errorf(
 				"batch: %d, server return invalid metrics: %s, cpu_load: %d%%, mem_free: %d, score: %d",
 				batchId, server, load.CpuLoad, load.MemFree, load.Score))
 			continue
@@ -102,7 +87,7 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 		if load.CpuLoad <= p.OptionCpuLoad && load.MemFree >= p.OptionMemFree {
 			serverLoad[server] = load.Score
 		} else {
-			logDebug("data", fmt.Sprintf(
+			logging(p, fmt.Sprintf(
 				"batch: %d, server is not ready: %s, cpu_load: %d%%, mem_free: %d, score: %d",
 				batchId, server, load.CpuLoad, load.MemFree, load.Score))
 		}
@@ -132,13 +117,44 @@ func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
 	}
 
 	if bestServer != "" {
-		logDebug("data", fmt.Sprintf("batch: %d, best server: %s, failed batch: %d, score: %d",
+		logging(p, fmt.Sprintf("batch: %d, best server: %s, failed batch: %d, score: %d",
 			batchId, bestServer, bestFail, bestScore))
 	} else {
-		logDebug("error", fmt.Sprintf("batch: %d, servers not ready!", batchId))
+		logging(p, fmt.Errorf("batch: %d, servers not ready", batchId))
 	}
 
 	return bestServer
+}
+
+func logging(p *Plugin, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"error":   fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"data":    fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
 }
 
 func processBatch(p *Plugin, batchTask *BatchTask) {
@@ -146,16 +162,7 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 	logAndSetFail := func(msg string) {
 		batchTask.Status = "fail"
 		p.OptionBatchChannel <- batchTask
-
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"id":     p.PluginID,
-			"error":  msg,
-		}).Error(core.LOG_PLUGIN_DATA)
+		logging(p, fmt.Errorf("%s", msg))
 	}
 
 	// Connect to server.
@@ -292,17 +299,9 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 			}
 		}
 
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"id":     p.PluginID,
-			"data":   fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir),
-		}).Debug(core.LOG_PLUGIN_DATA)
-
 		b.Output = append(b.Output, filepath.Join(outputDir, p.OptionOutputFilename))
+
+		logging(p, fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir))
 	}
 
 	return nil
@@ -380,18 +379,6 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 		return temp, nil
 	}
 
-	logError := func(msg string) {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"id":     p.PluginID,
-			"error":  msg,
-		}).Error(core.LOG_PLUGIN_DATA)
-	}
-
 	// Extract URLs from data items into single flat slice.
 	// This is needed for batch slicing (process URLs in sized blocks/batches).
 	// Example: every "DataItem" has filled ["data.array0", "data.array1"] with URLs,
@@ -445,7 +432,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 	for {
 		if timeoutCounter > p.OptionTimeout {
-			logError(fmt.Sprintf("main loop: timeout reached: total batches: %d, timeout: %d",
+			logging(p, fmt.Errorf("main loop: timeout reached: total batches: %d, timeout: %d",
 				len(batches), p.OptionTimeout))
 			return temp, nil
 		}
@@ -511,7 +498,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	// Amount of input and output data must be equal, even if some pages were processed
 	// with errors (timeouts, not known DNS names etc.).
 	if len(allURL) != len(outputData) {
-		logError(fmt.Sprintf("main loop: received data not equal sent data: %d != %d",
+		logging(p, fmt.Errorf("main loop: received data not equal sent data: %d != %d",
 			len(outputData), len(allURL)))
 		return temp, nil
 	}

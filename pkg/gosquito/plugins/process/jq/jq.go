@@ -46,17 +46,35 @@ func applyQueryToText(queries []*gojq.Query, jsonText string) ([]string, error) 
 	return temp, nil
 }
 
-func logQueryError(p *Plugin, err error) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   fmt.Sprintf("query error: %v", err),
-	}).Error(core.LOG_PLUGIN_DATA)
+func logging(p *Plugin, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"error":   fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"data":    fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
 }
 
 type Plugin struct {
@@ -122,7 +140,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			case reflect.String:
 				result, err := applyQueryToText(p.OptionQuery[index], ri.String())
 				if err != nil {
-					logQueryError(p, err)
+					logging(p, fmt.Errorf("query error: %s", err))
 				}
 
 				if len(result) > 0 {
@@ -139,7 +157,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				for i := 0; i < ri.Len(); i++ {
 					result, err := applyQueryToText(p.OptionQuery[index], ri.Index(i).String())
 					if err != nil {
-						logQueryError(p, err)
+						logging(p, fmt.Errorf("query error: %s", err))
 					}
 
 					if len(result) > 0 {

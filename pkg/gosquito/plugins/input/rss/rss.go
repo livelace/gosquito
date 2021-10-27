@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "rss"
+
 	DEFAULT_MATCH_TTL  = "1d"
 	DEFAULT_SSL_VERIFY = true
 )
@@ -82,33 +84,6 @@ func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofe
 	return temp, nil
 }
 
-func logging(p *Plugin, source string, message interface{}) {
-	_, ok := message.(error)
-
-	if ok {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"source": source,
-			"error":  fmt.Sprintf("%v", message),
-		}).Error(core.LOG_PLUGIN_DATA)
-
-	} else {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"source": source,
-			"data":   fmt.Sprintf("%v", message),
-		}).Debug(core.LOG_PLUGIN_DATA)
-	}
-}
-
 type Plugin struct {
 	m sync.Mutex
 
@@ -116,6 +91,8 @@ type Plugin struct {
 
 	PluginName string
 	PluginType string
+
+	LogFields log.Fields
 
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
@@ -192,7 +169,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		feeds, err := fetchFeed(source, p.OptionUserAgent, p.OptionSSLVerify, p.OptionTimeout)
 		if err != nil {
 			failedSources = append(failedSources, source)
-			logging(p, source, err)
+			core.LogInputPlugin(p.LogFields, source, err)
 			continue
 		}
 
@@ -309,7 +286,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		// always update source timestamp.
 		flowStates[source] = sourceLastTime
 
-		logging(p, source, fmt.Sprintf("last update: %s, received data: %d, new data: %d",
+		core.LogInputPlugin(p.LogFields, source, fmt.Sprintf("last update: %s, received data: %d, new data: %d",
 			sourceLastTime, len(feeds.Items), sourceNewStat[source]))
 	}
 
@@ -340,7 +317,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
-					logging(p, source, fmt.Sprintf(
+					core.LogInputPlugin(p.LogFields, source, fmt.Sprintf(
 						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
 						cmd, args, output, err))
 				}
@@ -372,8 +349,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:             pluginConfig.Flow,
-		PluginName:       "rss",
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+		},
+		PluginName:       PLUGIN_NAME,
 		PluginType:       pluginConfig.PluginType,
 		OptionExpireLast: 0,
 	}
@@ -406,19 +390,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// -----------------------------------------------------------------------------------------------------------------
-	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// expire_action.
 	setExpireAction := func(p interface{}) {
@@ -430,7 +404,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
 	setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
 	setExpireAction((*pluginConfig.PluginParams)["expire_action"])
-	showParam("expire_action", plugin.OptionExpireAction)
+	core.ShowPluginParam(plugin.LogFields, "expire_action", plugin.OptionExpireAction)
 
 	// expire_action_delay.
 	setExpireActionDelay := func(p interface{}) {
@@ -442,7 +416,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
 	setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
 	setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
-	showParam("expire_action_delay", plugin.OptionExpireActionDelay)
+	core.ShowPluginParam(plugin.LogFields, "expire_action_delay", plugin.OptionExpireActionDelay)
 
 	// expire_action_timeout.
 	setExpireActionTimeout := func(p interface{}) {
@@ -454,7 +428,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
 	setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
 	setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
-	showParam("expire_action_timeout", plugin.OptionExpireActionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "expire_action_timeout", plugin.OptionExpireActionTimeout)
 
 	// expire_interval.
 	setExpireInterval := func(p interface{}) {
@@ -466,7 +440,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
 	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
 	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
-	showParam("expire_interval", plugin.OptionExpireInterval)
+	core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
 
 	// force.
 	setForce := func(p interface{}) {
@@ -478,7 +452,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setForce(core.DEFAULT_FORCE_INPUT)
 	setForce(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.force", template)))
 	setForce((*pluginConfig.PluginParams)["force"])
-	showParam("force", plugin.OptionForce)
+	core.ShowPluginParam(plugin.LogFields, "force", plugin.OptionForce)
 
 	// force_count.
 	setForceCount := func(p interface{}) {
@@ -490,7 +464,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setForceCount(core.DEFAULT_FORCE_COUNT)
 	setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
 	setForceCount((*pluginConfig.PluginParams)["force_count"])
-	showParam("force_count", plugin.OptionForceCount)
+	core.ShowPluginParam(plugin.LogFields, "force_count", plugin.OptionForceCount)
 
 	// input.
 	setInput := func(p interface{}) {
@@ -501,7 +475,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.PluginParams)["input"])
-	showParam("input", plugin.OptionInput)
+	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
 	// match_signature.
 	setMatchSignature := func(p interface{}) {
@@ -512,7 +486,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
-	showParam("match_signature", plugin.OptionMatchSignature)
+	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {
@@ -524,7 +498,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL(DEFAULT_MATCH_TTL)
 	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
 	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
-	showParam("match_ttl", plugin.OptionMatchTTL)
+	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
 	// ssl_verify.
 	setSSLVerify := func(p interface{}) {
@@ -536,7 +510,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSSLVerify(DEFAULT_SSL_VERIFY)
 	setSSLVerify(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ssl_verify", template)))
 	setSSLVerify((*pluginConfig.PluginParams)["ssl_verify"])
-	showParam("ssl_verify", plugin.OptionSSLVerify)
+	core.ShowPluginParam(plugin.LogFields, "ssl_verify", plugin.OptionSSLVerify)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -548,7 +522,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	showParam("timeout", plugin.OptionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// time_format.
 	setTimeFormat := func(p interface{}) {
@@ -560,7 +534,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
 	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
 	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
-	showParam("time_format", plugin.OptionTimeFormat)
+	core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
 
 	// time_zone.
 	setTimeZone := func(p interface{}) {
@@ -572,7 +546,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
 	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
 	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
-	showParam("time_zone", plugin.OptionTimeZone)
+	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {
@@ -584,7 +558,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setUserAgent(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_USER_AGENT))
 	setUserAgent(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_agent", template)))
 	setUserAgent((*pluginConfig.PluginParams)["user_agent"])
-	showParam("user_agent", plugin.OptionUserAgent)
+	core.ShowPluginParam(plugin.LogFields, "user_agent", plugin.OptionUserAgent)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
