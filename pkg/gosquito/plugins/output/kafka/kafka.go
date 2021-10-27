@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	PLUGIN_NAME = "kafka"
+
 	DEFAULT_COMPRESSION    = "none"
 	DEFAULT_CONFLUENT_AVRO = false
 	DEFAULT_MESSAGE_KEY    = ""
@@ -160,6 +162,8 @@ type Plugin struct {
 
 	KafkaConfig *kafka.ConfigMap
 
+	LogFields log.Fields
+
 	PluginName string
 	PluginType string
 
@@ -282,8 +286,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	plugin := Plugin{
-		Flow:       pluginConfig.Flow,
-		PluginName: "kafka",
+		Flow: pluginConfig.Flow,
+		LogFields: log.Fields{
+			"hash":   pluginConfig.Flow.FlowHash,
+			"flow":   pluginConfig.Flow.FlowName,
+			"file":   pluginConfig.Flow.FlowFile,
+			"plugin": PLUGIN_NAME,
+			"type":   pluginConfig.PluginType,
+		},
+		PluginName: PLUGIN_NAME,
 		PluginType: pluginConfig.PluginType,
 	}
 
@@ -312,20 +323,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	showParam := func(p string, v interface{}) {
-		log.WithFields(log.Fields{
-			"hash":   plugin.Flow.FlowHash,
-			"flow":   plugin.Flow.FlowName,
-			"file":   plugin.Flow.FlowFile,
-			"plugin": plugin.PluginName,
-			"type":   plugin.PluginType,
-			"value":  fmt.Sprintf("%s: %v", p, v),
-		}).Debug(core.LOG_SET_VALUE)
-	}
+	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// -----------------------------------------------------------------------------------------------------------------
-
-	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
 	// brokers.
 	setServer := func(p interface{}) {
@@ -336,7 +336,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.brokers", template)))
 	setServer((*pluginConfig.PluginParams)["brokers"])
-	showParam("brokers", plugin.OptionBrokers)
+	core.ShowPluginParam(plugin.LogFields, "brokers", plugin.OptionBrokers)
 
 	// compress.
 	setCompress := func(p interface{}) {
@@ -348,7 +348,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setCompress(DEFAULT_COMPRESSION)
 	setCompress(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.compress", template)))
 	setCompress((*pluginConfig.PluginParams)["compress"])
-	showParam("compress", plugin.OptionCompress)
+	core.ShowPluginParam(plugin.LogFields, "compress", plugin.OptionCompress)
 
 	// confluent_avro.
 	setConfluentAvro := func(p interface{}) {
@@ -360,7 +360,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setConfluentAvro(DEFAULT_CONFLUENT_AVRO)
 	setConfluentAvro(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.confluent_avro", template)))
 	setConfluentAvro((*pluginConfig.PluginParams)["confluent_avro"])
-	showParam("confluent_avro", plugin.OptionConfluentAvro)
+	core.ShowPluginParam(plugin.LogFields, "confluent_avro", plugin.OptionConfluentAvro)
 
 	// client_id.
 	setClientId := func(p interface{}) {
@@ -371,7 +371,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setClientId(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.client_id", template)))
 	setClientId((*pluginConfig.PluginParams)["client_id"])
-	showParam("client_id", plugin.OptionClientId)
+	core.ShowPluginParam(plugin.LogFields, "client_id", plugin.OptionClientId)
 
 	// message_key.
 	setMessageKey := func(p interface{}) {
@@ -383,7 +383,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMessageKey(DEFAULT_MESSAGE_KEY)
 	setMessageKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_key", template)))
 	setMessageKey((*pluginConfig.PluginParams)["message_key"])
-	showParam("message_key", plugin.OptionMessageKey)
+	core.ShowPluginParam(plugin.LogFields, "message_key", plugin.OptionMessageKey)
 
 	// output.
 	setOutput := func(p interface{}) {
@@ -394,7 +394,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 	setOutput((*pluginConfig.PluginParams)["output"])
-	showParam("output", plugin.OptionOutput)
+	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
 	// schema_record_name.
 	setSchemaRecordName := func(p interface{}) {
@@ -406,7 +406,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaRecordName(DEFAULT_SCHEMA_RECORD_NAME)
 	setSchemaRecordName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_record_name", template)))
 	setSchemaRecordName((*pluginConfig.PluginParams)["schema_record_name"])
-	showParam("schema_record_name", plugin.OptionSchemaRecordName)
+	core.ShowPluginParam(plugin.LogFields, "schema_record_name", plugin.OptionSchemaRecordName)
 
 	// schema_record_namespace.
 	setSchemaRecordNamespace := func(p interface{}) {
@@ -418,7 +418,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaRecordNamespace(DEFAULT_SCHEMA_RECORD_NAMESPACE)
 	setSchemaRecordNamespace(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_record_namespace", template)))
 	setSchemaRecordNamespace((*pluginConfig.PluginParams)["schema_record_namespace"])
-	showParam("schema_record_namespace", plugin.OptionSchemaRecordNamespace)
+	core.ShowPluginParam(plugin.LogFields, "schema_record_namespace", plugin.OptionSchemaRecordNamespace)
 
 	// schema_registry.
 	setSchemaRegistry := func(p interface{}) {
@@ -431,7 +431,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaRegistry(DEFAULT_SCHEMA_REGISTRY)
 	setSchemaRegistry(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_registry", template)))
 	setSchemaRegistry((*pluginConfig.PluginParams)["schema_registry"])
-	showParam("schema_registry", plugin.OptionSchemaRegistry)
+	core.ShowPluginParam(plugin.LogFields, "schema_registry", plugin.OptionSchemaRegistry)
 
 	// schema_subject_strategy.
 	setSchemaSubjectStrategy := func(p interface{}) {
@@ -443,7 +443,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaSubjectStrategy(DEFAULT_SCHEMA_SUBJECT_STRATEGY)
 	setSchemaSubjectStrategy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_subject_strategy", template)))
 	setSchemaSubjectStrategy((*pluginConfig.PluginParams)["schema_subject_strategy"])
-	showParam("schema_subject_strategy", plugin.OptionSchemaSubjectStrategy)
+	core.ShowPluginParam(plugin.LogFields, "schema_subject_strategy", plugin.OptionSchemaSubjectStrategy)
 
 	// schema.
 	templateSchema, _ := core.IsMapWithStringAsKey(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.schema", template)))
@@ -476,7 +476,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, ERROR_SCHEMA_NOT_SET
 	}
 
-	showParam("schema", plugin.OptionSchemaCodec.CanonicalSchema())
+	core.ShowPluginParam(plugin.LogFields, "schema", plugin.OptionSchemaCodec.CanonicalSchema())
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -488,7 +488,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(DEFAULT_TIMEOUT)
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	showParam("timeout", plugin.OptionTimeout)
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.

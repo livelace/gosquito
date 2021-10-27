@@ -791,6 +791,21 @@ func LogInputPlugin(fields log.Fields, source string, message interface{}) {
 	}
 }
 
+func LogOutputPlugin(fields log.Fields, destination string, message interface{}) {
+	_, ok := message.(error)
+
+	fields["destination"] = destination
+
+	if ok {
+		fields["error"] = fmt.Sprintf("%v", message)
+		log.WithFields(fields).Error(LOG_PLUGIN_DATA)
+
+	} else {
+		fields["data"] = fmt.Sprintf("%v", message)
+		log.WithFields(fields).Debug(LOG_PLUGIN_DATA)
+	}
+}
+
 func PluginLoadState(database string, data *map[string]time.Time) error {
 	// Disable logging.
 	opts := badger.DefaultOptions(database)
