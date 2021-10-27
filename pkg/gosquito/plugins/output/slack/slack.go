@@ -16,11 +16,41 @@ const (
 )
 
 var (
-	ERROR_CHANNEL_NOT_FOUND = errors.New("channel not found: %s")
-	ERROR_OUTPUT_NOT_SET    = errors.New("channels and users are not set")
-	ERROR_USER_NOT_FOUND    = errors.New("user not found: %s")
-	ERROR_SEND_FAIL         = errors.New("sending finished with errors")
+	ERROR_CHANNEL_NOT_FOUND    = errors.New("channel not found: %s")
+	ERROR_OUTPUT_NOT_SET       = errors.New("channels and users are not set")
+	ERROR_USER_NOT_FOUND       = errors.New("user not found: %s")
+	ERROR_SEND_FAIL            = errors.New("sending finished with errors")
+	ERROR_SEND_MESSAGE_CHANNEL = errors.New("cannot send message to channel: %v")
+	ERROR_SEND_MESSAGE_USER    = errors.New("cannot send message to user: %v")
+	ERROR_USER_CONNECT         = errors.New("cannot establish connection to user: %v")
 )
+
+func logging(p *Plugin, destination string, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":        p.Flow.FlowHash,
+			"flow":        p.Flow.FlowName,
+			"file":        p.Flow.FlowFile,
+			"plugin":      p.PluginName,
+			"type":        p.PluginType,
+			"destination": destination,
+			"error":       fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":        p.Flow.FlowHash,
+			"flow":        p.Flow.FlowName,
+			"file":        p.Flow.FlowFile,
+			"plugin":      p.PluginName,
+			"type":        p.PluginType,
+			"destination": destination,
+			"data":        fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
+}
 
 func uploadFile(p *Plugin, channel string, file string) error {
 	mime, err := core.DetectFileType(file)
@@ -100,18 +130,6 @@ func (p *Plugin) GetType() string {
 func (p *Plugin) Send(data []*core.DataItem) error {
 	sendFail := false
 
-	// Logging.
-	logError := func(msg string) {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"error":  msg,
-		}).Error(core.LOG_PLUGIN_DATA)
-	}
-
 	// Process and send data.
 	for _, item := range data {
 
@@ -167,8 +185,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			)
 
 			if err != nil {
-				logError(fmt.Sprintf("cannot send message to channel: %s, %v", channel, err))
 				sendFail = true
+				logging(p, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
 				continue
 			}
 
@@ -179,8 +197,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		for _, user := range p.OptionUsers {
 			ch, _, _, err := p.SlackClient.OpenConversation(&slack.OpenConversationParameters{Users: []string{user}})
 			if err != nil {
-				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, err))
 				sendFail = true
+				logging(p, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
 				continue
 			}
 
@@ -192,8 +210,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			)
 
 			if err != nil {
-				logError(fmt.Sprintf("cannot send message to user: %s, %v", user, err))
 				sendFail = true
+				logging(p, user, fmt.Sprintf(ERROR_SEND_MESSAGE_USER.Error(), err))
 				continue
 			}
 

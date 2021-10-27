@@ -940,7 +940,7 @@ func SortLogFields(s []string) {
 	// Ordered fields list.
 	order := []string{
 		"time", "level", "msg", "path", "hash", "flow", "instance", "file", "plugin",
-		"type", "value", "source", "id", "alias", "data", "error", "message",
+		"type", "value", "source", "destination", "id", "alias", "include", "data", "error", "message",
 	}
 
 	// Mark found fields.

@@ -82,6 +82,33 @@ func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofe
 	return temp, nil
 }
 
+func logging(p *Plugin, source string, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"source": source,
+			"error":  fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"source": source,
+			"data":   fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
+}
+
 type Plugin struct {
 	m sync.Mutex
 
@@ -165,17 +192,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		feeds, err := fetchFeed(source, p.OptionUserAgent, p.OptionSSLVerify, p.OptionTimeout)
 		if err != nil {
 			failedSources = append(failedSources, source)
-
-			log.WithFields(log.Fields{
-				"hash":   p.Flow.FlowHash,
-				"flow":   p.Flow.FlowName,
-				"file":   p.Flow.FlowFile,
-				"plugin": p.PluginName,
-				"type":   p.PluginType,
-				"source": source,
-				"error":  err,
-			}).Error(core.LOG_PLUGIN_DATA)
-
+			logging(p, source, err)
 			continue
 		}
 
@@ -292,16 +309,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		// always update source timestamp.
 		flowStates[source] = sourceLastTime
 
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"source": source,
-			"data": fmt.Sprintf("last update: %s, received data: %d, new data: %d",
-				sourceLastTime, len(feeds.Items), sourceNewStat[source]),
-		}).Debug(core.LOG_PLUGIN_DATA)
+		logging(p, source, fmt.Sprintf("last update: %s, received data: %d, new data: %d",
+			sourceLastTime, len(feeds.Items), sourceNewStat[source]))
 	}
 
 	// Save updated flow states.
@@ -331,17 +340,9 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"source": source,
-						"data": fmt.Sprintf(
-							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
-							cmd, args, output, err),
-					}).Debug(core.LOG_PLUGIN_DATA)
+					logging(p, source, fmt.Sprintf(
+						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						cmd, args, output, err))
 				}
 			}
 		}

@@ -178,6 +178,33 @@ func loadUsers(p *Plugin) (map[int32][]string, error) {
 	return data, nil
 }
 
+func logging(p *Plugin, source string, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"source": source,
+			"error":  fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":   p.Flow.FlowHash,
+			"flow":   p.Flow.FlowName,
+			"file":   p.Flow.FlowFile,
+			"plugin": p.PluginName,
+			"type":   p.PluginType,
+			"source": source,
+			"data":   fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
+}
+
 func receiveFiles(p *Plugin) {
 	tempDirMatcher := regexp.MustCompile(filepath.Join(DEFAULT_FILES_DIR, "temp"))
 
@@ -367,14 +394,7 @@ func receiveMessages(p *Plugin) {
 					}
 
 				} else {
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"data":   fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId),
-					}).Debug(core.LOG_PLUGIN_DATA)
+					logging(p, "", fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId))
 				}
 			}
 
@@ -566,16 +586,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	}
 
 	for _, source := range p.OptionInput {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"source": source,
-			"data": fmt.Sprintf("last update: %v, received data: %d, new data: %d",
-				flowStates[source], sourceReceivedStat[source], sourceNewStat[source]),
-		}).Debug(core.LOG_PLUGIN_DATA)
+		logging(p, source, fmt.Sprintf("last update: %v, received data: %d, new data: %d",
+			flowStates[source], sourceReceivedStat[source], sourceNewStat[source]))
 	}
 
 	// Save updated flow states.
@@ -605,17 +617,9 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"source": source,
-						"data": fmt.Sprintf(
-							"expire_action: command: %s, arguments: %v, output: %s, error: %v",
-							cmd, args, output, err),
-					}).Debug(core.LOG_PLUGIN_DATA)
+					logging(p, source, fmt.Sprintf(
+						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						cmd, args, output, err))
 				}
 			}
 		}

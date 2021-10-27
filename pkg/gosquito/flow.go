@@ -775,7 +775,7 @@ func runFlow(flow *core.Flow) {
 
 			} else {
 				atomic.AddInt32(&flow.MetricSend, int32(len(inputData)))
-				logFlowDebug(fmt.Sprintf("input plugin: %s, send data: %d",
+				logOutputDebug(flow.OutputPlugin, fmt.Sprintf("input plugin: %s, send data: %d",
 					flow.InputPlugin.GetName(), len(inputData)))
 			}
 

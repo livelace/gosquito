@@ -21,11 +21,42 @@ const (
 )
 
 var (
-	ERROR_CHANNEL_NOT_FOUND = errors.New("channel not found: %s")
-	ERROR_OUTPUT_NOT_SET    = errors.New("channels and users are not set")
-	ERROR_USER_NOT_FOUND    = errors.New("user not found: %s")
-	ERROR_SEND_FAIL         = errors.New("sending finished with errors")
+	ERROR_CHANNEL_NOT_FOUND    = errors.New("channel not found: %s")
+	ERROR_OUTPUT_NOT_SET       = errors.New("channels and users are not set")
+	ERROR_SEND_FAIL            = errors.New("sending finished with errors")
+	ERROR_SEND_MESSAGE_CHANNEL = errors.New("cannot send message to channel: %v")
+	ERROR_SEND_MESSAGE_USER    = errors.New("cannot send message to user: %v")
+	ERROR_UPLOAD_FILE_CHANNEL  = errors.New("cannot upload file to channel: %s, %v")
+	ERROR_USER_CONNECT         = errors.New("cannot establish connection to user: %v")
+	ERROR_USER_NOT_FOUND       = errors.New("user not found: %s")
 )
+
+func logging(p *Plugin, destination string, message interface{}) {
+	_, ok := message.(error)
+
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":        p.Flow.FlowHash,
+			"flow":        p.Flow.FlowName,
+			"file":        p.Flow.FlowFile,
+			"plugin":      p.PluginName,
+			"type":        p.PluginType,
+			"destination": destination,
+			"error":       fmt.Sprintf("%v", message),
+		}).Error(core.LOG_PLUGIN_DATA)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":        p.Flow.FlowHash,
+			"flow":        p.Flow.FlowName,
+			"file":        p.Flow.FlowFile,
+			"plugin":      p.PluginName,
+			"type":        p.PluginType,
+			"destination": destination,
+			"data":        fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
+}
 
 func uploadFile(p *Plugin, channel string, file string) (string, error) {
 	// Form file name.
@@ -68,14 +99,7 @@ func uploadFiles(p *Plugin, channel string, files *[]string) []string {
 		if id, err := uploadFile(p, channel, file); err == nil {
 			filesId = append(filesId, id)
 		} else {
-			log.WithFields(log.Fields{
-				"hash":   p.Flow.FlowHash,
-				"flow":   p.Flow.FlowName,
-				"file":   p.Flow.FlowFile,
-				"plugin": p.PluginName,
-				"type":   p.PluginType,
-				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
-			}).Error(core.LOG_PLUGIN_DATA)
+			logging(p, channel, fmt.Errorf(ERROR_UPLOAD_FILE_CHANNEL.Error(), file, err))
 			continue
 		}
 	}
@@ -132,18 +156,6 @@ func (p *Plugin) GetType() string {
 
 func (p *Plugin) Send(data []*core.DataItem) error {
 	sendFail := false
-
-	// Logging.
-	logError := func(msg string) {
-		log.WithFields(log.Fields{
-			"hash":   p.Flow.FlowHash,
-			"flow":   p.Flow.FlowName,
-			"file":   p.Flow.FlowFile,
-			"plugin": p.PluginName,
-			"type":   p.PluginType,
-			"error":  msg,
-		}).Error(core.LOG_PLUGIN_DATA)
-	}
 
 	// Process and send data.
 	for _, item := range data {
@@ -206,8 +218,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 			_, res := p.MattermostApi.CreatePost(&post)
 			if res.Error != nil {
-				logError(fmt.Sprintf("cannot send message to channel: %s, %v", channel, res.Error))
 				sendFail = true
+				logging(p, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), res.Error))
 				continue
 			}
 		}
@@ -216,8 +228,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 		for _, user := range p.OptionUsers {
 			ch, res := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
 			if res.Error != nil {
-				logError(fmt.Sprintf("cannot establish connection to user: %s, %v", user, res.Error))
 				sendFail = true
+				logging(p, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), res.Error))
 				continue
 			}
 
@@ -233,8 +245,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 
 			_, res = p.MattermostApi.CreatePost(&post)
 			if res.Error != nil {
-				logError(fmt.Sprintf("cannot send message to user: %s, %v", user, res.Error))
 				sendFail = true
+				logging(p, user, fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), res.Error))
 				continue
 			}
 		}
