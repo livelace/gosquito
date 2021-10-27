@@ -45,30 +45,35 @@ func fetchData(url string, dst string, timeout int) error {
 	return nil
 }
 
-func logProcessError(p *Plugin, err error) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"error":  err,
-	}).Error(LOG_FETCH_ERROR)
-}
+func logging(p *Plugin, message interface{}) {
+	_, ok := message.(error)
 
-func logProcessDebug(p *Plugin, message string) {
-	log.WithFields(log.Fields{
-		"hash":   p.Flow.FlowHash,
-		"flow":   p.Flow.FlowName,
-		"file":   p.Flow.FlowFile,
-		"plugin": p.PluginName,
-		"type":   p.PluginType,
-		"id":     p.PluginID,
-		"alias":  p.PluginAlias,
-		"data":   message,
-	}).Debug(core.LOG_PLUGIN_DATA)
+	if ok {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"error":   fmt.Sprintf("%v", message),
+		}).Error(LOG_FETCH_ERROR)
+
+	} else {
+		log.WithFields(log.Fields{
+			"hash":    p.Flow.FlowHash,
+			"flow":    p.Flow.FlowName,
+			"file":    p.Flow.FlowFile,
+			"plugin":  p.PluginName,
+			"type":    p.PluginType,
+			"id":      p.PluginID,
+			"alias":   p.PluginAlias,
+			"include": p.OptionInclude,
+			"data":    fmt.Sprintf("%v", message),
+		}).Debug(core.LOG_PLUGIN_DATA)
+	}
 }
 
 type Plugin struct {
@@ -137,9 +142,9 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 				if err == nil {
 					ro.SetString(savePath)
-					logProcessDebug(p, fmt.Sprintf("%s -> %s", ri.String(), savePath))
+					logging(p, fmt.Sprintf("%s -> %s", ri.String(), savePath))
 				} else {
-					logProcessError(p, err)
+					logging(p, err)
 				}
 
 			case reflect.Slice:
@@ -149,9 +154,9 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 					if err == nil {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(savePath)))
-						logProcessDebug(p, fmt.Sprintf("%s -> %s", ri.Index(i).String(), savePath))
+						logging(p, fmt.Sprintf("%s -> %s", ri.Index(i).String(), savePath))
 					} else {
-						logProcessError(p, err)
+						logging(p, err)
 					}
 				}
 			}

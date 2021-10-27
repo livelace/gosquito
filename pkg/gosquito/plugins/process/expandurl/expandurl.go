@@ -72,6 +72,20 @@ func getRedirectFromServer(p *Plugin, url string) (string, bool) {
 	return url, false
 }
 
+func logging(p *Plugin, message interface{}) {
+	log.WithFields(log.Fields{
+		"hash":    p.Flow.FlowHash,
+		"flow":    p.Flow.FlowName,
+		"file":    p.Flow.FlowFile,
+		"plugin":  p.PluginName,
+		"type":    p.PluginType,
+		"id":      p.PluginID,
+		"alias":   p.PluginAlias,
+		"include": p.OptionInclude,
+		"data":    fmt.Sprintf("%v", message),
+	}).Debug(core.LOG_PLUGIN_DATA)
+}
+
 func swapURLSchema(s string) string {
 	if httpSchema.MatchString(s) {
 		return httpSchema.ReplaceAllString(s, "https://")
@@ -155,17 +169,8 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(expandedUrl)))
 					}
 
-					log.WithFields(log.Fields{
-						"hash":   p.Flow.FlowHash,
-						"flow":   p.Flow.FlowName,
-						"file":   p.Flow.FlowFile,
-						"plugin": p.PluginName,
-						"type":   p.PluginType,
-						"id":     p.PluginID,
-						"alias":  p.PluginAlias,
-						"data": fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
-							ri.Index(i).String(), p.OptionDepth, expandedUrl),
-					}).Debug(core.LOG_PLUGIN_DATA)
+					logging(p, fmt.Sprintf("expandurl: source url: %s, depth: %d, expanded url: %s",
+						ri.Index(i).String(), p.OptionDepth, expandedUrl))
 				}
 			}
 		}
