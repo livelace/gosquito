@@ -36,8 +36,8 @@ type Resty struct {
 | bearer_token    | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                              |
 | body            | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                              |
 | headers         | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.           |
-| **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://freegeoip.app/json/"]   | List of REST endpoints.                    |
-| match_signature | -          | array    | -     | +          | -             | "[]"                | ["body", "statuscode"]           | Match new articles by signature.           |
+| **input**       | +          | array    | -     | +          | -             | "[]"                | ["https://freegeoip.app/json/"]  | List of REST endpoints.                    |
+| match_signature | -          | array    | -     | +          | -             | "[]"                | ["source", "time"]               | Match new articles by signature.           |
 | match_ttl       | -          | string   | -     | +          | -             | "1d"                | "24h"                            | TTL (Time To Live) for matched signatures. |
 | method          | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).                |
 | params          | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request query parameters.  |
