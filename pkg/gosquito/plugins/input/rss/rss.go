@@ -9,6 +9,7 @@ import (
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -223,22 +224,22 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
 					case "content":
-						itemSignature += item.Content
+						itemSignature += strings.TrimSpace(item.Content)
 						break
 					case "description":
-						itemSignature += item.Description
+						itemSignature += strings.TrimSpace(item.Description)
 						break
 					case "guid":
-						itemSignature += item.GUID
+						itemSignature += strings.TrimSpace(item.GUID)
 						break
 					case "link":
-						itemSignature += item.Link
+						itemSignature += strings.TrimSpace(item.Link)
 						break
 					case "time":
 						itemSignature += itemTime.String()
 						break
 					case "title":
-						itemSignature += item.Title
+						itemSignature += strings.TrimSpace(item.Title)
 						break
 					}
 				}

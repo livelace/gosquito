@@ -67,11 +67,6 @@ flow:
         output: ["data.array0"]
         regexp: ["https://ria.ru/.*"]
 
-    - id: 2
-      plugin: "echo"
-      params:
-        input:  ["data.text0"]
-
   output:
     plugin: "mattermost"
     params:
