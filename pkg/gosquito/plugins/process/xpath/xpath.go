@@ -325,5 +325,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
 	}
 
+	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		return &Plugin{}, err
+	}
+
 	return &plugin, nil
 }

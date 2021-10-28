@@ -319,7 +319,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			break
 		}
 
-		if err == nil {
+		if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
 			itemBody := fmt.Sprintf("%s", resp.Body())
 
 			// Process only new items. Two methods:
