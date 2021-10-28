@@ -218,8 +218,6 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			// 1. Match item by user provided signature.
 			// 2. Compare item timestamp with source timestamp.
 			if len(p.OptionMatchSignature) > 0 || p.OptionForce {
-				itemSignature = source
-
 				for _, v := range p.OptionMatchSignature {
 					switch v {
 					case "content":
@@ -234,6 +232,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					case "link":
 						itemSignature += item.Link
 						break
+					case "source":
+						itemSignature += source
 					case "time":
 						itemSignature += itemTime.String()
 						break

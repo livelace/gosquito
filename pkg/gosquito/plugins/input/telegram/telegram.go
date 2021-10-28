@@ -506,8 +506,6 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		// 1. Match item by user provided signature.
 		// 2. Compare item timestamp with source timestamp.
 		if len(p.OptionMatchSignature) > 0 {
-			itemSignature = item.SOURCE
-
 			for _, v := range p.OptionMatchSignature {
 				switch v {
 				case "firstname":
@@ -518,6 +516,9 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					break
 				case "phone":
 					itemSignature += item.TELEGRAM.PHONE
+					break
+				case "source":
+					itemSignature += item.SOURCE
 					break
 				case "text":
 					itemSignature += item.TELEGRAM.TEXT

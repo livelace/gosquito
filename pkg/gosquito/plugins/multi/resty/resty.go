@@ -326,12 +326,13 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			// 1. Match item by user provided signature.
 			// 2. Pass items as is.
 			if len(p.OptionMatchSignature) > 0 {
-				itemSignature = source
-
 				for _, v := range p.OptionMatchSignature {
 					switch v {
 					case "body":
 						itemSignature += itemBody
+						break
+					case "source":
+						itemSignature += source
 						break
 					}
 				}
