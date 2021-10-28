@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	mattermost "github.com/mattermost/mattermost-server/model"
+	mattermost "github.com/mattermost/mattermost-server/v6/model"
 	"io"
 	"net/http"
 	"os"
@@ -57,9 +57,9 @@ func uploadFile(p *Plugin, channel string, file string) (string, error) {
 	data := buf.Bytes()
 
 	// Upload file.
-	fileUploadResponse, response := p.MattermostApi.UploadFile(data, channel, fileName)
-	if response.Error != nil {
-		return "", response.Error
+	fileUploadResponse, _, err := p.MattermostApi.UploadFile(data, channel, fileName)
+	if err != nil {
+		return "", err
 	}
 
 	_ = f.Close()
@@ -191,7 +191,7 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 			}
 		}
 
-		// Send to channels.
+		// Send to channel.
 		for _, channel := range p.OptionChannels {
 			filesId := uploadFiles(p, channel, &files)
 
@@ -203,20 +203,20 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				Props:     props,
 			}
 
-			_, res := p.MattermostApi.CreatePost(&post)
-			if res.Error != nil {
+			_, _, err := p.MattermostApi.CreatePost(&post)
+			if err != nil {
 				sendFail = true
-				core.LogOutputPlugin(p.LogFields, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), res.Error))
+				core.LogOutputPlugin(p.LogFields, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
 				continue
 			}
 		}
 
 		// Send to users.
 		for _, user := range p.OptionUsers {
-			ch, res := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
-			if res.Error != nil {
+			ch, _, err := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
+			if err != nil {
 				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), res.Error))
+				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
 				continue
 			}
 
@@ -230,10 +230,10 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 				Props:     props,
 			}
 
-			_, res = p.MattermostApi.CreatePost(&post)
-			if res.Error != nil {
+			_, _, err = p.MattermostApi.CreatePost(&post)
+			if err != nil {
 				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), res.Error))
+				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
 				continue
 			}
 		}
@@ -495,27 +495,27 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// Login.
 	plugin.MattermostApi = mattermost.NewAPIv4Client(plugin.OptionURL)
-	plugin.MattermostApi.HttpClient = &http.Client{
+	plugin.MattermostApi.HTTPClient = &http.Client{
 		Timeout: time.Duration(plugin.OptionTimeout) * time.Second,
 	}
 
-	user, res := plugin.MattermostApi.Login(plugin.OptionUsername, plugin.OptionPassword)
-	if res.Error != nil {
-		return &Plugin{}, res.Error
+	user, _, err := plugin.MattermostApi.Login(plugin.OptionUsername, plugin.OptionPassword)
+	if err != nil {
+		return &Plugin{}, err
 	}
 	plugin.MattermostUser = user
 
 	// Team.
-	team, res := plugin.MattermostApi.GetTeamByName(plugin.OptionTeam, "")
-	if res.Error != nil {
-		return &Plugin{}, res.Error
+	team, _, err := plugin.MattermostApi.GetTeamByName(plugin.OptionTeam, "")
+	if err != nil {
+		return &Plugin{}, err
 	}
 
 	// Resolve channels ids.
 	channelsId := make([]string, 0)
 	for _, channel := range plugin.OptionChannels {
-		ch, res := plugin.MattermostApi.GetChannelByName(channel, team.Id, "")
-		if res.Error == nil {
+		ch, _, err := plugin.MattermostApi.GetChannelByName(channel, team.Id, "")
+		if err == nil {
 			channelsId = append(channelsId, ch.Id)
 		} else {
 			return &Plugin{}, fmt.Errorf(ERROR_CHANNEL_NOT_FOUND.Error(), channel)
@@ -527,8 +527,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Resolve users ids.
 	usersId := make([]string, 0)
 	for _, user := range plugin.OptionUsers {
-		u, res := plugin.MattermostApi.GetUserByUsername(user, "")
-		if res.Error == nil {
+		u, _, err := plugin.MattermostApi.GetUserByUsername(user, "")
+		if err == nil {
 			usersId = append(usersId, u.Id)
 		} else {
 			return &Plugin{}, fmt.Errorf(ERROR_USER_NOT_FOUND.Error(), user)

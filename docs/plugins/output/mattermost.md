@@ -53,19 +53,24 @@ flow:
       alias: "clean text"
       plugin: "regexpreplace"
       params:
+        include: true
         input:  ["twitter.text"]
         output: ["data.text0"]
         regexp: ["regexps.urls"]
-        replacement: [""]
+        replace: [""]
 
     - id: 1
       alias: "search urls"
       plugin: "regexpfind"
       params:
-        include: false
         input:  ["twitter.urls"]
         output: ["data.array0"]
         regexp: ["https://ria.ru/.*"]
+
+    - id: 2
+      plugin: "echo"
+      params:
+        input:  ["data.text0"]
 
   output:
     plugin: "mattermost"
