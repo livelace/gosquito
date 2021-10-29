@@ -51,10 +51,10 @@ INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
 
 ```shell script
 # Docker:
-user@localhost /tmp $ docker run -ti --rm livelace/gosquito:v3.0.0 bash
-gosquito@fa388e89e10e ~ $ gosquito 
-INFO[03.11.2020 14:44:15.806] gosquito v3.0.0   
-INFO[03.11.2020 14:44:15.807] config init        path="/home/gosquito/.gosquito"
-ERRO[03.11.2020 14:44:15.807] flow read          path="/home/gosquito/.gosquito/flow/conf" error="no valid flow"
-gosquito@fa388e89e10e ~ $
+user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v3.0.0
+user@04a308454349 ~ $ gosquito
+INFO[29.10.2021 21:34:35.915] gosquito v3.0.0-55ce54 
+INFO[29.10.2021 21:34:35.916] config apply       path="/home/user/.gosquito"
+ERRO[29.10.2021 21:34:35.918] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
+user@04a308454349 ~ $
 ```
