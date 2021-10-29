@@ -44,6 +44,7 @@ INFO[30.10.2021 00:31:16.468] gosquito v3.0.0-55ce54
 INFO[30.10.2021 00:31:16.468] config apply       path="/home/user/.gosquito"
 INFO[30.10.2021 00:31:16.471] flow valid         hash="hi7oim" flow="test" file="test.yaml"
 INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
+...
 ```
 
 #### Docker:
