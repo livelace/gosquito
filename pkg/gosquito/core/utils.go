@@ -916,6 +916,12 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 		return nil
 	})
 
+	// Garbage collection.
+	err = db.RunValueLogGC(0.5)
+	if err == badger.ErrNoRewrite {
+		return nil
+	}
+
 	return err
 }
 
