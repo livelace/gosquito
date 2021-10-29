@@ -129,7 +129,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 
 					if err == nil {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(savePath)))
-						core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%s -> %s", ri.String(), savePath))
+						core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%s -> %s", ri.Index(i).String(), savePath))
 					} else {
 						core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_FETCH_ERROR.Error(),
 							ri.String(), savePath, err))

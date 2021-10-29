@@ -8,10 +8,7 @@ import (
 	log "github.com/livelace/logrus"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"os"
-	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -24,28 +21,6 @@ const (
 var (
 	ERROR_ACTION_UNKNOWN = errors.New("action unknown: %s")
 )
-
-func getLocalFiles(path string) ([]string, error) {
-	temp := make([]string, 0)
-
-	if core.IsFile(path, "") {
-		temp = append(temp, path)
-
-	} else if core.IsDir(path) {
-		err := filepath.Walk(path, func(item string, info os.FileInfo, err error) error {
-			if core.IsFile(item, "") {
-				temp = append(temp, item)
-			}
-			return nil
-		})
-
-		if err != nil {
-			return temp, err
-		}
-	}
-
-	return temp, nil
-}
 
 func minioPut(p *Plugin, file string, object string, timeout int) error {
 	// context.
@@ -145,32 +120,25 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
-			for i := 0; i < ri.Len(); i++ {
-				// Upload all found files:
-				// 1. local/path/to/file -> <bucket>/<item_uuid>/local/path/to/file
-				// 2. gosquito/data/<flow_name>/temp/<plugin_type>/<plugin_name>/uuid/file -> <bucket>/<item_uuid>/<plugin_name>/uuid/file
-				if p.OptionAction == "put" {
-					files, err := getLocalFiles(ri.Index(i).String())
-
-					if err != nil {
-						return temp, err
-					}
-
-					for _, file := range files {
-						pluginTemp := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
-						object := fmt.Sprintf("%s%s", item.UUID, strings.ReplaceAll(file, pluginTemp, ""))
-
-						// Fail fast.
-						if err := minioPut(p, file, object, p.OptionTimeout); err != nil {
-							return temp, err
-						} else {
-							ro.Set(reflect.Append(ro, reflect.ValueOf(object)))
-							core.LogProcessPlugin(p.LogFields,
-								fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, object))
-						}
-					}
-
+			switch ri.Kind() {
+			case reflect.String:
+				if err := minioPut(p, ri.String(), ro.String(), p.OptionTimeout); err != nil {
+					return temp, err
+				} else {
 					performed = true
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, ro.String()))
+				}
+
+			case reflect.Slice:
+				for i := 0; i < ri.Len(); i++ {
+					if err := minioPut(p, ri.Index(i).String(), ro.Index(i).String(), p.OptionTimeout); err != nil {
+						return temp, err
+					} else {
+						performed = true
+						core.LogProcessPlugin(p.LogFields,
+							fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, ro.Index(i).String()))
+					}
 				}
 			}
 		}
@@ -303,10 +271,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["input"] = 0
-				plugin.OptionInput = v
-			}
+			availableParams["input"] = 0
+			plugin.OptionInput = v
 		}
 	}
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
@@ -316,10 +282,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
-				availableParams["output"] = 0
-				plugin.OptionOutput = v
-			}
+			availableParams["output"] = 0
+			plugin.OptionOutput = v
 		}
 	}
 	setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))

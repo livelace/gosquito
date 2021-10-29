@@ -6,6 +6,7 @@ import (
 	log "github.com/livelace/logrus"
 	"reflect"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -15,11 +16,48 @@ const (
 	DEFAULT_MATCH_CASE = true
 )
 
-func findPatternsAndReturnSlice(regexps []*regexp.Regexp, text string) []string {
+func findPatternsAndReturnSlice(regexps []*regexp.Regexp, groups []int, groupsJoin string, text string) []string {
 	temp := make([]string, 0)
 
-	for _, re := range regexps {
-		temp = append(temp, re.FindAllString(text, -1)...)
+	needJoin := len(groupsJoin) > 0
+
+	// 1. Search groups of pattern.
+	// 2. Search patterns.
+	if len(groups) > 0 {
+		for _, re := range regexps {
+
+			// Try to find groups.
+			for _, foundGroups := range re.FindAllStringSubmatch(text, -1) {
+
+				// Groups found.
+				if len(foundGroups) > 0 {
+					groupsAmount := len(foundGroups) - 1 // first value is a string: matched text + groups.
+					groupsJoined := ""
+
+					for _, group := range groups {
+						if group <= groupsAmount {
+							// a. Join groups if needed.
+							// b. Just append groups to result.
+							if needJoin {
+								groupsJoined += foundGroups[group] + groupsJoin
+							} else {
+								temp = append(temp, foundGroups[group])
+							}
+						}
+					}
+
+					// Append joined groups to result.
+					if needJoin {
+						temp = append(temp, strings.TrimRight(groupsJoined, groupsJoin))
+					}
+				}
+			}
+		}
+
+	} else {
+		for _, re := range regexps {
+			temp = append(temp, re.FindAllString(text, -1)...)
+		}
 	}
 
 	return temp
@@ -36,6 +74,8 @@ type Plugin struct {
 	PluginType  string
 
 	OptionFindAll   bool
+	OptionGroup     [][]int
+	OptionGroupJoin []string
 	OptionInclude   bool
 	OptionInput     []string
 	OptionMatchCase bool
@@ -85,9 +125,22 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
+			regx := p.OptionRegexp[index]
+
+			var group []int
+			if len(p.OptionGroup) > 0 {
+				group = p.OptionGroup[index]
+			}
+
+			var groupJoin string
+			if len(p.OptionGroupJoin) > 0 {
+				groupJoin = p.OptionGroupJoin[index]
+			}
+
 			switch ri.Kind() {
 			case reflect.String:
-				if s := findPatternsAndReturnSlice(p.OptionRegexp[index], ri.String()); len(s) > 0 {
+				if s := findPatternsAndReturnSlice(regx, group, groupJoin, ri.String()); len(s) > 0 {
+
 					found[index] = true
 					for _, v := range s {
 						ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
@@ -97,7 +150,8 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				somethingWasFound := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if s := findPatternsAndReturnSlice(p.OptionRegexp[index], ri.Index(i).String()); len(s) > 0 {
+					if s := findPatternsAndReturnSlice(regx, group, groupJoin, ri.Index(i).String()); len(s) > 0 {
+
 						somethingWasFound = true
 						for _, v := range s {
 							ro.Set(reflect.Append(ro, reflect.ValueOf(v)))
@@ -160,6 +214,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require": -1,
 
 		"find_all":   -1,
+		"group":      -1,
+		"group_join": -1,
 		"input":      1,
 		"match_case": -1,
 		"output":     1,
@@ -179,6 +235,26 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFindAll(DEFAULT_FIND_ALL)
 	setFindAll((*pluginConfig.PluginParams)["find_all"])
 	core.ShowPluginParam(plugin.LogFields, "find_all", plugin.OptionFindAll)
+
+	// group.
+	setGroup := func(p interface{}) {
+		if v, b := core.IsSliceOfSliceInt(p); b {
+			availableParams["group"] = 0
+			plugin.OptionGroup = v
+		}
+	}
+	setGroup((*pluginConfig.PluginParams)["group"])
+	core.ShowPluginParam(plugin.LogFields, "group", plugin.OptionGroup)
+
+	// group_join.
+	setGroupJoin := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["group_join"] = 0
+			plugin.OptionGroupJoin = v
+		}
+	}
+	setGroupJoin((*pluginConfig.PluginParams)["group_join"])
+	core.ShowPluginParam(plugin.LogFields, "group_join", plugin.OptionGroupJoin)
 
 	// include.
 	setInclude := func(p interface{}) {
@@ -255,11 +331,27 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	// 1. "input, output, regexp" must have equal size.
+	// "input, output, regexp" must have equal size.
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
+	}
+
+	// "input, output, regexp, group" must have equal size, if group is set.
+	if len(plugin.OptionGroup) > 0 && len(plugin.OptionGroup) != len(plugin.OptionInput) {
+		return &Plugin{}, fmt.Errorf(
+			"%s: %v, %v, %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp,
+			plugin.OptionGroup)
+	}
+
+	// "input, output, regexp, group, group_join" must have equal size, if group_join is set.
+	if len(plugin.OptionGroupJoin) > 0 && len(plugin.OptionGroupJoin) != len(plugin.OptionGroup) {
+		return &Plugin{}, fmt.Errorf(
+			"%s: %v, %v, %v, %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp,
+			plugin.OptionGroup, plugin.OptionGroupJoin)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

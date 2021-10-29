@@ -616,6 +616,7 @@ func runFlow(flow *core.Flow) {
 				plugin.FlowLog(err)
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
+				logFlowStop()
 				return
 
 			} else {
@@ -660,6 +661,7 @@ func runFlow(flow *core.Flow) {
 							atomic.AddInt32(&flow.MetricError, 1)
 							flow.OutputPlugin.FlowLog(err)
 							cleanFlowTemp()
+							logFlowStop()
 							return
 
 						} else {
@@ -687,6 +689,7 @@ func runFlow(flow *core.Flow) {
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
 				flow.OutputPlugin.FlowLog(err)
+				logFlowStop()
 				return
 
 			} else {

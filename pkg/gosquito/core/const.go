@@ -51,7 +51,7 @@ const (
 	LOG_FLOW_STAT                  = "flow stat"
 	LOG_FLOW_STOP                  = "--- flow stop"
 	LOG_FLOW_VALID                 = "flow valid"
-	LOG_FLOW_WARN                  = "--- flow warn"
+	LOG_FLOW_WARN                  = "flow warn"
 	LOG_PLUGIN_DATA                = "plugin data"
 	LOG_PLUGIN_INIT                = "plugin init"
 	LOG_SET_VALUE                  = "set value"

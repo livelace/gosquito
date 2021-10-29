@@ -37,16 +37,16 @@ flow:
 
   process:
     - id: 0
-      alias: "search urls"
       plugin: "regexpfind"
+      alias: "search urls"
       params:
         input:  ["twitter.urls"]
         output: ["data.array0"]
         regexp: ["http://apne.ws/.*"]
 
     - id: 1
-      alias: "expand urls"
       plugin: "expandurl"
+      alias: "expand urls"
       params:
         require: [0]
         include: false

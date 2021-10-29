@@ -468,7 +468,7 @@ func IsBool(i interface{}) (bool, bool) {
 }
 
 func IsChatUsername(i interface{}) (string, bool) {
-	re := regexp.MustCompile("^@[a-zA-Z0-9.-_]+$")
+	re := regexp.MustCompile("^@[a-zA-Z0-9.\\-_]+$")
 
 	if v, b := IsString(i); b {
 		if re.MatchString(v) {
@@ -638,6 +638,34 @@ func IsSliceOfInt(i interface{}) ([]int, bool) {
 
 		for _, v := range ii {
 			i, ok := v.(int)
+
+			if !ok {
+				return temp, false
+			} else {
+				temp = append(temp, i)
+			}
+		}
+
+	} else {
+		return temp, false
+	}
+
+	return temp, true
+}
+
+func IsSliceOfSliceInt(i interface{}) ([][]int, bool) {
+	temp := make([][]int, 0)
+
+	if i == nil {
+		return temp, false
+
+	} else if ii, ok := i.([]interface{}); ok {
+		if len(ii) == 0 {
+			return temp, false
+		}
+
+		for _, v := range ii {
+			i, ok := IsSliceOfInt(v)
 
 			if !ok {
 				return temp, false

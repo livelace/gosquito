@@ -40,25 +40,35 @@ flow:
 
   process:
     - id: 0
-      alias: "fetch media"
       plugin: "fetch"
+      alias: "fetch media"
       params:
         input:  ["twitter.media"]
         output: ["data.array0"]
 
     - id: 1
-      alias: "save media"
+      plugin: "regexpfind"
+      params:
+        input:  ["data.array0"]
+        output: ["data.array1"]
+        regexp: ["process/fetch/([a-z0-9\\-]+)/([a-zA-Z0-9.?=_\\-]+)"]
+        group:  [[1, 2]]
+        group_join: ["/"]
+
+    - id: 2
       plugin: "minio"
+      alias: "save media"
       params:
         cred:   "creds.minio.default"
         template: "templates.minio.default"
         input:   ["data.array0"]
         output:  ["data.array1"]
         
-    - id: 2
+    - id: 3
       plugin: "echo"
+      alias: "echo local and remote files"
       params:
-        input:  ["data.array1"]
+        input:  ["data.array0", "data.array1"]
 ```
 
 ### Config sample:
