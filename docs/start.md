@@ -7,7 +7,7 @@ gosquito is delivered as [AppImage](https://appimage.org/) package and [Docker i
 1. Download application:
 ```shell
 # AppImage:
-user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v3.0.0/gosquito-v3.0.0.appimage" \
+user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v3.0.0/gosquito-v3.0.0-55ce54.appimage" \
   -o "/tmp/gosquito.appimage" && chmod +x "/tmp/gosquito.appimage"
 user@localhost ~ $ /tmp/gosquito.appimage 
 INFO[30.10.2021 00:27:22.636] gosquito v3.0.0-55ce54 
