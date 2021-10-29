@@ -34,7 +34,7 @@ flow:
   process:
     - id: 0
       plugin: "regexpfind"
-      alias: "find english words"
+      alias: "find english keywords"
       params:
         input:  ["rss.description"]
         output: ["data.array0"]

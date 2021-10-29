@@ -36,35 +36,29 @@ flow:
         "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=."
       ]
       force: true
-      force_count: 1
+      force_count: 3
 
   process:
     - id: 0
-      alias: "fetch pages"
       plugin: "fetch"
+      alias: "fetch pages"
       params:
         input:  ["rss.link"]
         output: ["data.text0"]
 
     - id: 1
-      alias: "extract xpath"
       plugin: "xpath"
+      alias: "extract xpath"
       params:
         input:  ["data.text0", "data.text0"]
-        output: ["data.array1", "data.array2"]
+        output: ["data.text1", "data.text2"]
         xpath:  ["//div[contains(@data-qa, 'vacancy-description')]", "//span[contains(@data-qa, 'bloko-tag__text')]"]
         xpath_html: false
 
     - id: 2
-      alias: "echo description"
+      alias: "echo data"
       plugin: "echo"
       params:
-        input:  ["data.array1"]
-        
-    - id: 3
-      alias: "echo tags"
-      plugin: "echo"
-      params:
-        input:  ["data.array2"]
+        input:  ["data.text1", "data.text2"]
 ```
 

@@ -55,6 +55,7 @@ flow:
 
     - id: 2
       plugin: "echo"
+      alias: "echo original and expanded urls"
       params:
         require: [0]
         input:  ["data.array0", "data.array1"]

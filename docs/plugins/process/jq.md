@@ -42,8 +42,7 @@ flow:
     - id:  1
       plugin: "echo"
       params:
-        input: ["data.array0", "data.array1"]
-        
+        input: ["data.array0", "data.array1"]     
 ```
 
 ### Config sample:

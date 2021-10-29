@@ -49,6 +49,6 @@ flow:
       plugin: "echo"
       params:
         require: [0]
-        input: ["data.text0"]
+        input: ["rss.title", "data.text0"]
 ```
 

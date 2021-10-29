@@ -47,6 +47,7 @@ flow:
 
     - id: 1
       plugin: "echo"
+      alias: "echo news with Россия word"
       params:
         require: [0]
         input: ["data.array0"]

@@ -44,6 +44,7 @@ flow:
 
     - id: 1
       plugin: "echo"
+      alias: "echo fetched data"
       params:
         input:  ["data.array0"]
 ```

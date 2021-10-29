@@ -32,6 +32,7 @@ flow:
   process:
     - id: 0
       plugin: "echo"
+      alias: "echo rss titles"
       params:
         input: ["rss.title"]
 
