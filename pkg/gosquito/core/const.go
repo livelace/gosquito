@@ -1,11 +1,12 @@
 package core
 
+var (
+	APP_NAME           = "gosquito"
+	APP_VERSION        = "devel"
+	DEFAULT_USER_AGENT = APP_NAME + " " + APP_VERSION
+)
+
 const (
-	// -----------------------------------------------------------------------------------------------------------------
-
-	APP_NAME    = "gosquito"
-	APP_VERSION = "v3.0.0"
-
 	// -----------------------------------------------------------------------------------------------------------------
 
 	DEFAULT_CURRENT_PATH          = "."
@@ -32,7 +33,6 @@ const (
 	DEFAULT_TEMP_DIR              = "temp"
 	DEFAULT_TIME_FORMAT           = "15:04:05 02.01.2006"
 	DEFAULT_TIME_ZONE             = "UTC"
-	DEFAULT_USER_AGENT            = APP_NAME + " " + APP_VERSION
 
 	// -----------------------------------------------------------------------------------------------------------------
 
