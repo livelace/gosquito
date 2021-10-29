@@ -19,7 +19,7 @@
 | **action**       | +          | string   | -      | +          | ""        | "put"                | Perform action (only "put" is supported).                                                                    |
 | **bucket**       | +          | string   | -      | +          | ""        | "news"               | Bucket name.                                                                                                 |
 | **input**        | +          | array    | -      | +          | []        | ["data.array0"]      | List of [DataItem](../../concept.md) fields with files paths.                                                |
-| **output**       | +          | array    | -      | +          | []        | []                   | List of target [DataItem](../../concept.md) fields.                                                          |
+| **output**       | +          | array    | -      | +          | []        | ["data.array1"]      | List of target [DataItem](../../concept.md) fields.                                                          |
 | **secret_key**   | +          | string   | +      | -          | ""        | ""                   | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html)                                |
 | **server**       | +          | string   | +      | -          | ""        | "host.example.com"   | Minio server.                                                                                                |
 | ssl              | -          | bool     | -      | +          | true      | false                | Use SSL for connection.                                                                                      |
