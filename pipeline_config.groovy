@@ -18,7 +18,7 @@ libraries {
         repo_branch = env.VERSION
     }
     go {
-        options = "-ldflags='-X github.com/livelace/gosquito/pkg/gosquito/core.APP_VERSION=${APP_VERSION}' -tags dynamic github.com/livelace/gosquito/cmd/gosquito"
+        options = "-ldflags=\"-X 'github.com/livelace/gosquito/pkg/gosquito/core.APP_VERSION=${APP_VERSION}'\" -tags dynamic github.com/livelace/gosquito/cmd/gosquito"
     }
     harbor_replicate {
         policy = "${APP_NAME}"
