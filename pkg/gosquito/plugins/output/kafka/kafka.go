@@ -74,10 +74,10 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 			var schemaItem string
 
 			switch fieldType {
+			case reflect.String:
+				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			case reflect.Slice:
 				schemaItem = "{\"name\": \"%s\", \"type\": {\"type\": \"array\", \"items\": \"string\"}}"
-			default:
-				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			}
 
 			fields = append(fields, fmt.Sprintf(schemaItem, field))
@@ -145,16 +145,11 @@ func sendData(p *Plugin, messages []*kafka.Message) error {
 func upsertSchema(p *Plugin, subject string) (*srclient.Schema, error) {
 	registrySchema, _ := p.OptionSchemaRegistryClient.GetLatestSchema(subject, false)
 
-	if registrySchema == nil {
+	if registrySchema == nil || registrySchema.Codec().CanonicalSchema() != p.OptionSchemaCodec.CanonicalSchema() {
 		return p.OptionSchemaRegistryClient.CreateSchema(subject, p.OptionSchema, srclient.Avro, false)
-
-	} else {
-		if registrySchema.Codec().CanonicalSchema() != p.OptionSchemaCodec.CanonicalSchema() {
-			return p.OptionSchemaRegistryClient.CreateSchema(subject, p.OptionSchema, srclient.Avro, false)
-		} else {
-			return registrySchema, nil
-		}
 	}
+
+	return registrySchema, nil
 }
 
 type Plugin struct {
@@ -259,6 +254,8 @@ func (p *Plugin) Send(data []*core.DataItem) error {
 					subject = p.OptionSchemaRecordName
 				case "TOPICRECORDNAME":
 					subject = fmt.Sprintf("%s-%s", topic, p.OptionSchemaRecordName)
+				default:
+					subject = topic
 				}
 
 				registrySchema, err := upsertSchema(p, subject)
@@ -447,7 +444,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSchemaSubjectStrategy := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["schema_subject_strategy"] = 0
-			plugin.OptionSchemaSubjectStrategy = v
+			plugin.OptionSchemaSubjectStrategy = strings.ToUpper(v)
 		}
 	}
 	setSchemaSubjectStrategy(DEFAULT_SCHEMA_SUBJECT_STRATEGY)
@@ -510,7 +507,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if !core.IsValueInSlice(strings.ToUpper(plugin.OptionSchemaSubjectStrategy), &SUBJECT_STRATEGIES) {
+	if !core.IsValueInSlice(plugin.OptionSchemaSubjectStrategy, &SUBJECT_STRATEGIES) {
 		return &Plugin{}, fmt.Errorf(ERROR_SUBJECT_STRATEGY_UNKNOWN.Error(), plugin.OptionSchemaSubjectStrategy)
 	}
 
@@ -526,12 +523,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	kafkaConfig := kafka.ConfigMap{
-		"bootstrap.servers":           plugin.OptionBrokers,
-		"client.id":                   clientId,
-		"compression.type":            plugin.OptionCompress,
-		"message.timeout.ms":          plugin.OptionTimeout * 1000,
-		"metadata.request.timeout.ms": plugin.OptionTimeout * 1000,
-		"socket.timeout.ms":           plugin.OptionTimeout * 1000,
+		"bootstrap.servers":  plugin.OptionBrokers,
+		"client.id":          clientId,
+		"compression.type":   plugin.OptionCompress,
+		"message.timeout.ms": plugin.OptionTimeout * 1000,
+		"socket.timeout.ms":  plugin.OptionTimeout * 1000,
 	}
 
 	plugin.KafkaConfig = &kafkaConfig
