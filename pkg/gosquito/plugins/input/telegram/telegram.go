@@ -422,6 +422,8 @@ type Plugin struct {
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
 	OptionFileMaxSize         int64
+	OptionForce               bool
+	OptionForceCount          int
 	OptionInput               []string
 	OptionLogLevel            int
 	OptionMatchSignature      []string
@@ -487,7 +489,17 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	// Fixate channel length (channel changes length size in the loop).
 	length := len(p.DataChannel)
 
-	for i := 1; i <= length; i++ {
+	// Process only specific amount of messages from every source if force = true.
+	var start = 0
+	var end = length - 1
+
+	if p.OptionForce {
+		if length > p.OptionForceCount {
+			end = start + p.OptionForceCount - 1
+		}
+	}
+
+	for i := start; i <= end; i++ {
 		var itemNew = false
 		var itemSignature string
 		var itemSignatureHash string
@@ -539,13 +551,13 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			}
 
 			// set default value for signature if user provided wrong values.
-			if itemSignature == item.SOURCE {
+			if len(itemSignature) == 0 {
 				itemSignature += item.TELEGRAM.TEXT + item.TIME.String()
 			}
 
 			itemSignatureHash = core.HashString(&itemSignature)
 
-			if _, ok := flowStates[itemSignatureHash]; !ok {
+			if _, ok := flowStates[itemSignatureHash]; !ok || p.OptionForce {
 				// save item signature hash to state.
 				flowStates[itemSignatureHash] = currentTime
 
@@ -558,7 +570,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			}
 
 		} else {
-			if item.TIME.Unix() > sourceLastTime.Unix() {
+			if item.TIME.Unix() > sourceLastTime.Unix() || p.OptionForce {
 				sourceLastTime = item.TIME
 				itemNew = true
 			}
@@ -659,6 +671,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"expire_action_timeout": -1,
 		"expire_delay":          -1,
 		"expire_interval":       -1,
+		"force":                 -1,
+		"force_count":           -1,
 		"template":              -1,
 		"timeout":               -1,
 		"time_format":           -1,
@@ -763,6 +777,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFileMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_max_size", template)))
 	setFileMaxSize((*pluginConfig.PluginParams)["file_max_size"])
 	core.ShowPluginParam(plugin.LogFields, "file_max_size", plugin.OptionFileMaxSize)
+
+	// force.
+	setForce := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["force"] = 0
+			plugin.OptionForce = v
+		}
+	}
+	setForce(core.DEFAULT_FORCE_INPUT)
+	setForce(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.force", template)))
+	setForce((*pluginConfig.PluginParams)["force"])
+	core.ShowPluginParam(plugin.LogFields, "force", plugin.OptionForce)
+
+	// force_count.
+	setForceCount := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["force_count"] = 0
+			plugin.OptionForceCount = v
+		}
+	}
+	setForceCount(core.DEFAULT_FORCE_COUNT)
+	setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
+	setForceCount((*pluginConfig.PluginParams)["force_count"])
+	core.ShowPluginParam(plugin.LogFields, "force_count", plugin.OptionForceCount)
 
 	// input.
 	setInput := func(p interface{}) {

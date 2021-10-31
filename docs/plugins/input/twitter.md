@@ -61,8 +61,8 @@ flow:
 
   process:
     - id: 0
-      alias: "clean text"
       plugin: "regexpreplace"
+      alias: "clean text"
       params:
         input:   ["twitter.text"]
         output:  ["data.text0"]
