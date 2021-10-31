@@ -209,7 +209,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 		if p.OptionForce {
 			if len(*tweets) > p.OptionForceCount {
-				end = start - p.OptionForceCount + 1
+				start = p.OptionForceCount - 1
 			}
 		}
 
