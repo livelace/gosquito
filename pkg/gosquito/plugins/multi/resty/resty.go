@@ -338,7 +338,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 				}
 
 				// set default value for signature if user provided wrong values.
-				if itemSignature == source {
+				if len(itemSignature) == 0 {
 					itemSignature += itemBody
 				}
 
