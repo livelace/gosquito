@@ -355,6 +355,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 					itemNew = true
 				}
+
 			} else {
 				sourceLastTime = itemTime
 				itemNew = true
