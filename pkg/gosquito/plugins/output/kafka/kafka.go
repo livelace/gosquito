@@ -74,13 +74,14 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 			var schemaItem string
 
 			switch fieldType {
-			case reflect.String:
-				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			case reflect.Slice:
 				schemaItem = "{\"name\": \"%s\", \"type\": {\"type\": \"array\", \"items\": \"string\"}}"
+			default:
+				schemaItem = "{\"name\": \"%s\", \"type\": \"string\"}"
 			}
 
 			fields = append(fields, fmt.Sprintf(schemaItem, field))
+
 		} else {
 			fields = append(fields, fmt.Sprintf("{\"name\": \"%s\", \"type\": \"string\"}", field))
 		}

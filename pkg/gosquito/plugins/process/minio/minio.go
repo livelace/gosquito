@@ -20,6 +20,7 @@ const (
 
 var (
 	ERROR_ACTION_UNKNOWN = errors.New("action unknown: %s")
+	ERROR_IN_OUT_AMOUNT  = errors.New("input and output objects amount not equal: %d != %d")
 )
 
 func minioPut(p *Plugin, file string, object string, timeout int) error {
@@ -131,6 +132,10 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				}
 
 			case reflect.Slice:
+				if ro.Len() != ri.Len() {
+					return temp, fmt.Errorf(ERROR_IN_OUT_AMOUNT.Error(), ri.Len(), ro.Len())
+				}
+
 				for i := 0; i < ri.Len(); i++ {
 					if err := minioPut(p, ri.Index(i).String(), ro.Index(i).String(), p.OptionTimeout); err != nil {
 						return temp, err
