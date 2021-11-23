@@ -25,7 +25,7 @@
 | proxy        | -          | string   | -     | +          | -             | ""                  | "http://127.0.0.1:8080"          | Proxy settings.                           |
 | redirect     | -          | bool     | -     | +          | -             | true                | false                            | Follow redirects.                         |
 | ssl_verify   | -          | bool     | -     | +          | -             | true                | false                            | Verify server certificate.                |
-| user_agent   | -          | string   | -     | +          | -             | "gosquito v3.0.0"   | "webchela 1.0"                   | Custom User-Agent for feed access.        |
+| user_agent   | -          | string   | -     | +          | -             | "gosquito v3.0.2"   | "webchela 1.0"                   | Custom User-Agent for feed access.        |
 | username     | -          | string   | +     | -          | -             | ""                  | ""                               | Basic auth username.                      |
 
 
