@@ -180,6 +180,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	if err != nil {
 		return temp, err
 	}
+	core.LogInputPlugin(p.LogFields, "all", fmt.Sprintf("states loaded: %d", len(flowStates)))
 
 	// Source stat.
 	sourceNewStat := make(map[string]int32)
