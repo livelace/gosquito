@@ -877,7 +877,7 @@ func PluginLoadState(database string, data *map[string]time.Time) error {
 	// Read database.
 	err = db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
-		opts.PrefetchSize = 10
+		opts.PrefetchSize = 100
 
 		it := txn.NewIterator(opts)
 		defer it.Close()
@@ -924,6 +924,7 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	// Disable logging.
 	opts := badger.DefaultOptions(database)
 	opts.Logger = nil
+	opts.SyncWrites = true
 
 	// Open database.
 	db, err := badger.Open(opts)
