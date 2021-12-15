@@ -946,6 +946,9 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	// Garbage collection.
 	err = db.RunValueLogGC(0.5)
