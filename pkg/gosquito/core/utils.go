@@ -925,6 +925,7 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	opts := badger.DefaultOptions(database)
 	opts.Logger = nil
 	opts.SyncWrites = true
+	opts.WithBaseLevelSize(536870912)
 
 	// Open database.
 	db, err := badger.Open(opts)
