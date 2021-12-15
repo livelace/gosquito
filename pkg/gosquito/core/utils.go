@@ -925,8 +925,6 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	opts := badger.DefaultOptions(database)
 	opts.Logger = nil
 	opts.SyncWrites = true
-	opts.WithBaseLevelSize(536870912)
-	opts.WithBaseTableSize(536870912)
 
 	// Open database.
 	db, err := badger.Open(opts)
@@ -936,17 +934,16 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	defer db.Close()
 
 	// Save data.
-	err = db.Update(func(txn *badger.Txn) error {
-		for signature, timestamp := range *data {
-			e := badger.NewEntry([]byte(signature), []byte(timestamp.Format(time.RFC3339))).WithTTL(ttl)
-			err := txn.SetEntry(e)
-			if err != nil {
-				return err
-			}
+	txn := db.NewTransaction(true)
+	for signature, timestamp := range *data {
+		e := badger.NewEntry([]byte(signature), []byte(timestamp.Format(time.RFC3339))).WithTTL(ttl)
+		if err := txn.SetEntry(e); err == badger.ErrTxnTooBig {
+			_ = txn.Commit()
+			txn = db.NewTransaction(true)
+			_ = txn.Set([]byte(signature), []byte(timestamp.Format(time.RFC3339)))
 		}
-		return nil
-	})
-	if err != nil {
+	}
+	if err = txn.Commit(); err != nil {
 		return err
 	}
 
