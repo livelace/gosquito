@@ -18,31 +18,31 @@ type Twitter struct {
 
 ### Generic parameters:
 
-| Param                   | Required   | Type     | Template   | Default                 |
-| :---------------------- | :--------: | :------: | :--------: | :---------------------: |
-| expire_action           | -          | array    | +          | []                      |
-| expire_action_delay     | -          | string   | +          | "1d"                    |
-| expire_action_timeout   | -          | int      | +          | 30                      |
-| expire_interval         | -          | string   | +          | "7d"                    |
-| force                   | -          | bool     | +          | false                   |
-| force_count             | -          | int      | +          | 100                     |
-| timeout                 | -          | int      | +          | 60                      |
-| time_format             | -          | string   | +          | "15:04:05 02.01.2006"   |
-| time_zone               | -          | string   | +          | "UTC"                   |
+| Param                 | Required |  Type  | Template |        Default        |
+|:----------------------|:--------:|:------:|:--------:|:---------------------:|
+| expire_action         |    -     | array  |    +     |          []           |
+| expire_action_delay   |    -     | string |    +     |         "1d"          |
+| expire_action_timeout |    -     |  int   |    +     |          30           |
+| expire_interval       |    -     | string |    +     |         "7d"          |
+| force                 |    -     |  bool  |    +     |         false         |
+| force_count           |    -     |  int   |    +     |          100          |
+| timeout               |    -     |  int   |    +     |          60           |
+| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_zone             |    -     | string |    +     |         "UTC"         |
 
 
 ### Plugin parameters:
 
-| Param                 | Required   | Type     | Cred   | Template   | Default             | Example            | Description                                                               |
-| :-------------------- | :--------: | :------: | :----: | :--------: | :-----------------: | :---------------:  | :------------------------------------------------------------------------ |
-| **access_secret**     | +          | string   | +      | -          | ""                  | ""                 | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
-| **access_token**      | +          | string   | +      | -          | ""                  | ""                 | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
-| **consumer_key**      | +          | string   | +      | -          | ""                  | ""                 | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
-| **consumer_secret**   | +          | string   | +      | -          | ""                  | ""                 | [Twitter API Access](https://developer.twitter.com/en/apply-for-access)   |
-| **input**             | +          | array    | -      | +          | []                  | ["tass_agency"]    | List of Twitter channels.                                                 |
-| match_signature       | -          | array    | -      | +          | "[]"                | ["source", "time"] | Match new tweets by signature.                                            |
-| match_ttl             | -          | string   | -      | +          | "1d"                | "24h"              | TTL (Time To Live) for matched signatures.                                |
-| user_agent            | -          | string   | -      | +          | "gosquito v3.0.2"   | "webchela 1.0"     | Custom User-Agent for API access.                                         |
+| Param               | Required |  Type  | Cred | Template |      Default      |      Example       | Description                                                             |
+|:--------------------|:--------:|:------:|:----:|:--------:|:-----------------:|:------------------:|:------------------------------------------------------------------------|
+| **access_secret**   |    +     | string |  +   |    -     |        ""         |         ""         | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **access_token**    |    +     | string |  +   |    -     |        ""         |         ""         | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_key**    |    +     | string |  +   |    -     |        ""         |         ""         | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **consumer_secret** |    +     | string |  +   |    -     |        ""         |         ""         | [Twitter API Access](https://developer.twitter.com/en/apply-for-access) |
+| **input**           |    +     | array  |  -   |    +     |        []         |  ["tass_agency"]   | List of Twitter channels.                                               |
+| match_signature     |    -     | array  |  -   |    +     |       "[]"        | ["source", "time"] | Match new tweets by signature.                                          |
+| match_ttl           |    -     | string |  -   |    +     |       "1d"        |       "24h"        | TTL (Time To Live) for matched signatures.                              |
+| user_agent          |    -     | string |  -   |    +     | "gosquito v3.0.3" |   "webchela 1.0"   | Custom User-Agent for API access.                                       |
 
 
 ### Flow sample:

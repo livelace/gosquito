@@ -5,16 +5,16 @@
 
 ### Generic parameters:
 
-| Param     | Required   | Type    | Default   | Example   |
-| :-------- | :--------: | :-----: | :-------: | :-------: |
-| require   | -          | array   | []        | [1, 2]    |
+| Param   | Required | Type  | Default | Example |
+|:--------|:--------:|:-----:|:-------:|:-------:|
+| require |    -     | array |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param       | Required   | Type    | Default   | Example                           | Description                                              |
-| :---------- | :--------: | :-----: | :-------: | :-------------------------------: | :-------------------------------------                   |
-| **input**   | +          | array   | []        | ["rss.title"]                     | List of [DataItem](../../concept.md) fields for echoing. |
+| Param     | Required | Type  | Default |    Example    | Description                                              |
+|:----------|:--------:|:-----:|:-------:|:-------------:|:---------------------------------------------------------|
+| **input** |    +     | array |   []    | ["rss.title"] | List of [DataItem](../../concept.md) fields for echoing. |
 
 ### Flow sample:
 

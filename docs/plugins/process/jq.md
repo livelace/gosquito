@@ -5,20 +5,20 @@
 
 ### Generic parameters:
 
-| Param     | Required   | Type    | Template   | Default   | Example   |
-| :-------- | :--------: | :-----: | :--------: | :-------: | :-------: |
-| include   | -          | bool    | -          | true      | false     |
-| require   | -          | array   | -          | []        | [1, 2]    |
+| Param   | Required | Type  | Template | Default | Example |
+|:--------|:--------:|:-----:|:--------:|:-------:|:-------:|
+| include |    -     | bool  |    -     |  true   |  false  |
+| require |    -     | array |    -     |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param        | Required   | Type    | Template   | Default   | Example                    | Description                                                                                                                |
-| :----------- | :--------: | :-----: | :--------: | :-------: | :------------------------: | :------------------------------------------------------------------------------------------------------------------------- |
-| find_all     | -          | bool    | -          | false     | true                       | Query must be found in all selected [DataItem](../../concept.md) fields.                                                   |
-| **input**    | +          | array   | -          | []        | ["data.array0"]            | List of [DataItem](../../concept.md) fields with data.                                                                     |
-| **output**   | +          | array   | -          | []        | ["data.array1"]            | List of target [DataItem](../../concept.md) fields.                                                                        |
-| **query**    | +          | array   | +          | []        | [".foo", ".bar"]           | List of config templates/raw queries for searching.                                                                        |
+| Param      | Required | Type  | Template | Default |     Example      | Description                                                              |
+|:-----------|:--------:|:-----:|:--------:|:-------:|:----------------:|:-------------------------------------------------------------------------|
+| find_all   |    -     | bool  |    -     |  false  |       true       | Query must be found in all selected [DataItem](../../concept.md) fields. |
+| **input**  |    +     | array |    -     |   []    | ["data.array0"]  | List of [DataItem](../../concept.md) fields with data.                   |
+| **output** |    +     | array |    -     |   []    | ["data.array1"]  | List of target [DataItem](../../concept.md) fields.                      |
+| **query**  |    +     | array |    +     |   []    | [".foo", ".bar"] | List of config templates/raw queries for searching.                      |
 
 ### Flow sample:
 

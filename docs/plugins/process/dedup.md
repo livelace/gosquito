@@ -7,16 +7,16 @@ Deduplication is performed over [DataItem](../../concept.md) UUID.
 
 ### Generic parameters:
 
-| Param     | Required   | Type   | Default   | Example   |
-| :-------- | :--------: | :----: | :-------: | :-------: |
-| include   | -          | bool   | true      | false     |
+| Param   | Required | Type | Default | Example |
+|:--------|:--------:|:----:|:-------:|:-------:|
+| include |    -     | bool |  true   |  false  |
 
 
 ### Plugin parameters:
 
-| Param         | Required   | Type    | Default   | Example   | Description                                      |
-| :------------ | :--------: | :-----: | :-------: | :-------: | :----------------------------------------------- |
-| **require**   | +          | array   | []        | [1, 2]    | List of process plugins IDs for deduplication.   |
+| Param       | Required | Type  | Default | Example | Description                                    |
+|:------------|:--------:|:-----:|:-------:|:-------:|:-----------------------------------------------|
+| **require** |    +     | array |   []    | [1, 2]  | List of process plugins IDs for deduplication. |
 
 
 ### Flow sample:

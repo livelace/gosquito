@@ -5,31 +5,31 @@
 
 ### Generic parameters:
 
-| Param     | Required   | Type    | Template   | Default   | Example   |
-| :-------- | :--------: | :-----: | :--------: | :-------: | :-------: |
-| include   | -          | bool    | -          | true      | false     |
-| require   | -          | array   | -          | []        | [1, 2]    |
+| Param   | Required | Type  | Template | Default | Example |
+|:--------|:--------:|:-----:|:--------:|:-------:|:-------:|
+| include |    -     | bool  |    -     |  true   |  false  |
+| require |    -     | array |    -     |   []    | [1, 2]  |
 
 
 ### Plugin parameters:
 
-| Param        | Required   | Type     | Cred  | Template   | Text Template | Default             | Example                          | Description                                            |
-| :----------- | :--------: | :------: | :---: | :--------: | :-----------: | :-----------------: | :------------------------------: | :-----------------------------------                   |
-| auth         | -          | string   | -     | +          | -             | ""                  | "basic"                          | Auth method (basic, bearer).                           |
-| bearer_token | -          | string   | +     | -          | -             | ""                  | "qwerty"                         | Bearer token.                                          |
-| body         | -          | string   | -     | +          | +             | ""                  | "{"foo": "bar"}"                 | Request body.                                          |
-| **input**    | +          | array    | -     | +          | -             | "[]"                | ["data.array0"]                  | List of [DataItem](../../concept.md) fields with data. |
-| headers      | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request headers.                       |
-| method       | -          | string   | -     | +          | -             | "GET"               | "POST"                           | Request method (GET, POST).                            |
-| **output**   | +          | array    | -     | +          | -             | "[]"                | ["data.array1"]                  | List of target [DataItem](../../concept.md) fields.    |
-| params       | -          | map[]    | -     | +          | +             | map[]               | see example                      | Dynamic list of request query parameters.              |
-| password     | -          | string   | +     | -          | -             | ""                  | ""                               | Basic auth password.                                   |
-| proxy        | -          | string   | -     | +          | -             | ""                  | "http://127.0.0.1:8080"          | Proxy settings.                                        |
-| redirect     | -          | bool     | -     | +          | -             | true                | false                            | Follow redirects.                                      |
-| ssl_verify   | -          | bool     | -     | +          | -             | true                | false                            | Verify server certificate.                             |
-| **target**   | +          | string   | -     | +          | -             | ""                  | "http://172.17.0.2:8080/api"     | REST endpoint.                                         |
-| user_agent   | -          | string   | -     | +          | -             | "gosquito v3.0.2"   | "webchela 1.0"                   | Custom User-Agent for feed access.                     |
-| username     | -          | string   | +     | -          | -             | ""                  | ""                               | Basic auth username.                                   |
+| Param        | Required |  Type  | Cred | Template | Text Template |      Default      |           Example            | Description                                            |
+|:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-----------------:|:----------------------------:|:-------------------------------------------------------|
+| auth         |    -     | string |  -   |    +     |       -       |        ""         |           "basic"            | Auth method (basic, bearer).                           |
+| bearer_token |    -     | string |  +   |    -     |       -       |        ""         |           "qwerty"           | Bearer token.                                          |
+| body         |    -     | string |  -   |    +     |       +       |        ""         |       "{"foo": "bar"}"       | Request body.                                          |
+| **input**    |    +     | array  |  -   |    +     |       -       |       "[]"        |       ["data.array0"]        | List of [DataItem](../../concept.md) fields with data. |
+| headers      |    -     | map[]  |  -   |    +     |       +       |       map[]       |         see example          | Dynamic list of request headers.                       |
+| method       |    -     | string |  -   |    +     |       -       |       "GET"       |            "POST"            | Request method (GET, POST).                            |
+| **output**   |    +     | array  |  -   |    +     |       -       |       "[]"        |       ["data.array1"]        | List of target [DataItem](../../concept.md) fields.    |
+| params       |    -     | map[]  |  -   |    +     |       +       |       map[]       |         see example          | Dynamic list of request query parameters.              |
+| password     |    -     | string |  +   |    -     |       -       |        ""         |              ""              | Basic auth password.                                   |
+| proxy        |    -     | string |  -   |    +     |       -       |        ""         |   "http://127.0.0.1:8080"    | Proxy settings.                                        |
+| redirect     |    -     |  bool  |  -   |    +     |       -       |       true        |            false             | Follow redirects.                                      |
+| ssl_verify   |    -     |  bool  |  -   |    +     |       -       |       true        |            false             | Verify server certificate.                             |
+| **target**   |    +     | string |  -   |    +     |       -       |        ""         | "http://172.17.0.2:8080/api" | REST endpoint.                                         |
+| user_agent   |    -     | string |  -   |    +     |       -       | "gosquito v3.0.3" |        "webchela 1.0"        | Custom User-Agent for feed access.                     |
+| username     |    -     | string |  +   |    -     |       -       |        ""         |              ""              | Basic auth username.                                   |
 
 
 ### Flow sample:
