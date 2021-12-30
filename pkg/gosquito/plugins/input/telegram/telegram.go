@@ -169,8 +169,8 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 	return data, nil
 }
 
-func loadUsers(p *Plugin) (map[int32][]string, error) {
-	data := make(map[int32][]string, 0)
+func loadUsers(p *Plugin) (map[int64][]string, error) {
+	data := make(map[int64][]string, 0)
 
 	err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), &data)
 	if err != nil {
@@ -226,12 +226,12 @@ func receiveMessages(p *Plugin) {
 				messageContent := newMessage.Message.Content
 				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
 
-				messageSenderId := int32(-1)
-				switch messageSender := newMessage.Message.Sender.(type) {
+				messageSenderId := int64(-1)
+				switch messageSender := newMessage.Message.SenderId.(type) {
 				case *client.MessageSenderChat:
-					messageSenderId = int32(messageSender.ClientId)
+					messageSenderId = int64(messageSender.ClientId)
 				case *client.MessageSenderUser:
-					messageSenderId = int32(messageSender.ClientId)
+					messageSenderId = int64(messageSender.ClientId)
 				}
 
 				messageUserId := fmt.Sprintf("%v", messageSenderId)
@@ -409,7 +409,7 @@ type Plugin struct {
 
 	ChatsById   map[int64]string
 	ChatsByName map[string]int64
-	UsersById   map[int32][]string
+	UsersById   map[int64][]string
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters

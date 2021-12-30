@@ -25,7 +25,7 @@ require (
 	github.com/slack-go/slack v0.9.5
 	github.com/spf13/viper v1.7.1
 	github.com/xhit/go-simple-mail/v2 v2.10.0
-	github.com/zelenin/go-tdlib v0.4.1
+	github.com/zelenin/go-tdlib v0.5.0
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
