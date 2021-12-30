@@ -16,15 +16,17 @@ import (
 const (
 	PLUGIN_NAME = "telegram"
 
-	DEFAULT_BUFFER_LENGHT = 1000
-	DEFAULT_CHATS_DATA    = "chats.data"
-	DEFAULT_DATABASE_DIR  = "database"
-	DEFAULT_FILES_DIR     = "files"
-	DEFAULT_FILE_MAX_SIZE = "10m"
-	DEFAULT_LOG_LEVEL     = 0
-	DEFAULT_MATCH_TTL     = "1d"
-	DEFAULT_USERS_DATA    = "users.data"
-	MAX_INSTANCE_PER_APP  = 1
+	DEFAULT_BUFFER_LENGHT      = 1000
+	DEFAULT_CHATS_DATA         = "chats.data"
+	DEFAULT_DATABASE_DIR       = "database"
+	DEFAULT_FILES_DIR          = "files"
+	DEFAULT_FILE_MAX_SIZE      = "10m"
+	DEFAULT_LOG_LEVEL          = 0
+	DEFAULT_MATCH_TTL          = "1d"
+	DEFAULT_USERS_DATA         = "users.data"
+	SPONSORED_MESSAGE          = "telegram sponsored message"
+	SPONSORED_MESSAGE_INTERVAL = 5
+	MAX_INSTANCE_PER_APP       = 1
 )
 
 var (
@@ -387,13 +389,58 @@ func receiveMessages(p *Plugin) {
 func receiveSponsoredMessages(p *Plugin) {
 	for {
 		for chatId := range p.ChatsById {
-			fmt.Println(chatId)
-			msg, err := p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
-			fmt.Printf("%v: %v, %v", chatId, msg, err)
+			chatName := p.ChatsById[chatId]
+			sponsoredMessage, err :=
+				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
 
+			if err == nil {
+				var u, _ = uuid.NewRandom()
+				messageTime := time.Now().UTC()
+				messageContent := sponsoredMessage.Content
+
+				switch sponsoredMessage.Content.(type) {
+				case *client.MessageText:
+					var textURL string
+					formattedText := messageContent.(*client.MessageText).Text
+
+					// Search for text URL.
+					for _, entity := range formattedText.Entities {
+						switch entity.Type.(type) {
+						case *client.TextEntityTypeTextUrl:
+							textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
+						}
+					}
+
+					// Send data to channel.
+					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+						p.DataChannel <- &core.DataItem{
+							FLOW:       p.Flow.FlowName,
+							PLUGIN:     p.PluginName,
+							SOURCE:     chatName,
+							TIME:       messageTime,
+							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+							UUID:       u,
+
+							TELEGRAM: core.Telegram{
+								USERID:   SPONSORED_MESSAGE,
+								USERNAME: SPONSORED_MESSAGE,
+								USERTYPE: SPONSORED_MESSAGE,
+
+								FIRSTNAME: SPONSORED_MESSAGE,
+								LASTNAME:  SPONSORED_MESSAGE,
+								PHONE:     SPONSORED_MESSAGE,
+
+								TEXT: formattedText.Text,
+								URL:  textURL,
+							},
+						}
+					}
+					fmt.Printf("%v: %v, %v\n", chatId, textURL, sponsoredMessage.SponsorChatId)
+				}
+			}
 		}
 
-		time.Sleep(60 * time.Second)
+		time.Sleep(SPONSORED_MESSAGE_INTERVAL * time.Minute)
 	}
 }
 
