@@ -151,6 +151,7 @@ func getChatId(p *Plugin, name string) (int64, error) {
 
 func joinToChat(p *Plugin, name string, id int64) error {
 	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: id})
+
 	if err != nil {
 		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), name, err)
 	}
@@ -380,6 +381,19 @@ func receiveMessages(p *Plugin) {
 
 		listener.Close()
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func receiveSponsoredMessages(p *Plugin) {
+	for {
+		for chatId := range p.ChatsById {
+			fmt.Println(chatId)
+			msg, err := p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
+			fmt.Printf("%v: %v, %v", chatId, msg, err)
+
+		}
+
+		time.Sleep(60 * time.Second)
 	}
 }
 
@@ -1000,6 +1014,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	go receiveFiles(&plugin)
 	go receiveMessages(&plugin)
+	go receiveSponsoredMessages(&plugin)
 
 	// -----------------------------------------------------------------------------------------------------------------
 
