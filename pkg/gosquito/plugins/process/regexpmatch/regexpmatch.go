@@ -13,11 +13,16 @@ const (
 
 	DEFAULT_MATCH_ALL  = false
 	DEFAULT_MATCH_CASE = true
+	DEFAULT_MATCH_NOT  = false
 )
 
-func matchRegexes(regexps []*regexp.Regexp, text string) bool {
+func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool) bool {
 	for _, re := range regexps {
-		if re.MatchString(text) {
+		if re.MatchString(text) && !isNot {
+			return true
+		}
+
+		if !re.MatchString(text) && isNot {
 			return true
 		}
 	}
@@ -39,6 +44,7 @@ type Plugin struct {
 	OptionInput     []string
 	OptionMatchAll  bool
 	OptionMatchCase bool
+	OptionMatchNot  bool
 	OptionOutput    []string
 	OptionRegexp    [][]*regexp.Regexp
 	OptionRequire   []int
@@ -96,7 +102,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if matchRegexes(p.OptionRegexp[index], ri.String()) {
+				if matchRegexes(p.OptionRegexp[index], ri.String(), p.OptionMatchNot) {
 					matched[index] = true
 					if len(p.OptionOutput) > 0 {
 						ro.SetString(ri.String())
@@ -106,7 +112,7 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 				somethingWasMatched := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if matchRegexes(p.OptionRegexp[index], ri.Index(i).String()) {
+					if matchRegexes(p.OptionRegexp[index], ri.Index(i).String(), p.OptionMatchNot) {
 						somethingWasMatched = true
 						if len(p.OptionOutput) > 0 {
 							ro.Set(reflect.Append(ro, ri.Index(i)))
@@ -169,7 +175,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require": -1,
 
 		"input":      1,
+		"match_all":  -1,
 		"match_case": -1,
+		"match_not":  -1,
 		"output":     -1,
 		"regexp":     1,
 	}
@@ -219,6 +227,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchCase(DEFAULT_MATCH_CASE)
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
 	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
+
+	// match_not.
+	setMatchNot := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_not"] = 0
+			plugin.OptionMatchNot = v
+		}
+	}
+	setMatchNot(DEFAULT_MATCH_NOT)
+	setMatchNot((*pluginConfig.PluginParams)["match_not"])
+	core.ShowPluginParam(plugin.LogFields, "match_not", plugin.OptionMatchNot)
 
 	// output.
 	setOutput := func(p interface{}) {
