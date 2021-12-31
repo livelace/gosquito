@@ -7,10 +7,10 @@ gosquito is delivered as [AppImage](https://appimage.org/) package and [Docker i
 1. Download application:
 ```shell
 # AppImage:
-user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v3.1.0/gosquito-v3.1.0-1bb328.appimage" \
+user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v3.2.0/gosquito-v3.2.0-e78724.appimage" \
   -o "/tmp/gosquito.appimage" && chmod +x "/tmp/gosquito.appimage"
 user@localhost ~ $ /tmp/gosquito.appimage 
-INFO[30.10.2021 00:27:22.636] gosquito v3.1.0-1bb328 
+INFO[30.10.2021 00:27:22.636] gosquito v3.2.0-e78724 
 INFO[30.10.2021 00:27:22.636] config apply       path="/home/user/.gosquito"
 ERRO[30.10.2021 00:27:22.639] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
 ```
@@ -40,7 +40,7 @@ flow:
 
 ```shell
 user@localhost ~ $ /tmp/gosquito.appimage 
-INFO[30.10.2021 00:31:16.468] gosquito v3.1.0-1bb328 
+INFO[30.10.2021 00:31:16.468] gosquito v3.2.0-e78724 
 INFO[30.10.2021 00:31:16.468] config apply       path="/home/user/.gosquito"
 INFO[30.10.2021 00:31:16.471] flow valid         hash="hi7oim" flow="test" file="test.yaml"
 INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
@@ -51,9 +51,9 @@ INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
 
 ```shell script
 # Docker:
-user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v3.1.0
+user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v3.2.0
 user@04a308454349 ~ $ gosquito
-INFO[29.10.2021 21:34:35.915] gosquito v3.1.0-1bb328 
+INFO[29.10.2021 21:34:35.915] gosquito v3.2.0-e78724 
 INFO[29.10.2021 21:34:35.916] config apply       path="/home/user/.gosquito"
 ERRO[29.10.2021 21:34:35.918] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
 user@04a308454349 ~ $
