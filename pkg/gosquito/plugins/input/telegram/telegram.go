@@ -16,17 +16,17 @@ import (
 const (
 	PLUGIN_NAME = "telegram"
 
-	DEFAULT_BUFFER_LENGHT      = 1000
-	DEFAULT_CHATS_DATA         = "chats.data"
-	DEFAULT_DATABASE_DIR       = "database"
-	DEFAULT_FILES_DIR          = "files"
-	DEFAULT_FILE_MAX_SIZE      = "10m"
-	DEFAULT_LOG_LEVEL          = 0
-	DEFAULT_MATCH_TTL          = "1d"
-	DEFAULT_USERS_DATA         = "users.data"
-	SPONSORED_MESSAGE          = "sponsored"
-	SPONSORED_MESSAGE_INTERVAL = 5
-	MAX_INSTANCE_PER_APP       = 1
+	DEFAULT_ADS_ID        = "ads"
+	DEFAULT_ADS_PERIOD    = "5m"
+	DEFAULT_BUFFER_LENGHT = 1000
+	DEFAULT_CHATS_DATA    = "chats.data"
+	DEFAULT_DATABASE_DIR  = "database"
+	DEFAULT_FILES_DIR     = "files"
+	DEFAULT_FILE_MAX_SIZE = "10m"
+	DEFAULT_LOG_LEVEL     = 0
+	DEFAULT_MATCH_TTL     = "1d"
+	DEFAULT_USERS_DATA    = "users.data"
+	MAX_INSTANCE_PER_APP  = 1
 )
 
 var (
@@ -203,6 +203,63 @@ func receiveFiles(p *Plugin) {
 
 		listener.Close()
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func receiveAds(p *Plugin) {
+	for {
+		for chatId := range p.ChatsById {
+			chatName := p.ChatsById[chatId]
+			sponsoredMessage, err :=
+				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
+
+			if err == nil {
+				var u, _ = uuid.NewRandom()
+				messageTime := time.Now().UTC()
+				messageContent := sponsoredMessage.Content
+
+				switch sponsoredMessage.Content.(type) {
+				case *client.MessageText:
+					var textURL string
+					formattedText := messageContent.(*client.MessageText).Text
+
+					// Search for text URL.
+					for _, entity := range formattedText.Entities {
+						switch entity.Type.(type) {
+						case *client.TextEntityTypeTextUrl:
+							textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
+						}
+					}
+
+					// Send data to channel.
+					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+						p.DataChannel <- &core.DataItem{
+							FLOW:       p.Flow.FlowName,
+							PLUGIN:     p.PluginName,
+							SOURCE:     chatName,
+							TIME:       messageTime,
+							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+							UUID:       u,
+
+							TELEGRAM: core.Telegram{
+								USERID:   DEFAULT_ADS_ID,
+								USERNAME: DEFAULT_ADS_ID,
+								USERTYPE: DEFAULT_ADS_ID,
+
+								FIRSTNAME: DEFAULT_ADS_ID,
+								LASTNAME:  DEFAULT_ADS_ID,
+								PHONE:     DEFAULT_ADS_ID,
+
+								TEXT: formattedText.Text,
+								URL:  textURL,
+							},
+						}
+					}
+				}
+			}
+		}
+
+		time.Sleep(time.Duration(p.OptionAdsPeriod) * time.Second)
 	}
 }
 
@@ -386,63 +443,6 @@ func receiveMessages(p *Plugin) {
 	}
 }
 
-func receiveSponsoredMessages(p *Plugin) {
-	for {
-		for chatId := range p.ChatsById {
-			chatName := p.ChatsById[chatId]
-			sponsoredMessage, err :=
-				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
-
-			if err == nil {
-				var u, _ = uuid.NewRandom()
-				messageTime := time.Now().UTC()
-				messageContent := sponsoredMessage.Content
-
-				switch sponsoredMessage.Content.(type) {
-				case *client.MessageText:
-					var textURL string
-					formattedText := messageContent.(*client.MessageText).Text
-
-					// Search for text URL.
-					for _, entity := range formattedText.Entities {
-						switch entity.Type.(type) {
-						case *client.TextEntityTypeTextUrl:
-							textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
-						}
-					}
-
-					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow.FlowName,
-							PLUGIN:     p.PluginName,
-							SOURCE:     chatName,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-							UUID:       u,
-
-							TELEGRAM: core.Telegram{
-								USERID:   SPONSORED_MESSAGE,
-								USERNAME: SPONSORED_MESSAGE,
-								USERTYPE: SPONSORED_MESSAGE,
-
-								FIRSTNAME: SPONSORED_MESSAGE,
-								LASTNAME:  SPONSORED_MESSAGE,
-								PHONE:     SPONSORED_MESSAGE,
-
-								TEXT: formattedText.Text,
-								URL:  textURL,
-							},
-						}
-					}
-				}
-			}
-		}
-
-		time.Sleep(SPONSORED_MESSAGE_INTERVAL * time.Minute)
-	}
-}
-
 func saveChats(p *Plugin) error {
 	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DATA), p.ChatsByName)
 }
@@ -474,6 +474,7 @@ type Plugin struct {
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
 
+	OptionAdsPeriod           int64
 	OptionApiHash             string
 	OptionApiId               int
 	OptionExpireAction        []string
@@ -739,6 +740,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
+		"ads_period":      -1,
 		"api_id":          1,
 		"api_hash":        1,
 		"cred":            -1,
@@ -778,6 +780,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setApiHash((*pluginConfig.PluginParams)["api_hash"])
 
 	// -----------------------------------------------------------------------------------------------------------------
+
+	// ads_period.
+	setAdsPeriod := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["ads_period"] = 0
+			plugin.OptionAdsPeriod = v
+		}
+	}
+	setAdsPeriod(DEFAULT_ADS_PERIOD)
+	setAdsPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_period", template)))
+	setAdsPeriod((*pluginConfig.PluginParams)["ads_period"])
+	core.ShowPluginParam(plugin.LogFields, "ads_period", plugin.OptionAdsPeriod)
 
 	// expire_action.
 	setExpireAction := func(p interface{}) {
@@ -1058,9 +1072,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
 	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_BUFFER_LENGHT)
 
+	go receiveAds(&plugin)
 	go receiveFiles(&plugin)
 	go receiveMessages(&plugin)
-	go receiveSponsoredMessages(&plugin)
 
 	// -----------------------------------------------------------------------------------------------------------------
 

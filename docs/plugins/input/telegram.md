@@ -40,6 +40,7 @@ type Telegram struct {
 
 | Param           | Required |  Type  | Cred | Template | Default |      Example       | Description                                                                                                |
 |:----------------|:--------:|:------:|:----:|:--------:|:-------:|:------------------:|:-----------------------------------------------------------------------------------------------------------|
+| ads_period      |    -     | string |  -   |    -     |  "5m"   |        "1h"        | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
 | **api_id**      |    +     | string |  +   |    -     |   ""    |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | **api_hash**    |    +     | string |  +   |    -     |   ""    |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | file_max_size   |    -     |  size  |  -   |    +     |  "10m"  |        "1g"        | Maximum file size for download.                                                                            |
