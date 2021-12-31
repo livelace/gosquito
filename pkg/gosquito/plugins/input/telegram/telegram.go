@@ -24,7 +24,7 @@ const (
 	DEFAULT_LOG_LEVEL          = 0
 	DEFAULT_MATCH_TTL          = "1d"
 	DEFAULT_USERS_DATA         = "users.data"
-	SPONSORED_MESSAGE          = "telegram sponsored message"
+	SPONSORED_MESSAGE          = "sponsored"
 	SPONSORED_MESSAGE_INTERVAL = 5
 	MAX_INSTANCE_PER_APP       = 1
 )
