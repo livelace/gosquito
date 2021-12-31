@@ -19,7 +19,7 @@ data.
 | **input**  |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](../../concept.md) fields with data.                        |
 | match_all  |    -     | bool  |    -     |  false  |       true       | Patterns must be matched in all selected [DataItem](../../concept.md) fields. |
 | match_case |    -     | bool  |    -     |  true   |      false       | Case sensitive/insensitive.                                                   |
-| match_not  |    -     | bool  |    -     |  false  |       true       | Logical not match pattern.                                                    |
+| match_not  |    -     | bool  |    -     |  false  |       true       | Logical not for pattern matching.                                             |
 | output     |    -     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](../../concept.md) fields.                           |
 | **regexp** |    +     | array |    +     |   []    |    ["Россия"]    | List of config templates/raw regexps for matching.                            |
 
