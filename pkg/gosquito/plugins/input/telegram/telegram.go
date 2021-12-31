@@ -435,7 +435,6 @@ func receiveSponsoredMessages(p *Plugin) {
 							},
 						}
 					}
-					fmt.Printf("%v: %v, %v\n", chatId, textURL, sponsoredMessage.SponsorChatId)
 				}
 			}
 		}
