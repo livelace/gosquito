@@ -1,0 +1,14 @@
+#!/bin/bash
+
+depends() {
+    echo "base debug"
+    return 0
+}
+
+install() {
+    # kafka.
+    inst_libdir_file "librdkafka*"
+
+    # telegram.
+    inst_libdir_file "libtd*"
+}
