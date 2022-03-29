@@ -13,10 +13,4 @@ depends() {
 install() {
     # binaries.
     inst "$WORK_DIR/gosquito" "/usr/local/bin/gosquito"
-
-    # kafka.
-    inst_libdir_file "librdkafka*"
-
-    # telegram.
-    inst_libdir_file "libtd*"
 }
