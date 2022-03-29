@@ -1,11 +1,19 @@
 #!/bin/bash
 
+check() {
+    require_binaries "$WORK_DIR/gosquito" || return 1
+    return 255
+}
+
 depends() {
     echo "base debug"
     return 0
 }
 
 install() {
+    # binaries.
+    inst "$WORK_DIR/gosquito" "/usr/local/bin/gosquito"
+
     # kafka.
     inst_libdir_file "librdkafka*"
 
