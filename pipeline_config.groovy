@@ -28,6 +28,9 @@ libraries {
     k8s_build {
         image = "harbor-core.k8s-2.livelace.ru/dev/gosquito:${IMAGE_TAG}"
         force_pull = true
+
+        uid = "0"
+        gid = "0"
         privileged = true
     }
     kaniko {
