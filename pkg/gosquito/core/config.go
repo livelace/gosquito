@@ -10,16 +10,17 @@ import (
 )
 
 func initAppConfig() (string, error) {
+	configFile := "config.toml"
+
 	// Get current user info.
+	// Ignore user absence.
+	userDir := ""
 	userAccount, err := user.Current()
-	if err != nil {
-		return "", err
+	if err == nil {
+		userDir = filepath.Join(userAccount.HomeDir, ".gosquito")
 	}
 
 	// Possible config paths.
-	userDir := filepath.Join(userAccount.HomeDir, ".gosquito")
-	configFile := "config.toml"
-
 	// Path priority order.
 	// 1. /etc/gosquito/
 	// 2. ~/.gosquito
