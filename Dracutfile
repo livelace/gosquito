@@ -13,4 +13,7 @@ depends() {
 install() {
     # binaries.
     inst "$WORK_DIR/gosquito" "/usr/local/bin/gosquito"
+
+    # dependencies.
+    inst "/usr/share/zoneinfo/*"
 }
