@@ -11,7 +11,5 @@ depends() {
 }
 
 install() {
-    inst "/bin/cat"
-    inst "/usr/bin/top"
     inst "$WORK_DIR/gosquito" "/usr/local/bin/gosquito"
 }
