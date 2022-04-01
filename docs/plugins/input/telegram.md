@@ -8,14 +8,15 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 
 ```go
 type Telegram struct {
-	FIRSTNAME* string
-	LASTNAME*  string
-	MEDIA      []string
-	PHONE*     string
-	TEXT*      string
-	URL*       string
-	USERNAME*  string
-	USERTYPE*  string
+	FIRSTNAME*    string
+	LASTNAME*     string
+	MEDIA         []string
+	MESSAGETYPE*  string
+	PHONE*        string
+	TEXT*         string
+	URL*          string
+	USERNAME*     string
+	USERTYPE*     string
 }
 ```
 
