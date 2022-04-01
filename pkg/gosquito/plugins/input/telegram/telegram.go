@@ -263,6 +263,7 @@ func receiveAds(p *Plugin) {
 	}
 }
 
+// TODO: Boilerplate, refactoring needed.
 func receiveMessages(p *Plugin) {
 	// Loop till the app end.
 	for {
@@ -314,6 +315,84 @@ func receiveMessages(p *Plugin) {
 					var u, _ = uuid.NewRandom()
 
 					switch messageContent.(type) {
+					case *client.MessageAudio:
+						media := make([]string, 0)
+						caption := messageContent.(*client.MessageAudio).Caption
+						audio := messageContent.(*client.MessageAudio).Audio
+
+						if int64(audio.Audio.Size) < p.OptionFileMaxSize {
+							localFile, err := downloadFile(p, audio.Audio.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
+						}
+
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
+								SOURCE:     chatName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+								UUID:       u,
+
+								TELEGRAM: core.Telegram{
+									USERID:   messageUserId,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
+
+									MESSAGETYPE: "audio",
+
+									FIRSTNAME: messageUserFirstName,
+									LASTNAME:  messageUserLastName,
+									PHONE:     messageUserPhoneNumber,
+
+									MEDIA: media,
+									TEXT:  caption.Text,
+								},
+							}
+						}
+
+					case *client.MessageDocument:
+						media := make([]string, 0)
+						caption := messageContent.(*client.MessageDocument).Caption
+						document := messageContent.(*client.MessageDocument).Document
+
+						if int64(document.Document.Size) < p.OptionFileMaxSize {
+							localFile, err := downloadFile(p, document.Document.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
+						}
+
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
+								SOURCE:     chatName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+								UUID:       u,
+
+								TELEGRAM: core.Telegram{
+									USERID:   messageUserId,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
+
+									MESSAGETYPE: "document",
+
+									FIRSTNAME: messageUserFirstName,
+									LASTNAME:  messageUserLastName,
+									PHONE:     messageUserPhoneNumber,
+
+									MEDIA: media,
+									TEXT:  caption.Text,
+								},
+							}
+						}
+
 					case *client.MessageText:
 						var textURL string
 						formattedText := messageContent.(*client.MessageText).Text
@@ -340,6 +419,8 @@ func receiveMessages(p *Plugin) {
 									USERID:   messageUserId,
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,
+
+									MESSAGETYPE: "text",
 
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
@@ -380,6 +461,8 @@ func receiveMessages(p *Plugin) {
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,
 
+									MESSAGETYPE: "photo",
+
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
 									PHONE:     messageUserPhoneNumber,
@@ -417,6 +500,8 @@ func receiveMessages(p *Plugin) {
 									USERNAME: messageUserName,
 									USERTYPE: messageUserType,
 
+									MESSAGETYPE: "video",
+
 									FIRSTNAME: messageUserFirstName,
 									LASTNAME:  messageUserLastName,
 									PHONE:     messageUserPhoneNumber,
@@ -426,6 +511,84 @@ func receiveMessages(p *Plugin) {
 								},
 							}
 						}
+
+					case *client.MessageVoiceNote:
+						media := make([]string, 0)
+						caption := messageContent.(*client.MessageVoiceNote).Caption
+						note := messageContent.(*client.MessageVoiceNote).VoiceNote
+
+						if int64(note.Voice.Size) < p.OptionFileMaxSize {
+							localFile, err := downloadFile(p, note.Voice.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
+						}
+
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
+								SOURCE:     chatName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+								UUID:       u,
+
+								TELEGRAM: core.Telegram{
+									USERID:   messageUserId,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
+
+									MESSAGETYPE: "voice_note",
+
+									FIRSTNAME: messageUserFirstName,
+									LASTNAME:  messageUserLastName,
+									PHONE:     messageUserPhoneNumber,
+
+									MEDIA: media,
+									TEXT:  caption.Text,
+								},
+							}
+						}
+
+					case *client.MessageVideoNote:
+						media := make([]string, 0)
+						note := messageContent.(*client.MessageVideoNote).VideoNote
+
+						if int64(note.Video.Size) < p.OptionFileMaxSize {
+							localFile, err := downloadFile(p, note.Video.Remote.Id)
+							if err == nil {
+								media = append(media, localFile)
+							}
+						}
+
+						// Send data to channel.
+						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+							p.DataChannel <- &core.DataItem{
+								FLOW:       p.Flow.FlowName,
+								PLUGIN:     p.PluginName,
+								SOURCE:     chatName,
+								TIME:       messageTime,
+								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+								UUID:       u,
+
+								TELEGRAM: core.Telegram{
+									USERID:   messageUserId,
+									USERNAME: messageUserName,
+									USERTYPE: messageUserType,
+
+									MESSAGETYPE: "video_note",
+
+									FIRSTNAME: messageUserFirstName,
+									LASTNAME:  messageUserLastName,
+									PHONE:     messageUserPhoneNumber,
+
+									MEDIA: media,
+									TEXT:  "",
+								},
+							}
+						}
+
 					}
 
 				} else {

@@ -196,6 +196,8 @@ type Telegram struct {
 	USERNAME string
 	USERTYPE string
 
+	MESSAGETYPE string
+
 	FIRSTNAME string
 	LASTNAME  string
 	PHONE     string
