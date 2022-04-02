@@ -9,6 +9,7 @@ import (
 	"github.com/zelenin/go-tdlib/client"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 )
@@ -30,11 +31,11 @@ const (
 )
 
 var (
-	ERROR_CHAT_UNKNOWN     = errors.New("chat unknown: %s, %s")
-	ERROR_CHAT_JOIN_ERROR  = errors.New("join to chat error: %s, %s")
-	ERROR_DOWNLOAD_TIMEOUT = errors.New("download timeout: %s")
-	ERROR_LOAD_USERS_ERROR = errors.New("cannot load users: %s")
-	ERROR_SAVE_CHATS_ERROR = errors.New("cannot save chats: %s")
+	ERROR_CHAT_COMMON_ERROR = errors.New("chat error: %s, %s")
+	ERROR_CHAT_JOIN_ERROR   = errors.New("join to chat error: %s, %s")
+	ERROR_DOWNLOAD_TIMEOUT  = errors.New("download timeout: %s")
+	ERROR_LOAD_USERS_ERROR  = errors.New("cannot load users: %s")
+	ERROR_SAVE_CHATS_ERROR  = errors.New("cannot save chats: %s")
 )
 
 type clientAuthorizer struct {
@@ -142,7 +143,17 @@ func getClient(p *Plugin) (*client.Client, error) {
 	return client.NewClient(authorizer, verbosity)
 }
 
-func getChatId(p *Plugin, name string) (int64, error) {
+func getPrivateChatId(p *Plugin, name string) (int64, error) {
+	joinRequest := client.JoinChatByInviteLinkRequest{InviteLink: name}
+	chat, err := p.TdlibClient.JoinChatByInviteLink(&joinRequest)
+	if err != nil {
+		return 0, err
+	} else {
+		return chat.Id, nil
+	}
+}
+
+func getPublicChatId(p *Plugin, name string) (int64, error) {
 	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: name})
 	if err != nil {
 		return 0, err
@@ -640,6 +651,8 @@ type Plugin struct {
 	OptionAdsPeriod           int64
 	OptionApiHash             string
 	OptionApiId               int
+	OptionAppVersion          string
+	OptionDeviceModel         string
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
@@ -906,6 +919,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"ads_period":      -1,
 		"api_id":          1,
 		"api_hash":        1,
+		"app_version":     -1,
+		"device_model":    -1,
 		"cred":            -1,
 		"file_max_size":   -1,
 		"input":           1,
@@ -955,6 +970,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setAdsPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_period", template)))
 	setAdsPeriod((*pluginConfig.PluginParams)["ads_period"])
 	core.ShowPluginParam(plugin.LogFields, "ads_period", plugin.OptionAdsPeriod)
+
+	// app_version.
+	setAppVersion := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["app_version"] = 0
+			plugin.OptionAppVersion = v
+		}
+	}
+	setAppVersion(core.APP_VERSION)
+	setAppVersion(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.app_version", template)))
+	setAppVersion((*pluginConfig.PluginParams)["app_version"])
+	core.ShowPluginParam(plugin.LogFields, "app_version", plugin.OptionAppVersion)
+
+	// device_model.
+	setDeviceModel := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["device_model"] = 0
+			plugin.OptionDeviceModel = v
+		}
+	}
+	setDeviceModel(core.APP_NAME)
+	setDeviceModel(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.device_model", template)))
+	setDeviceModel((*pluginConfig.PluginParams)["device_model"])
+	core.ShowPluginParam(plugin.LogFields, "device_model", plugin.OptionDeviceModel)
 
 	// expire_action.
 	setExpireAction := func(p interface{}) {
@@ -1135,9 +1174,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin.TdlibParams = &client.TdlibParameters{
 		ApiHash:                plugin.OptionApiHash,
 		ApiId:                  int32(plugin.OptionApiId),
-		ApplicationVersion:     core.APP_VERSION,
+		ApplicationVersion:     plugin.OptionAppVersion,
 		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
-		DeviceModel:            core.APP_NAME,
+		DeviceModel:            plugin.OptionDeviceModel,
 		EnableStorageOptimizer: true,
 		FilesDirectory:         filepath.Join(plugin.PluginDataDir, DEFAULT_FILES_DIR),
 		IgnoreFileNames:        true,
@@ -1146,7 +1185,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		UseChatInfoDatabase:    true,
 		UseFileDatabase:        true,
 		UseMessageDatabase:     true,
-		UseSecretChats:         false,
+		UseSecretChats:         true,
 		UseTestDc:              false,
 	}
 
@@ -1171,9 +1210,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// We keep chats/user IDs due Telegram API limits.
 	// We may be banned for 24 hours if limits were reached (~200 requests may be enough).
 	for _, chatName := range plugin.OptionInput {
+		var chatId int64
+		var err error
 
 		if id, ok := chatsByName[chatName]; !ok {
-			chatId, err := getChatId(&plugin, chatName)
+			if strings.Contains(chatName, "t.me/+") {
+				chatId, err = getPrivateChatId(&plugin, chatName)
+			} else {
+				chatId, err = getPublicChatId(&plugin, chatName)
+			}
 
 			if err == nil {
 				// Add found chat to chat database.
@@ -1187,24 +1232,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				}
 
 			} else {
-				// We are not tolerate to unknown chats (they might be closed).
-				return &Plugin{}, fmt.Errorf(ERROR_CHAT_UNKNOWN.Error(), chatName, err)
+				// We are not tolerate to unknown chats (they might be closed, id changed).
+				return &Plugin{}, fmt.Errorf(ERROR_CHAT_COMMON_ERROR.Error(), chatName, err)
 			}
 
 		} else {
 			// Always join to chat.
 			err = joinToChat(&plugin, chatName, id)
 
-			// Recheck chat ID (it might be changed "silently").
+			// Try to rejoin to chat if something wrong.
 			if err != nil {
-				chatId, _ := getChatId(&plugin, chatName)
-				err = joinToChat(&plugin, chatName, chatId)
+				if strings.Contains(chatName, "t.me/+") {
+					chatId, err = getPrivateChatId(&plugin, chatName)
+				} else {
+					chatId, err = getPublicChatId(&plugin, chatName)
+				}
 
-				if err != nil {
+				if err == nil {
+					chatsByName[chatName] = chatId
+					chatsById[chatId] = chatName
+				} else {
 					return &Plugin{}, err
 				}
 
-				chatsById[chatId] = chatName
 			} else {
 				chatsById[id] = chatName
 			}
