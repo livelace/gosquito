@@ -61,7 +61,7 @@ type Telegram struct {
 | **input**         |    +     | array  |  -   |    +     |      []       |  ["breakingmash"]  | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
 | match_signature   |    -     | array  |  -   |    +     |     "[]"      | ["source", "time"] | Match new messages by signature.                                                                           |
 | match_ttl         |    -     | string |  -   |    +     |     "1d"      |       "24h"        | TTL (Time To Live) for matched signatures.                                                                 |
-| original_filename |    -     |  bool  |  -   |    +     |     true      |       false        | Generate new names for downloaded files: <ORIGIN_NAME>_<UUID>.<ORIGIN_EXT>.                                |
+| original_filename |    -     |  bool  |  -   |    +     |     true      |       false        | Use original file names with random generated suffix.                                                      |
 | log_level         |    -     |  int   |  -   |    +     |       0       |         90         | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 
