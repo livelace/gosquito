@@ -26,6 +26,8 @@ type Telegram struct {
     USERFIRSTNAME string
     USERLASTNAME  string
     USERPHONE     string
+	
+	WARNINGS []string
 }
 ```
 

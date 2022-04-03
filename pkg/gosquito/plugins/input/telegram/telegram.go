@@ -32,11 +32,12 @@ const (
 )
 
 var (
-	ERROR_CHAT_COMMON_ERROR = errors.New("chat error: %s, %s")
-	ERROR_CHAT_JOIN_ERROR   = errors.New("join to chat error: %s, %s")
-	ERROR_DOWNLOAD_TIMEOUT  = errors.New("download timeout: %s")
-	ERROR_LOAD_USERS_ERROR  = errors.New("cannot load users: %s")
-	ERROR_SAVE_CHATS_ERROR  = errors.New("cannot save chats: %s")
+	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
+	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
+	ERROR_DOWNLOAD_TIMEOUT   = errors.New("download timeout: %s")
+	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
+	ERROR_SAVE_CHATS_ERROR   = errors.New("cannot save chats: %s")
+	ERROR_FILE_SIZE_EXCEEDED = errors.New("file size exceeded: %v (%v > %v)")
 )
 
 type clientAuthorizer struct {
@@ -335,6 +336,7 @@ func receiveMessages(p *Plugin) {
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
+				warnings := make([]string, 0)
 
 				if v, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: messageChatId}); err == nil {
 					messageChatTitle = v.Title
@@ -381,6 +383,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								audio.FileName, audio.Audio.Size, p.OptionFileMaxSize))
 						}
 
 					case *client.MessageDocument:
@@ -392,6 +397,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								document.FileName, document.Document.Size, p.OptionFileMaxSize))
 						}
 
 					case *client.MessageText:
@@ -415,6 +423,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								"photo", photoFile.Photo.Size, p.OptionFileMaxSize))
 						}
 
 					case *client.MessageVideo:
@@ -426,6 +437,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								video.FileName, video.Video.Size, p.OptionFileMaxSize))
 						}
 
 					case *client.MessageVoiceNote:
@@ -437,6 +451,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								"voice note", note.Voice.Size, p.OptionFileMaxSize))
 						}
 
 					case *client.MessageVideoNote:
@@ -447,6 +464,9 @@ func receiveMessages(p *Plugin) {
 							if err == nil {
 								messageMedia = append(messageMedia, localFile)
 							}
+						} else {
+							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+								"video note", note.Video.Size, p.OptionFileMaxSize))
 						}
 					}
 
@@ -479,6 +499,8 @@ func receiveMessages(p *Plugin) {
 								MESSAGETEXT:     messageText,
 								MESSAGETEXTURL:  messageTextURLs,
 								MESSAGEURL:      messageURL,
+
+								WARNINGS: warnings,
 							},
 						}
 					}
@@ -675,7 +697,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			}
 
 		} else {
-			if item.TIME.Unix() > sourceLastTime.Unix() || p.OptionForce {
+			// item time can be the same (multiple files in single message).
+			if item.TIME.Unix() >= sourceLastTime.Unix() || p.OptionForce {
 				sourceLastTime = item.TIME
 				itemNew = true
 			}
