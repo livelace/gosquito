@@ -8,15 +8,24 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 
 ```go
 type Telegram struct {
-	FIRSTNAME*    string
-	LASTNAME*     string
-	MEDIA         []string
-	MESSAGETYPE*  string
-	PHONE*        string
-	TEXT*         string
-	URL*          string
-	USERNAME*     string
-	USERTYPE*     string
+    CHATID    string
+    CHATTITLE string
+    CHATTYPE  string
+    
+    MESSAGEID       string
+    MESSAGEMEDIA    []string
+    MESSAGESENDERID string
+    MESSAGETEXT*    string
+    MESSAGETEXTURL  []string
+    MESSAGETYPE     string
+    MESSAGEURL*     string
+    
+    USERID        string
+    USERNAME      string
+    USERTYPE      string
+    USERFIRSTNAME string
+    USERLASTNAME  string
+    USERPHONE     string
 }
 ```
 
@@ -39,18 +48,19 @@ type Telegram struct {
 
 ### Plugin parameters:
 
-| Param           | Required |  Type  | Cred | Template |    Default    |      Example       | Description                                                                                                |
-|:----------------|:--------:|:------:|:----:|:--------:|:-------------:|:------------------:|:-----------------------------------------------------------------------------------------------------------|
-| ads_period      |    -     | string |  -   |    -     |     "5m"      |        "1h"        | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
-| **api_id**      |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| **api_hash**    |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| app_version     |    -     | string |  +   |    -     | v3.2.0-e78724 |      "0.0.1"       | Custom application version.                                                                                |
-| device_model    |    -     | string |  +   |    -     |   gosquito    |  "Redmi Note 42"   | Custom device model.                                                                                       |
-| file_max_size   |    -     |  size  |  -   |    +     |     "10m"     |        "1g"        | Maximum file size for download.                                                                            |
-| **input**       |    +     | array  |  -   |    +     |      []       |  ["breakingmash"]  | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
-| match_signature |    -     | array  |  -   |    +     |     "[]"      | ["source", "time"] | Match new messages by signature.                                                                           |
-| match_ttl       |    -     | string |  -   |    +     |     "1d"      |       "24h"        | TTL (Time To Live) for matched signatures.                                                                 |
-| log_level       |    -     |  int   |  -   |    +     |       0       |         90         | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
+| Param             | Required |  Type  | Cred | Template |    Default    |      Example       | Description                                                                                                |
+|:------------------|:--------:|:------:|:----:|:--------:|:-------------:|:------------------:|:-----------------------------------------------------------------------------------------------------------|
+| ads_period        |    -     | string |  -   |    -     |     "5m"      |        "1h"        | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
+| **api_id**        |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
+| **api_hash**      |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
+| app_version       |    -     | string |  +   |    -     | v3.2.0-e78724 |      "0.0.1"       | Custom application version.                                                                                |
+| device_model      |    -     | string |  +   |    -     |   gosquito    |  "Redmi Note 42"   | Custom device model.                                                                                       |
+| file_max_size     |    -     |  size  |  -   |    +     |     "10m"     |        "1g"        | Maximum file size for download.                                                                            |
+| **input**         |    +     | array  |  -   |    +     |      []       |  ["breakingmash"]  | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
+| match_signature   |    -     | array  |  -   |    +     |     "[]"      | ["source", "time"] | Match new messages by signature.                                                                           |
+| match_ttl         |    -     | string |  -   |    +     |     "1d"      |       "24h"        | TTL (Time To Live) for matched signatures.                                                                 |
+| original_filename |    -     |  bool  |  -   |    +     |     true      |       false        | Generate new names for downloaded files: <ORIGIN_FILE_NAME>_<UID>.<ORIGIN_EXT>.                            |
+| log_level         |    -     |  int   |  -   |    +     |       0       |         90         | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 
 ### Flow sample:

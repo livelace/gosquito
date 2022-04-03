@@ -192,19 +192,24 @@ type Rss struct {
 }
 
 type Telegram struct {
-	USERID   string
-	USERNAME string
-	USERTYPE string
+	CHATID    string
+	CHATTITLE string
+	CHATTYPE  string
 
-	MESSAGETYPE string
+	MESSAGEID       string
+	MESSAGEMEDIA    []string
+	MESSAGESENDERID string
+	MESSAGETEXT     string
+	MESSAGETEXTURL  []string
+	MESSAGETYPE     string
+	MESSAGEURL      string
 
-	FIRSTNAME string
-	LASTNAME  string
-	PHONE     string
-
-	MEDIA []string
-	TEXT  string
-	URL   string
+	USERID        string
+	USERNAME      string
+	USERTYPE      string
+	USERFIRSTNAME string
+	USERLASTNAME  string
+	USERPHONE     string
 }
 
 type Twitter struct {

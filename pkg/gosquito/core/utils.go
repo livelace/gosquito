@@ -392,7 +392,7 @@ func ExecWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
 	return c.Output()
 }
 
-func GenFlowHash() string {
+func GenUID() string {
 	runes := []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 
 	rand.Seed(time.Now().UnixNano())
@@ -417,6 +417,18 @@ func GetDataFieldType(field interface{}) (reflect.Kind, error) {
 	} else {
 		return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
 	}
+}
+
+func GetFileNameAndExtension(file string) (string, string) {
+	if file == "/" || file == " " || file == "" || file == "." || file == ".." {
+		return "", ""
+	}
+
+	fileWithExtension := filepath.Base(file)
+	fileExtension := filepath.Ext(fileWithExtension)
+	fileName := fileWithExtension[0 : len(fileWithExtension)-len(fileExtension)]
+
+	return fileName, fileExtension
 }
 
 func HashString(s *string) string {
@@ -747,6 +759,15 @@ func IsValueInSlice(v string, s *[]string) bool {
 	return false
 }
 
+func JsonEscape(s string) (string, error) {
+	result, err := json.Marshal(s)
+	if err != nil {
+		return fmt.Sprintf("escape error: %s", err), err
+	}
+
+	return string(result[1 : len(result)-1]), err
+}
+
 func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	temp := make([]string, 0)
 
@@ -793,15 +814,6 @@ func PluginLoadData(database string, data interface{}) error {
 	}
 
 	return nil
-}
-
-func JsonEscape(s string) (string, error) {
-	result, err := json.Marshal(s)
-	if err != nil {
-		return fmt.Sprintf("escape error: %s", err), err
-	}
-
-	return string(result[1 : len(result)-1]), err
 }
 
 func LogInputPlugin(fields log.Fields, source string, message interface{}) {
@@ -860,6 +872,10 @@ func LogOutputPlugin(fields log.Fields, destination string, message interface{})
 		f["data"] = fmt.Sprintf("%v", message)
 		log.WithFields(f).Debug(LOG_PLUGIN_DATA)
 	}
+}
+
+func SymlinkFile(source string, destination string) error {
+	return renameio.Symlink(source, destination)
 }
 
 func PluginLoadState(database string, data *map[string]time.Time) error {

@@ -17,17 +17,18 @@ import (
 const (
 	PLUGIN_NAME = "telegram"
 
-	DEFAULT_ADS_ID        = "ads"
-	DEFAULT_ADS_PERIOD    = "5m"
-	DEFAULT_BUFFER_LENGHT = 1000
-	DEFAULT_CHATS_DATA    = "chats.data"
-	DEFAULT_DATABASE_DIR  = "database"
-	DEFAULT_FILES_DIR     = "files"
-	DEFAULT_FILE_MAX_SIZE = "10m"
-	DEFAULT_LOG_LEVEL     = 0
-	DEFAULT_MATCH_TTL     = "1d"
-	DEFAULT_USERS_DATA    = "users.data"
-	MAX_INSTANCE_PER_APP  = 1
+	DEFAULT_ADS_ID            = "ads"
+	DEFAULT_ADS_PERIOD        = "5m"
+	DEFAULT_BUFFER_LENGHT     = 1000
+	DEFAULT_CHATS_DATA        = "chats.data"
+	DEFAULT_DATABASE_DIR      = "database"
+	DEFAULT_FILES_DIR         = "files"
+	DEFAULT_FILE_MAX_SIZE     = "10m"
+	DEFAULT_LOG_LEVEL         = 0
+	DEFAULT_MATCH_TTL         = "1d"
+	DEFAULT_ORIGINAL_FILENAME = true
+	DEFAULT_USERS_DATA        = "users.data"
+	MAX_INSTANCE_PER_APP      = 1
 )
 
 var (
@@ -93,7 +94,9 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	}
 }
 
-func downloadFile(p *Plugin, remoteId string) (string, error) {
+func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, error) {
+	localFile := ""
+
 	remoteFileReq := client.GetRemoteFileRequest{RemoteFileId: remoteId}
 	remoteFile, err := p.TdlibClient.GetRemoteFile(&remoteFileReq)
 	if err != nil {
@@ -106,28 +109,54 @@ func downloadFile(p *Plugin, remoteId string) (string, error) {
 		return "", err
 	}
 
-	// Check if file already downloaded.
-	// Or wait for file id from receiveFiles listener.
+	// 1. File downloading might be in progress. Just wait for it.
+	// 2. File might be already downloaded.
 	if downloadFile.Local.Path == "" {
 
-		// Read files ids from file channel.
-		// Return error if timeout is happened.
+		// 1. Read files IDs from file channel.
+		// 2. Return error if timeout is happened.
 		for i := 0; i < p.OptionTimeout; i++ {
-
 			for id := range p.FileChannel {
 				if id == downloadFile.Id {
-					file, _ := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id})
-					return file.Local.Path, nil
+					f, _ := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id})
+					localFile = f.Local.Path
+					goto stopWaiting
 				}
 			}
-
 			time.Sleep(1 * time.Second)
 
 		}
 		return "", fmt.Errorf(ERROR_DOWNLOAD_TIMEOUT.Error(), remoteId)
+
+	} else {
+		localFile = downloadFile.Local.Path
 	}
 
-	return downloadFile.Local.Path, nil
+stopWaiting:
+
+	// Create symlink with new file name inside plugin's temp dir.
+	if p.OptionOriginalFileName && originalFileName != "" {
+		oldName, oldExt := core.GetFileNameAndExtension(originalFileName)
+		newName := fmt.Sprintf("%s_%s%s", oldName, core.GenUID(), oldExt)
+		newFile := filepath.Join(p.PluginTempDir, newName)
+		symlinkDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
+
+		if err := core.CreateDirIfNotExist(symlinkDir); err != nil {
+			core.LogInputPlugin(p.LogFields, "",
+				fmt.Errorf(core.ERROR_PLUGIN_CREATE_TEMP.Error(), err))
+			return newFile, err
+		}
+
+		if err := core.SymlinkFile(localFile, newFile); err != nil {
+			core.LogInputPlugin(p.LogFields, "",
+				fmt.Errorf(core.ERROR_SYMLINK_ERROR.Error(), err))
+			return newFile, err
+		}
+
+		return newFile, nil
+	}
+
+	return localFile, nil
 }
 
 func getClient(p *Plugin) (*client.Client, error) {
@@ -231,14 +260,14 @@ func receiveAds(p *Plugin) {
 
 				switch sponsoredMessage.Content.(type) {
 				case *client.MessageText:
-					var textURL string
+					textURLs := make([]string, 0)
 					formattedText := messageContent.(*client.MessageText).Text
 
-					// Search for text URL.
+					// Search for text MESSAGETEXTURL.
 					for _, entity := range formattedText.Entities {
 						switch entity.Type.(type) {
 						case *client.TextEntityTypeTextUrl:
-							textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
+							textURLs = append(textURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
 						}
 					}
 
@@ -257,12 +286,12 @@ func receiveAds(p *Plugin) {
 								USERNAME: DEFAULT_ADS_ID,
 								USERTYPE: DEFAULT_ADS_ID,
 
-								FIRSTNAME: DEFAULT_ADS_ID,
-								LASTNAME:  DEFAULT_ADS_ID,
-								PHONE:     DEFAULT_ADS_ID,
+								USERFIRSTNAME: DEFAULT_ADS_ID,
+								USERLASTNAME:  DEFAULT_ADS_ID,
+								USERPHONE:     DEFAULT_ADS_ID,
 
-								TEXT: formattedText.Text,
-								URL:  textURL,
+								MESSAGETEXT:    formattedText.Text,
+								MESSAGETEXTURL: textURLs,
 							},
 						}
 					}
@@ -274,7 +303,6 @@ func receiveAds(p *Plugin) {
 	}
 }
 
-// TODO: Boilerplate, refactoring needed.
 func receiveMessages(p *Plugin) {
 	// Loop till the app end.
 	for {
@@ -293,19 +321,37 @@ func receiveMessages(p *Plugin) {
 				}
 
 			case *client.UpdateNewMessage:
-				newMessage := update.(*client.UpdateNewMessage)
-				messageChatId := newMessage.Message.ChatId
-				messageContent := newMessage.Message.Content
-				messageTime := time.Unix(int64(newMessage.Message.Date), 0).UTC()
-
+				// Map message attributes to vars.
+				message := update.(*client.UpdateNewMessage)
+				messageChatId := message.Message.ChatId
+				messageChatTitle := ""
+				messageChatType := ""
+				messageContent := message.Message.Content
+				messageId := message.Message.Id
+				messageMedia := make([]string, 0)
 				messageSenderId := int64(-1)
-				switch messageSender := newMessage.Message.SenderId.(type) {
+				messageText := ""
+				messageTextURLs := make([]string, 0)
+				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
+				messageType := messageContent.MessageContentType()
+				messageURL := ""
+
+				if v, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: messageChatId}); err == nil {
+					messageChatTitle = v.Title
+					messageChatType = v.GetType()
+				}
+
+				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChatId, MessageId: messageId}); err == nil {
+					messageURL = v.Link
+				}
+
+				switch messageSender := message.Message.SenderId.(type) {
 				case *client.MessageSenderChat:
-					messageSenderId = int64(messageSender.ClientId)
 				case *client.MessageSenderUser:
 					messageSenderId = int64(messageSender.ClientId)
 				}
 
+				// Try to map user attributes from internal database (UpdateUser event).
 				messageUserId := fmt.Sprintf("%v", messageSenderId)
 				messageUserName := ""
 				messageUserType := ""
@@ -327,279 +373,114 @@ func receiveMessages(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						media := make([]string, 0)
-						caption := messageContent.(*client.MessageAudio).Caption
 						audio := messageContent.(*client.MessageAudio).Audio
+						messageText = messageContent.(*client.MessageAudio).Caption.Text
 
 						if int64(audio.Audio.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, audio.Audio.Remote.Id)
+							localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
 							if err == nil {
-								media = append(media, localFile)
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "audio",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  caption.Text,
-								},
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
 
 					case *client.MessageDocument:
-						media := make([]string, 0)
-						caption := messageContent.(*client.MessageDocument).Caption
 						document := messageContent.(*client.MessageDocument).Document
+						messageText = messageContent.(*client.MessageDocument).Caption.Text
 
 						if int64(document.Document.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, document.Document.Remote.Id)
+							localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
 							if err == nil {
-								media = append(media, localFile)
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "document",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  caption.Text,
-								},
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
 
 					case *client.MessageText:
-						var textURL string
 						formattedText := messageContent.(*client.MessageText).Text
+						messageText = formattedText.Text
 
-						// Search for text URL.
 						for _, entity := range formattedText.Entities {
 							switch entity.Type.(type) {
 							case *client.TextEntityTypeTextUrl:
-								textURL = entity.Type.(*client.TextEntityTypeTextUrl).Url
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "text",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									TEXT: formattedText.Text,
-									URL:  textURL,
-								},
+								messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
 							}
 						}
 
 					case *client.MessagePhoto:
-						media := make([]string, 0)
-						caption := messageContent.(*client.MessagePhoto).Caption
 						photo := messageContent.(*client.MessagePhoto).Photo
-
 						photoFile := photo.Sizes[len(photo.Sizes)-1]
+						messageText = messageContent.(*client.MessagePhoto).Caption.Text
 
 						if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, photoFile.Photo.Remote.Id)
+							localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
 							if err == nil {
-								media = append(media, localFile)
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "photo",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  caption.Text,
-								},
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
 
 					case *client.MessageVideo:
-						media := make([]string, 0)
-						caption := messageContent.(*client.MessageVideo).Caption
+						messageText = messageContent.(*client.MessageVideo).Caption.Text
 						video := messageContent.(*client.MessageVideo).Video
 
 						if int64(video.Video.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, video.Video.Remote.Id)
+							localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
 							if err == nil {
-								media = append(media, localFile)
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "video",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  caption.Text,
-								},
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
 
 					case *client.MessageVoiceNote:
-						media := make([]string, 0)
-						caption := messageContent.(*client.MessageVoiceNote).Caption
+						messageText = messageContent.(*client.MessageVoiceNote).Caption.Text
 						note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
 						if int64(note.Voice.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, note.Voice.Remote.Id)
+							localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
 							if err == nil {
-								media = append(media, localFile)
-							}
-						}
-
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
-
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
-
-									MESSAGETYPE: "voice_note",
-
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  caption.Text,
-								},
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
 
 					case *client.MessageVideoNote:
-						media := make([]string, 0)
 						note := messageContent.(*client.MessageVideoNote).VideoNote
 
 						if int64(note.Video.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, note.Video.Remote.Id)
+							localFile, err := downloadFile(p, note.Video.Remote.Id, "")
 							if err == nil {
-								media = append(media, localFile)
+								messageMedia = append(messageMedia, localFile)
 							}
 						}
+					}
 
-						// Send data to channel.
-						if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-							p.DataChannel <- &core.DataItem{
-								FLOW:       p.Flow.FlowName,
-								PLUGIN:     p.PluginName,
-								SOURCE:     chatName,
-								TIME:       messageTime,
-								TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-								UUID:       u,
+					// Send data to channel.
+					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+						p.DataChannel <- &core.DataItem{
+							FLOW:       p.Flow.FlowName,
+							PLUGIN:     p.PluginName,
+							SOURCE:     chatName,
+							TIME:       messageTime,
+							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+							UUID:       u,
 
-								TELEGRAM: core.Telegram{
-									USERID:   messageUserId,
-									USERNAME: messageUserName,
-									USERTYPE: messageUserType,
+							TELEGRAM: core.Telegram{
+								CHATID:    fmt.Sprintf("%v", messageChatId),
+								CHATTITLE: messageChatTitle,
+								CHATTYPE:  messageChatType,
 
-									MESSAGETYPE: "video_note",
+								USERID:        messageUserId,
+								USERNAME:      messageUserName,
+								USERTYPE:      messageUserType,
+								USERFIRSTNAME: messageUserFirstName,
+								USERLASTNAME:  messageUserLastName,
+								USERPHONE:     messageUserPhoneNumber,
 
-									FIRSTNAME: messageUserFirstName,
-									LASTNAME:  messageUserLastName,
-									PHONE:     messageUserPhoneNumber,
-
-									MEDIA: media,
-									TEXT:  "",
-								},
-							}
+								MESSAGEID:       fmt.Sprintf("%v", messageId),
+								MESSAGEMEDIA:    messageMedia,
+								MESSAGESENDERID: fmt.Sprintf("%v", messageSenderId),
+								MESSAGETYPE:     messageType,
+								MESSAGETEXT:     messageText,
+								MESSAGETEXTURL:  messageTextURLs,
+								MESSAGEURL:      messageURL,
+							},
 						}
-
 					}
 
 				} else {
@@ -665,6 +546,7 @@ type Plugin struct {
 	OptionLogLevel            int
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
+	OptionOriginalFileName    bool
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
@@ -758,39 +640,24 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		if len(p.OptionMatchSignature) > 0 {
 			for _, v := range p.OptionMatchSignature {
 				switch v {
-				case "firstname":
-					itemSignature += item.TELEGRAM.FIRSTNAME
+				case "messagetext":
+					itemSignature += item.TELEGRAM.MESSAGETEXT
 					break
-				case "lastname":
-					itemSignature += item.TELEGRAM.LASTNAME
-					break
-				case "phone":
-					itemSignature += item.TELEGRAM.PHONE
+				case "messageurl":
+					itemSignature += item.TELEGRAM.MESSAGEURL
 					break
 				case "source":
 					itemSignature += item.SOURCE
 					break
-				case "text":
-					itemSignature += item.TELEGRAM.TEXT
-					break
 				case "time":
 					itemSignature += item.TIME.String()
-					break
-				case "url":
-					itemSignature += item.TELEGRAM.URL
-					break
-				case "username":
-					itemSignature += item.TELEGRAM.USERNAME
-					break
-				case "usertype":
-					itemSignature += item.TELEGRAM.USERTYPE
 					break
 				}
 			}
 
 			// set default value for signature if user provided wrong values.
 			if len(itemSignature) == 0 {
-				itemSignature += item.TELEGRAM.TEXT + item.TIME.String()
+				itemSignature += item.TELEGRAM.MESSAGETEXT + item.TIME.String()
 			}
 
 			itemSignatureHash = core.HashString(&itemSignature)
@@ -916,17 +783,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
-		"ads_period":      -1,
-		"api_id":          1,
-		"api_hash":        1,
-		"app_version":     -1,
-		"device_model":    -1,
-		"cred":            -1,
-		"file_max_size":   -1,
-		"input":           1,
-		"log_level":       -1,
-		"match_signature": -1,
-		"match_ttl":       -1,
+		"ads_period":        -1,
+		"api_id":            1,
+		"api_hash":          1,
+		"app_version":       -1,
+		"device_model":      -1,
+		"cred":              -1,
+		"file_max_size":     -1,
+		"input":             1,
+		"log_level":         -1,
+		"match_signature":   -1,
+		"match_ttl":         -1,
+		"original_filename": -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1124,6 +992,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
 	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
+
+	// original_filename.
+	setOriginalFileName := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["original_filename"] = 0
+			plugin.OptionOriginalFileName = v
+		}
+	}
+	setOriginalFileName(DEFAULT_ORIGINAL_FILENAME)
+	setOriginalFileName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.original_filename", template)))
+	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
+	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
 
 	// timeout.
 	setTimeout := func(p interface{}) {

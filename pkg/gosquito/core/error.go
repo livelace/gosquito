@@ -22,6 +22,7 @@ var (
 	ERROR_PARAM_ERROR                  = errors.New("parameter error")
 	ERROR_PARAM_KEY_MUST_STRING        = errors.New("parameter key must be string")
 	ERROR_PARAM_UNKNOWN                = errors.New("unknown parameter: %s")
+	ERROR_PLUGIN_CREATE_TEMP           = errors.New("plugin create temp error: %s")
 	ERROR_PLUGIN_LOAD_DATA             = errors.New("plugin load data error: %s")
 	ERROR_PLUGIN_MAX_INSTANCE          = errors.New("plugin max instance reached: %d")
 	ERROR_PLUGIN_PROCESS_ORDER         = errors.New("plugin id must be ordered")
@@ -29,6 +30,8 @@ var (
 	ERROR_PLUGIN_REQUIRED_PARAM        = errors.New("required parameter wrong or not set: %s")
 	ERROR_PLUGIN_SAVE_DATA             = errors.New("plugin save data error: %s")
 	ERROR_PLUGIN_UNKNOWN               = errors.New("plugin unknown")
-	ERROR_SIZE_FORMAT_UNKNOWN          = errors.New("size format unknown")
-	ERROR_SIZE_MISMATCH                = errors.New("size mismatch")
+
+	ERROR_SIZE_FORMAT_UNKNOWN = errors.New("size format unknown")
+	ERROR_SIZE_MISMATCH       = errors.New("size mismatch")
+	ERROR_SYMLINK_ERROR       = errors.New("cannot create symlink: %s")
 )

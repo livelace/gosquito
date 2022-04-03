@@ -126,7 +126,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		// Parse and check flow body.
 
 		var flowUUID, _ = uuid.NewRandom()
-		var flowHash = core.GenFlowHash()
+		var flowHash = core.GenUID()
 		var flowName string
 
 		var flowCleanup bool
