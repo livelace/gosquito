@@ -174,10 +174,15 @@ func getClient(p *Plugin) (*client.Client, error) {
 }
 
 func getPrivateChatId(p *Plugin, name string) (int64, error) {
-	joinRequest := client.JoinChatByInviteLinkRequest{InviteLink: name}
-	chat, err := p.TdlibClient.JoinChatByInviteLink(&joinRequest)
-	if err != nil {
+	chatInfo, chatInfoErr := p.TdlibClient.CheckChatInviteLink(&client.CheckChatInviteLinkRequest{InviteLink: name})
+	chat, err := p.TdlibClient.JoinChatByInviteLink(&client.JoinChatByInviteLinkRequest{InviteLink: name})
+
+	if err != nil && err.Error() == "400 USER_ALREADY_PARTICIPANT" && chatInfoErr == nil {
+		return chatInfo.ChatId, nil
+
+	} else if err != nil {
 		return 0, err
+
 	} else {
 		return chat.Id, nil
 	}
@@ -336,6 +341,7 @@ func receiveMessages(p *Plugin) {
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
+				sendMessage := false
 				warnings := make([]string, 0)
 
 				if v, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: messageChatId}); err == nil {
@@ -375,6 +381,7 @@ func receiveMessages(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
+						sendMessage = true
 						audio := messageContent.(*client.MessageAudio).Audio
 						messageText = messageContent.(*client.MessageAudio).Caption.Text
 
@@ -389,6 +396,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageDocument:
+						sendMessage = true
 						document := messageContent.(*client.MessageDocument).Document
 						messageText = messageContent.(*client.MessageDocument).Caption.Text
 
@@ -403,6 +411,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageText:
+						sendMessage = true
 						formattedText := messageContent.(*client.MessageText).Text
 						messageText = formattedText.Text
 
@@ -414,6 +423,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessagePhoto:
+						sendMessage = true
 						photo := messageContent.(*client.MessagePhoto).Photo
 						photoFile := photo.Sizes[len(photo.Sizes)-1]
 						messageText = messageContent.(*client.MessagePhoto).Caption.Text
@@ -429,6 +439,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVideo:
+						sendMessage = true
 						messageText = messageContent.(*client.MessageVideo).Caption.Text
 						video := messageContent.(*client.MessageVideo).Video
 
@@ -443,6 +454,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVoiceNote:
+						sendMessage = true
 						messageText = messageContent.(*client.MessageVoiceNote).Caption.Text
 						note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
@@ -457,6 +469,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVideoNote:
+						sendMessage = true
 						note := messageContent.(*client.MessageVideoNote).VideoNote
 
 						if int64(note.Video.Size) < p.OptionFileMaxSize {
@@ -471,7 +484,7 @@ func receiveMessages(p *Plugin) {
 					}
 
 					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+					if sendMessage && len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
 						p.DataChannel <- &core.DataItem{
 							FLOW:       p.Flow.FlowName,
 							PLUGIN:     p.PluginName,
