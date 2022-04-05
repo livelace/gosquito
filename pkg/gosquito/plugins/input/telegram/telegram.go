@@ -1122,9 +1122,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	}
 
-	// Check if we know ids for all specified chats.
-	// We keep chats/user IDs due Telegram API limits.
-	// We may be banned for 24 hours if limits were reached (~200 requests may be enough).
+	// 1. Check if we know IDs for all specified chats.
+	// 2. We keep chats/user IDs due Telegram API limits.
+	// 3. We may be banned for 24 hours if limits were reached (~200 requests might be enough).
 	for _, chatName := range plugin.OptionInput {
 		var chatId int64
 		var err error
@@ -1148,7 +1148,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				}
 
 			} else {
-				// We are not tolerate to unknown chats (they might be closed, id changed).
+				// Don't accept any joining errors.
 				return &Plugin{}, fmt.Errorf(ERROR_CHAT_COMMON_ERROR.Error(), chatName, err)
 			}
 
