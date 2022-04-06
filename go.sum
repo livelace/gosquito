@@ -609,6 +609,8 @@ github.com/lib/pq v1.10.2/go.mod h1:AlVN5x4E4T544tWzH6hKfbfQvm3HdbOxrmggDNAPY9o=
 github.com/linkedin/goavro/v2 v2.9.7/go.mod h1:UgQUb2N/pmueQYH9bfqFioWxzYCZXSfF8Jw03O5sjqA=
 github.com/linkedin/goavro/v2 v2.9.8 h1:jN50elxBsGBDGVDEKqUlDuU1cFwJ11K/yrJCBMe/7Wg=
 github.com/linkedin/goavro/v2 v2.9.8/go.mod h1:UgQUb2N/pmueQYH9bfqFioWxzYCZXSfF8Jw03O5sjqA=
+github.com/livelace/go-tdlib v0.6.1-0.20220406174614-4e15db9ff95d h1:bV2mCgprmYxeKKMDbq+6V1zM+yhdT9NQB2OmhDE0SBk=
+github.com/livelace/go-tdlib v0.6.1-0.20220406174614-4e15db9ff95d/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
 github.com/livelace/logrus v1.6.1 h1:mdaba7YSyZaywEV2Wo88Gnbv15e8TDQKpo6qH4zllSg=
 github.com/livelace/logrus v1.6.1/go.mod h1:OEe+iWSGmgDZ8hTnPzfb9RuwVNvifXCsdg/jAacLKsw=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
@@ -1001,8 +1003,6 @@ github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.3.8/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.com/zelenin/go-tdlib v0.5.0 h1:NA0WftV0eilXTwoJGQtDbC7BEhiD+5eHo+jb62Gmp+w=
-github.com/zelenin/go-tdlib v0.5.0/go.mod h1:Xs8fXbk5n7VaPyrSs9DP7QYoBScWYsjX+lUcWmx1DIU=
 github.com/zenazn/goji v0.9.0/go.mod h1:7S9M489iMyHBNxwZnk9/EHS098H4/F6TATF2mIxtB1Q=
 github.com/ziutek/mymysql v1.5.4/go.mod h1:LMSpPZ6DbqWFxNCHW77HeMg9I646SAhApZ/wKdgO/C0=
 gitlab.com/nyarla/go-crypt v0.0.0-20160106005555-d9a5dc2b789b/go.mod h1:T3BPAOm2cqquPa0MKWeNkmOM5RQsRhkrwMWonFMN7fE=

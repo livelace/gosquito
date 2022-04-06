@@ -16,6 +16,7 @@ require (
 	github.com/hashicorp/go-getter v1.5.9
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
+	github.com/livelace/go-tdlib v0.6.1-0.20220406174614-4e15db9ff95d
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost-server/v6 v6.0.2
 	github.com/minio/minio-go/v7 v7.0.15
@@ -25,7 +26,6 @@ require (
 	github.com/slack-go/slack v0.9.5
 	github.com/spf13/viper v1.7.1
 	github.com/xhit/go-simple-mail/v2 v2.10.0
-	github.com/zelenin/go-tdlib v0.5.0
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
