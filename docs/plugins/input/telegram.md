@@ -55,7 +55,7 @@ type Telegram struct {
 | ads_period        |    -     | string |  -   |    -     |     "5m"      |        "1h"        | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
 | **api_id**        |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | **api_hash**      |    +     | string |  +   |    -     |      ""       |         ""         | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| app_version       |    -     | string |  +   |    -     | v3.2.0-e78724 |      "0.0.1"       | Custom application version.                                                                                |
+| app_version       |    -     | string |  +   |    -     | v3.5.0-dfd665 |      "0.0.1"       | Custom application version.                                                                                |
 | device_model      |    -     | string |  +   |    -     |   gosquito    |  "Redmi Note 42"   | Custom device model.                                                                                       |
 | file_max_size     |    -     |  size  |  -   |    +     |     "10m"     |        "1g"        | Maximum file size for download.                                                                            |
 | **input**         |    +     | array  |  -   |    +     |      []       |  ["breakingmash"]  | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |

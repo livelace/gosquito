@@ -40,7 +40,7 @@ type Rss struct {
 | match_signature |    -     | array  |    +     |       "[]"        |       ["source", "time"]       | Match new articles by signature.           |
 | match_ttl       |    -     | string |    +     |       "1d"        |             "24h"              | TTL (Time To Live) for matched signatures. |
 | ssl_verify      |    -     |  bool  |    +     |       true        |             false              | Verify server certificate.                 |
-| user_agent      |    -     | string |    +     | "gosquito v3.2.0" |         "webchela 1.0"         | Custom User-Agent for feed access.         |
+| user_agent      |    -     | string |    +     | "gosquito v3.5.0" |         "webchela 1.0"         | Custom User-Agent for feed access.         |
 
 
 ### Flow sample:
