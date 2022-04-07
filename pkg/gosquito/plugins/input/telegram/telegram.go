@@ -136,8 +136,16 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 stopWaiting:
 
 	// Create symlink with new file name inside plugin's temp dir.
-	if p.OptionOriginalFileName && originalFileName != "" {
-		oldName, oldExt := core.GetFileNameAndExtension(originalFileName)
+	if p.OptionOriginalFileName {
+		var oldName = ""
+		var oldExt = ""
+
+		if originalFileName != "" {
+			oldName, oldExt = core.GetFileNameAndExtension(originalFileName)
+		} else {
+			oldName, oldExt = core.GetFileNameAndExtension(localFile)
+		}
+
 		newName := fmt.Sprintf("%s_%s%s", oldName, core.GenUID(), oldExt)
 		newFile := filepath.Join(p.PluginTempDir, newName)
 		symlinkDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
