@@ -1254,7 +1254,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		core.LogInputPlugin(plugin.LogFields, "users records", len(plugin.UsersById))
 		for userId, userData := range plugin.UsersById {
 			core.LogInputPlugin(plugin.LogFields, "user",
-				fmt.Sprintf("%v, %v, %v", userData[0], userId, userData[1]))
+				fmt.Sprintf("%v, %v, %v, %v, %v, %v", userData[0], userId,
+					userData[1], userData[2], userData[3], userData[4]))
 		}
 	}
 
