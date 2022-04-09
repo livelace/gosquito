@@ -27,6 +27,8 @@ const (
 	DEFAULT_LOG_LEVEL         = 0
 	DEFAULT_MATCH_TTL         = "1d"
 	DEFAULT_ORIGINAL_FILENAME = true
+	DEFAULT_SHOW_CHAT         = false
+	DEFAULT_SHOW_USER         = false
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
 )
@@ -590,6 +592,8 @@ type Plugin struct {
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
 	OptionOriginalFileName    bool
+	OptionShowChat            bool
+	OptionShowUser            bool
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
@@ -838,6 +842,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"log_level":         -1,
 		"match_signature":   -1,
 		"match_ttl":         -1,
+		"show_chat":         -1,
+		"show_user":         -1,
 		"original_filename": -1,
 	}
 
@@ -1049,6 +1055,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
 	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
 
+	// show_chat.
+	setShowChat := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["show_chat"] = 0
+			plugin.OptionShowChat = v
+		}
+	}
+	setShowChat(DEFAULT_SHOW_CHAT)
+	setShowChat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.show_chat", template)))
+	setShowChat((*pluginConfig.PluginParams)["show_chat"])
+	core.ShowPluginParam(plugin.LogFields, "show_chat", plugin.OptionShowChat)
+
+	// show_user.
+	setShowUser := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["show_user"] = 0
+			plugin.OptionShowUser = v
+		}
+	}
+	setShowUser(DEFAULT_SHOW_USER)
+	setShowUser(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.show_user", template)))
+	setShowUser((*pluginConfig.PluginParams)["show_user"])
+	core.ShowPluginParam(plugin.LogFields, "show_user", plugin.OptionShowUser)
+
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -1202,9 +1232,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, fmt.Errorf(ERROR_LOAD_USERS_ERROR.Error(), err)
 	}
 
-	core.ShowPluginParam(plugin.LogFields, "chats records", len(plugin.ChatsByName))
-	core.ShowPluginParam(plugin.LogFields, "users records", len(plugin.UsersById))
-
 	// Get messages and files in background.
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
 	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_BUFFER_LENGHT)
@@ -1213,7 +1240,25 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	go receiveFiles(&plugin)
 	go receiveMessages(&plugin)
 
-	// -----------------------------------------------------------------------------------------------------------------
+	// Show chats.
+	if plugin.OptionShowChat {
+		core.LogInputPlugin(plugin.LogFields, "chats records", len(plugin.ChatsByName))
+		for chatName, chatId := range plugin.ChatsByName {
+			core.LogInputPlugin(plugin.LogFields, "chat",
+				fmt.Sprintf("%v, %v", chatName, chatId))
+		}
+	}
+
+	// Show users.
+	if plugin.OptionShowUser {
+		core.LogInputPlugin(plugin.LogFields, "users records", len(plugin.UsersById))
+		for userId, userData := range plugin.UsersById {
+			core.LogInputPlugin(plugin.LogFields, "user",
+				fmt.Sprintf("%v, %v, %v", userData[0], userId, userData[1]))
+		}
+	}
+
+	// -------------------------------------------------------------------------
 
 	return &plugin, nil
 }
