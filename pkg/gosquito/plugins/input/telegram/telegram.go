@@ -29,6 +29,7 @@ const (
 	DEFAULT_ORIGINAL_FILENAME = true
 	DEFAULT_SHOW_CHAT         = false
 	DEFAULT_SHOW_USER         = false
+	DEFAULT_STATUS_PERIOD     = "5m"
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
 )
@@ -530,7 +531,7 @@ func receiveMessages(p *Plugin) {
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "",
-						fmt.Sprintf("chat id is unknown, messages excluded: %v", messageChatId))
+						fmt.Sprintf("chat id is unknown, message excluded: %v", messageChatId))
 				}
 			}
 
@@ -549,6 +550,27 @@ func saveChats(p *Plugin) error {
 
 func saveUsers(p *Plugin) error {
 	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), p.UsersById)
+}
+
+func showStatus(p *Plugin) {
+	for {
+		sessions, err := p.TdlibClient.GetActiveSessions()
+
+		if err != nil {
+			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf("error: %v", err))
+		} else {
+			for _, session := range sessions.Sessions {
+				if session.IsCurrent {
+					info := fmt.Sprintf("login date: %v, last active: %v, region: %v, country: %v, ip: %v",
+						time.Unix(int64(session.LogInDate), 0), time.Unix(int64(session.LastActiveDate), 0),
+						session.Region, session.Country, session.Ip)
+					core.LogInputPlugin(p.LogFields, "status", info)
+				}
+			}
+		}
+
+		time.Sleep(time.Duration(p.OptionStatusPeriod) * time.Second)
+	}
 }
 
 type Plugin struct {
@@ -594,6 +616,7 @@ type Plugin struct {
 	OptionOriginalFileName    bool
 	OptionShowChat            bool
 	OptionShowUser            bool
+	OptionStatusPeriod        int64
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
@@ -844,6 +867,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"match_ttl":         -1,
 		"show_chat":         -1,
 		"show_user":         -1,
+		"status_period":     -1,
 		"original_filename": -1,
 	}
 
@@ -1079,6 +1103,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setShowUser((*pluginConfig.PluginParams)["show_user"])
 	core.ShowPluginParam(plugin.LogFields, "show_user", plugin.OptionShowUser)
 
+	// status_period.
+	setStatusPeriod := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["status_period"] = 0
+			plugin.OptionStatusPeriod = v
+		}
+	}
+	setStatusPeriod(DEFAULT_STATUS_PERIOD)
+	setStatusPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.status_period", template)))
+	setStatusPeriod((*pluginConfig.PluginParams)["status_period"])
+	core.ShowPluginParam(plugin.LogFields, "status_period", plugin.OptionStatusPeriod)
+
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -1236,10 +1272,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
 	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_BUFFER_LENGHT)
 
-	go receiveAds(&plugin)
-	go receiveFiles(&plugin)
-	go receiveMessages(&plugin)
-
 	// Show chats.
 	if plugin.OptionShowChat {
 		core.LogInputPlugin(plugin.LogFields, "chats records", len(plugin.ChatsByName))
@@ -1258,6 +1290,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 					userData[1], userData[2], userData[3], userData[4]))
 		}
 	}
+
+	// Run main threads.
+	go receiveAds(&plugin)
+	go receiveFiles(&plugin)
+	go receiveMessages(&plugin)
+	go showStatus(&plugin)
 
 	// -------------------------------------------------------------------------
 
