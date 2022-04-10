@@ -27,6 +27,7 @@ const (
 	DEFAULT_LOG_LEVEL         = 0
 	DEFAULT_MATCH_TTL         = "1d"
 	DEFAULT_ORIGINAL_FILENAME = true
+	DEFAULT_SESSION_TTL       = 366
 	DEFAULT_SHOW_CHAT         = false
 	DEFAULT_SHOW_USER         = false
 	DEFAULT_STATUS_PERIOD     = "5m"
@@ -561,9 +562,9 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, session := range sessions.Sessions {
 				if session.IsCurrent {
-					info := fmt.Sprintf("login date: %v, last active: %v, region: %v, country: %v, ip: %v",
+					info := fmt.Sprintf("login date: %v, last active: %v, geo: %v, ip: %v",
 						time.Unix(int64(session.LogInDate), 0), time.Unix(int64(session.LastActiveDate), 0),
-						session.Region, session.Country, session.Ip)
+						session.Country, session.Ip)
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
@@ -614,6 +615,7 @@ type Plugin struct {
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
 	OptionOriginalFileName    bool
+	OptionSessionTTL          int
 	OptionShowChat            bool
 	OptionShowUser            bool
 	OptionStatusPeriod        int64
@@ -865,6 +867,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"log_level":         -1,
 		"match_signature":   -1,
 		"match_ttl":         -1,
+		"session_ttl":       -1,
 		"show_chat":         -1,
 		"show_user":         -1,
 		"status_period":     -1,
@@ -1079,6 +1082,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
 	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
 
+	// session_ttl.
+	setSessionTTL := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["session_ttl"] = 0
+			plugin.OptionSessionTTL = v
+		}
+	}
+	setSessionTTL(DEFAULT_SESSION_TTL)
+	setSessionTTL(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.session_ttl", template)))
+	setSessionTTL((*pluginConfig.PluginParams)["session_ttl"])
+	core.ShowPluginParam(plugin.LogFields, "session_ttl", plugin.OptionSessionTTL)
+
 	// show_chat.
 	setShowChat := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1185,6 +1200,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	} else {
 		plugin.TdlibClient = tdlibClient
+	}
+
+	// Set session TTL.
+	_, err = plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: DEFAULT_SESSION_TTL})
+	if err != nil {
+		return &Plugin{}, err
 	}
 
 	// Load already known chats ID mappings by their username (not available in API).

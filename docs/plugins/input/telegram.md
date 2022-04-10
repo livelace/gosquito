@@ -62,9 +62,10 @@ type Telegram struct {
 | match_signature     | -          | array    | -      | +          | "[]"            | ["source", "time"]   | Match new messages by signature.                                                                             |
 | match_ttl           | -          | string   | -      | +          | "1d"            | "24h"                | TTL (Time To Live) for matched signatures.                                                                   |
 | original_filename   | -          | bool     | -      | +          | true            | false                | Use original file names with random generated suffix.                                                        |
+| session_ttl         | -          | int      | -      | +          | 366             | 1                    | TTL (Time To Live) for session (number of days).                                                            |
 | show_chat           | -          | bool     | -      | +          | false           | true                 | Show collected chats data in plugin output.                                                                  |
 | show_user           | -          | bool     | -      | +          | false           | true                 | Show collected users data in plugin output.                                                                  |
-| status_period       | -          | string   | -      | -          | "5m"            | "1h"                 | Interval for showing session status in plugin output.                                                                        |
+| status_period       | -          | string   | -      | -          | "5m"            | "1h"                 | Interval for showing session status in plugin output.                                                        |
 | log_level           | -          | int      | -      | +          | 0               | 90                   | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html)   |
 
 
