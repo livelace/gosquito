@@ -1317,7 +1317,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	go receiveFiles(&plugin)
 	go receiveMessages(&plugin)
 	go showStatus(&plugin)
-
 	// -------------------------------------------------------------------------
 
 	return &plugin, nil
