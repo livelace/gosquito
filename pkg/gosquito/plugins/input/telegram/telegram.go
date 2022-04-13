@@ -3,21 +3,23 @@ package telegramIn
 import (
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/livelace/go-tdlib/client"
-	"github.com/livelace/gosquito/pkg/gosquito/core"
-	log "github.com/livelace/logrus"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/livelace/go-tdlib/client"
+	"github.com/livelace/gosquito/pkg/gosquito/core"
+	log "github.com/livelace/logrus"
 )
 
 const (
 	PLUGIN_NAME = "telegram"
 
 	DEFAULT_ADS_ID            = "ads"
+	DEFAULT_ADS_ENABLE        = true
 	DEFAULT_ADS_PERIOD        = "5m"
 	DEFAULT_BUFFER_LENGHT     = 1000
 	DEFAULT_CHATS_DATA        = "chats.data"
@@ -27,10 +29,15 @@ const (
 	DEFAULT_LOG_LEVEL         = 0
 	DEFAULT_MATCH_TTL         = "1d"
 	DEFAULT_ORIGINAL_FILENAME = true
+	DEFAULT_PROXY_ENABLE      = false
+	DEFAULT_PROXY_PORT        = 9050
+	DEFAULT_PROXY_SERVER      = "127.0.0.1"
+	DEFAULT_PROXY_TYPE        = "socks"
 	DEFAULT_SESSION_TTL       = 366
 	DEFAULT_SHOW_CHAT         = false
 	DEFAULT_SHOW_USER         = false
-	DEFAULT_STATUS_PERIOD     = "5m"
+	DEFAULT_STATUS_ENABLE     = true
+	DEFAULT_STATUS_PERIOD     = "30s"
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
 )
@@ -39,9 +46,10 @@ var (
 	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
 	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
 	ERROR_DOWNLOAD_TIMEOUT   = errors.New("download timeout: %s")
-	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
-	ERROR_SAVE_CHATS_ERROR   = errors.New("cannot save chats: %s")
 	ERROR_FILE_SIZE_EXCEEDED = errors.New("file size exceeded: %v (%v > %v)")
+	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
+	ERROR_PROXY_TYPE_UNKNOWN = errors.New("proxy type unknown: %s")
+	ERROR_SAVE_CHATS_ERROR   = errors.New("cannot save chats: %s")
 )
 
 type clientAuthorizer struct {
@@ -182,7 +190,38 @@ func getClient(p *Plugin) (*client.Client, error) {
 		NewVerbosityLevel: int32(p.OptionLogLevel),
 	})
 
-	return client.NewClient(authorizer, verbosity)
+	if p.OptionProxyEnable {
+		proxyRequest := client.AddProxyRequest{
+			Server: p.OptionProxyServer,
+			Port:   int32(p.OptionProxyPort),
+			Enable: p.OptionProxyEnable,
+		}
+
+		switch p.OptionProxyType {
+		case "socks":
+			proxyRequest.Type = &client.ProxyTypeSocks5{Username: p.OptionProxyUsername, Password: p.OptionProxyPassword}
+		default:
+			proxyRequest.Type = &client.ProxyTypeHttp{Username: p.OptionProxyUsername, Password: p.OptionProxyPassword}
+		}
+
+		proxy := client.WithProxy(&proxyRequest)
+
+		return client.NewClient(authorizer, verbosity, proxy)
+
+	} else {
+		c, err := client.NewClient(authorizer, verbosity)
+
+		if err == nil {
+      if proxies, err := c.GetProxies(); err == nil {
+        for _, v := range proxies.Proxies {
+          c.RemoveProxy(&client.RemoveProxyRequest{ProxyId: v.Id})
+        }
+      }
+      c.DisableProxy()
+		}
+
+		return c, err
+	}
 }
 
 func getPrivateChatId(p *Plugin, name string) (int64, error) {
@@ -597,6 +636,7 @@ type Plugin struct {
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
 
+	OptionAdsEnable           bool
 	OptionAdsPeriod           int64
 	OptionApiHash             string
 	OptionApiId               int
@@ -615,9 +655,16 @@ type Plugin struct {
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
 	OptionOriginalFileName    bool
+	OptionProxyEnable         bool
+	OptionProxyPort           int
+	OptionProxyServer         string
+	OptionProxyUsername       string
+	OptionProxyPassword       string
+	OptionProxyType           string
 	OptionSessionTTL          int
 	OptionShowChat            bool
 	OptionShowUser            bool
+	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
@@ -845,6 +892,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
+		"cred":                  -1,
 		"expire_action":         -1,
 		"expire_action_timeout": -1,
 		"expire_delay":          -1,
@@ -856,20 +904,25 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
+		"ads_enable":        -1,
 		"ads_period":        -1,
 		"api_id":            1,
 		"api_hash":          1,
 		"app_version":       -1,
 		"device_model":      -1,
-		"cred":              -1,
 		"file_max_size":     -1,
 		"input":             1,
 		"log_level":         -1,
 		"match_signature":   -1,
 		"match_ttl":         -1,
+		"proxy_enable":      -1,
+		"proxy_port":        -1,
+		"proxy_server":      -1,
+		"proxy_type":        -1,
 		"session_ttl":       -1,
 		"show_chat":         -1,
 		"show_user":         -1,
+		"status_enable":     -1,
 		"status_period":     -1,
 		"original_filename": -1,
 	}
@@ -879,6 +932,28 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+
+	// -----------------------------------------------------------------------------------------------------------------
+
+	// proxy_username.
+	setProxyUsername := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["proxy_username"] = 0
+			plugin.OptionProxyUsername = v
+		}
+	}
+	setProxyUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_userrname", cred)))
+	setProxyUsername((*pluginConfig.PluginParams)["proxy_username"])
+
+	// proxy_password.
+	setProxyPassword := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["proxy_password"] = 0
+			plugin.OptionProxyPassword = v
+		}
+	}
+	setProxyPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_password", cred)))
+	setProxyPassword((*pluginConfig.PluginParams)["proxy_password"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -903,6 +978,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setApiHash((*pluginConfig.PluginParams)["api_hash"])
 
 	// -----------------------------------------------------------------------------------------------------------------
+
+	// ads_enable.
+	setAdsEnable := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["ads_enable"] = 0
+			plugin.OptionAdsEnable = v
+		}
+	}
+	setAdsEnable(DEFAULT_ADS_ENABLE)
+	setAdsEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_enable", template)))
+	setAdsEnable((*pluginConfig.PluginParams)["ads_enable"])
+	core.ShowPluginParam(plugin.LogFields, "ads_enable", plugin.OptionAdsEnable)
 
 	// ads_period.
 	setAdsPeriod := func(p interface{}) {
@@ -1082,6 +1169,54 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
 	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
 
+	// proxy_enable.
+	setProxyEnable := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["proxy_enable"] = 0
+			plugin.OptionProxyEnable = v
+		}
+	}
+	setProxyEnable(DEFAULT_PROXY_ENABLE)
+	setProxyEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_enable", template)))
+	setProxyEnable((*pluginConfig.PluginParams)["proxy_enable"])
+	core.ShowPluginParam(plugin.LogFields, "proxy_enable", plugin.OptionProxyEnable)
+
+	// proxy_port.
+	setProxyPort := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["proxy_port"] = 0
+			plugin.OptionProxyPort = v
+		}
+	}
+	setProxyPort(DEFAULT_PROXY_PORT)
+	setProxyPort(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.proxy_port", template)))
+	setProxyPort((*pluginConfig.PluginParams)["proxy_port"])
+	core.ShowPluginParam(plugin.LogFields, "proxy_port", plugin.OptionProxyPort)
+
+	// proxy_server.
+	setProxyServer := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["proxy_server"] = 0
+			plugin.OptionProxyServer = v
+		}
+	}
+	setProxyServer(DEFAULT_PROXY_SERVER)
+	setProxyServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_server", template)))
+	setProxyServer((*pluginConfig.PluginParams)["proxy_server"])
+	core.ShowPluginParam(plugin.LogFields, "proxy_server", plugin.OptionProxyServer)
+
+	// proxy_type.
+	setProxyType := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["proxy_type"] = 0
+			plugin.OptionProxyType = v
+		}
+	}
+	setProxyType(DEFAULT_PROXY_TYPE)
+	setProxyType(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_type", template)))
+	setProxyType((*pluginConfig.PluginParams)["proxy_type"])
+	core.ShowPluginParam(plugin.LogFields, "proxy_type", plugin.OptionProxyType)
+
 	// session_ttl.
 	setSessionTTL := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -1117,6 +1252,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setShowUser(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.show_user", template)))
 	setShowUser((*pluginConfig.PluginParams)["show_user"])
 	core.ShowPluginParam(plugin.LogFields, "show_user", plugin.OptionShowUser)
+
+	// status_enable.
+	setStatusEnable := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["status_enable"] = 0
+			plugin.OptionStatusEnable = v
+		}
+	}
+	setStatusEnable(DEFAULT_STATUS_ENABLE)
+	setStatusEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.status_enable", template)))
+	setStatusEnable((*pluginConfig.PluginParams)["status_enable"])
+	core.ShowPluginParam(plugin.LogFields, "status_enable", plugin.OptionStatusEnable)
 
 	// status_period.
 	setStatusPeriod := func(p interface{}) {
@@ -1171,6 +1318,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
+	}
+	
+  // -----------------------------------------------------------------------------------------------------------------
+	// Additional checks.
+
+	if plugin.OptionProxyType != "socks" && plugin.OptionProxyType != "http" {
+		return &Plugin{}, fmt.Errorf(ERROR_PROXY_TYPE_UNKNOWN.Error(), plugin.OptionProxyType)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1313,10 +1467,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Run main threads.
-	go receiveAds(&plugin)
+	if plugin.OptionAdsEnable {
+		go receiveAds(&plugin)
+	}
+
+	if plugin.OptionStatusEnable {
+		go showStatus(&plugin)
+	}
+
 	go receiveFiles(&plugin)
+
 	go receiveMessages(&plugin)
-	go showStatus(&plugin)
+
 	// -------------------------------------------------------------------------
 
 	return &plugin, nil
