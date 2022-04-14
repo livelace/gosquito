@@ -37,7 +37,7 @@ const (
 	DEFAULT_SHOW_CHAT         = false
 	DEFAULT_SHOW_USER         = false
 	DEFAULT_STATUS_ENABLE     = true
-	DEFAULT_STATUS_PERIOD     = "30s"
+	DEFAULT_STATUS_PERIOD     = "5m"
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
 )
