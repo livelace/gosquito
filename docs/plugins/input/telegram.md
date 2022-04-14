@@ -69,7 +69,6 @@ type Telegram struct {
 | proxy_username    | -        | string | +    | -        | ""            | "alex"             | Proxy username.                                                                                            |
 | proxy_password    | -        | string | +    | -        | ""            | "a1eXPass"         | Proxy password.                                                                                            |
 | proxy_type        | -        | string | -    | +        | "socks"       | "http"             | Use original file names with random generated suffix.                                                      |
-| session_ttl       | -        | int    | -    | +        | 366           | 1                  | TTL (Time To Live) for session (days).                                                                     |
 | show_chat         | -        | bool   | -    | +        | false         | true               | Show collected chats data in plugin output.                                                                |
 | show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
 | status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                      |

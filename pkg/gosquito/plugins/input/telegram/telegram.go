@@ -199,9 +199,15 @@ func getClient(p *Plugin) (*client.Client, error) {
 
 		switch p.OptionProxyType {
 		case "socks":
-			proxyRequest.Type = &client.ProxyTypeSocks5{Username: p.OptionProxyUsername, Password: p.OptionProxyPassword}
+			proxyRequest.Type = &client.ProxyTypeSocks5{
+				Username: p.OptionProxyUsername,
+				Password: p.OptionProxyPassword,
+			}
 		default:
-			proxyRequest.Type = &client.ProxyTypeHttp{Username: p.OptionProxyUsername, Password: p.OptionProxyPassword}
+			proxyRequest.Type = &client.ProxyTypeHttp{
+				Username: p.OptionProxyUsername,
+				Password: p.OptionProxyPassword,
+			}
 		}
 
 		proxy := client.WithProxy(&proxyRequest)
@@ -212,12 +218,12 @@ func getClient(p *Plugin) (*client.Client, error) {
 		c, err := client.NewClient(authorizer, verbosity)
 
 		if err == nil {
-      if proxies, err := c.GetProxies(); err == nil {
-        for _, v := range proxies.Proxies {
-          c.RemoveProxy(&client.RemoveProxyRequest{ProxyId: v.Id})
-        }
-      }
-      c.DisableProxy()
+			if proxies, err := c.GetProxies(); err == nil {
+				for _, v := range proxies.Proxies {
+					c.RemoveProxy(&client.RemoveProxyRequest{ProxyId: v.Id})
+				}
+			}
+			c.DisableProxy()
 		}
 
 		return c, err
@@ -280,29 +286,6 @@ func loadUsers(p *Plugin) (map[int64][]string, error) {
 	return data, nil
 }
 
-func receiveFiles(p *Plugin) {
-	tempDirMatcher := regexp.MustCompile(filepath.Join(DEFAULT_FILES_DIR, "temp"))
-
-	// Loop till the app end.
-	for {
-		listener := p.TdlibClient.GetListener()
-
-		// Wait for new files, be sure they are not in temp, send file.id into channel.
-		for update := range listener.Updates {
-			switch update.(type) {
-			case *client.UpdateFile:
-				newFile := update.(*client.UpdateFile).File
-				if newFile.Local.Path != "" && newFile.Size > 0 && !tempDirMatcher.MatchString(newFile.Local.Path) {
-					p.FileChannel <- newFile.Id
-				}
-			}
-		}
-
-		listener.Close()
-		time.Sleep(1 * time.Second)
-	}
-}
-
 func receiveAds(p *Plugin) {
 	for {
 		for chatId := range p.ChatsById {
@@ -360,11 +343,29 @@ func receiveAds(p *Plugin) {
 	}
 }
 
-func receiveMessages(p *Plugin) {
-	// Loop till the app end.
-	for {
-		listener := p.TdlibClient.GetListener()
+func receiveFiles(p *Plugin) {
+	listener := p.TdlibClient.GetListener()
+	tempDirMatcher := regexp.MustCompile(filepath.Join(DEFAULT_FILES_DIR, "temp"))
 
+	for {
+		// Wait for new files, be sure they are not in temp, send file.id into channel.
+		for update := range listener.Updates {
+			switch update.(type) {
+			case *client.UpdateFile:
+				newFile := update.(*client.UpdateFile).File
+				if newFile.Local.Path != "" && newFile.Size > 0 && !tempDirMatcher.MatchString(newFile.Local.Path) {
+					p.FileChannel <- newFile.Id
+				}
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func receiveMessages(p *Plugin) {
+	listener := p.TdlibClient.GetListener()
+
+	for {
 		// Loop over message events.
 		for update := range listener.Updates {
 			switch update.(type) {
@@ -579,7 +580,32 @@ func receiveMessages(p *Plugin) {
 			_ = saveUsers(p)
 		}
 
-		listener.Close()
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func receiveState(p *Plugin) {
+	listener := p.TdlibClient.GetListener()
+
+	for {
+		for update := range listener.Updates {
+			switch update.(type) {
+			case *client.UpdateConnectionState:
+				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
+				case "connectionStateConnecting":
+					p.ConnectionState = "connecting"
+				case "connectionStateConnectingToProxy":
+					p.ConnectionState = "connecting to proxy"
+				case "connectionStateReady":
+					p.ConnectionState = "ready"
+				case "connectionStateUpdating":
+					p.ConnectionState = "updating"
+				case "connectionStateWaitingForNetwork":
+					p.ConnectionState = "waiting for network"
+				}
+			}
+		}
+
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -601,9 +627,9 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, session := range sessions.Sessions {
 				if session.IsCurrent {
-					info := fmt.Sprintf("login date: %v, last active: %v, geo: %v, ip: %v",
-						time.Unix(int64(session.LogInDate), 0), time.Unix(int64(session.LastActiveDate), 0),
-						session.Country, session.Ip)
+          info := fmt.Sprintf("geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
+						strings.ToLower(session.Country), session.Ip, time.Unix(int64(session.LastActiveDate), 0),
+						time.Unix(int64(session.LogInDate), 0), p.OptionProxyEnable, p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
@@ -635,6 +661,8 @@ type Plugin struct {
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
+
+	ConnectionState string
 
 	OptionAdsEnable           bool
 	OptionAdsPeriod           int64
@@ -882,6 +910,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginType:       pluginConfig.PluginType,
 		PluginDataDir:    filepath.Join(pluginConfig.Flow.FlowDataDir, pluginConfig.PluginType, PLUGIN_NAME),
 		PluginTempDir:    filepath.Join(pluginConfig.Flow.FlowTempDir, pluginConfig.PluginType, PLUGIN_NAME),
+		ConnectionState:  "unknown",
 		OptionExpireLast: 0,
 	}
 
@@ -919,7 +948,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"proxy_port":        -1,
 		"proxy_server":      -1,
 		"proxy_type":        -1,
-		"session_ttl":       -1,
 		"show_chat":         -1,
 		"show_user":         -1,
 		"status_enable":     -1,
@@ -1217,18 +1245,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setProxyType((*pluginConfig.PluginParams)["proxy_type"])
 	core.ShowPluginParam(plugin.LogFields, "proxy_type", plugin.OptionProxyType)
 
-	// session_ttl.
-	setSessionTTL := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["session_ttl"] = 0
-			plugin.OptionSessionTTL = v
-		}
-	}
-	setSessionTTL(DEFAULT_SESSION_TTL)
-	setSessionTTL(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.session_ttl", template)))
-	setSessionTTL((*pluginConfig.PluginParams)["session_ttl"])
-	core.ShowPluginParam(plugin.LogFields, "session_ttl", plugin.OptionSessionTTL)
-
 	// show_chat.
 	setShowChat := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1319,8 +1335,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
-	
-  // -----------------------------------------------------------------------------------------------------------------
+
+	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
 	if plugin.OptionProxyType != "socks" && plugin.OptionProxyType != "http" {
@@ -1354,12 +1370,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	} else {
 		plugin.TdlibClient = tdlibClient
-	}
-
-	// Set session TTL.
-	_, err = plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: DEFAULT_SESSION_TTL})
-	if err != nil {
-		return &Plugin{}, err
 	}
 
 	// Load already known chats ID mappings by their username (not available in API).
@@ -1467,6 +1477,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Run main threads.
+	go receiveFiles(&plugin)
+
+	go receiveMessages(&plugin)
+
+	go receiveState(&plugin)
+
 	if plugin.OptionAdsEnable {
 		go receiveAds(&plugin)
 	}
@@ -1474,11 +1490,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
 	}
-
-	go receiveFiles(&plugin)
-
-	go receiveMessages(&plugin)
-
 	// -------------------------------------------------------------------------
 
 	return &plugin, nil
