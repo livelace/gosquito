@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +20,7 @@ const (
 	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_ENABLE        = true
 	DEFAULT_ADS_PERIOD        = "5m"
-	DEFAULT_BUFFER_LENGHT     = 1000
+	DEFAULT_BUFFER_LENGHT     = 100000
 	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
@@ -46,6 +45,7 @@ const (
 var (
 	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
 	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
+	ERROR_FETCH_ERROR        = errors.New("fetch error: %s")
 	ERROR_FETCH_TIMEOUT      = errors.New("fetch timeout: %s")
 	ERROR_FILE_SIZE_EXCEEDED = errors.New("file size exceeded: %v (%v > %v)")
 	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
@@ -111,6 +111,8 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, error) {
 	localFile := ""
 
+	core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("begin: %v -> %v", remoteId, originalFileName))
+
 	remoteFileReq := client.GetRemoteFileRequest{RemoteFileId: remoteId}
 	remoteFile, err := p.TdlibClient.GetRemoteFile(&remoteFileReq)
 	if err != nil {
@@ -132,13 +134,15 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 		for i := 0; i < p.OptionFetchTimeout; i++ {
 			for id := range p.FileChannel {
 				if id == downloadFile.Id {
-					f, _ := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id})
-					localFile = f.Local.Path
-					goto stopWaiting
+					if f, err := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id}); err == nil {
+						localFile = f.Local.Path
+						goto stopWaiting
+					} else {
+						return "", fmt.Errorf(ERROR_FETCH_ERROR.Error(), err)
+					}
 				}
 			}
 			time.Sleep(1 * time.Second)
-
 		}
 		return "", fmt.Errorf(ERROR_FETCH_TIMEOUT.Error(), remoteId)
 
@@ -175,10 +179,14 @@ stopWaiting:
 			return newFile, err
 		}
 
+		core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, newFile))
+
 		return newFile, nil
 	}
-
-	return localFile, nil
+	
+  core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, localFile))
+	
+  return localFile, nil
 }
 
 func getClient(p *Plugin) (*client.Client, error) {
@@ -346,20 +354,18 @@ func receiveAds(p *Plugin) {
 
 func receiveFiles(p *Plugin) {
 	listener := p.TdlibClient.GetListener()
-	tempDirMatcher := regexp.MustCompile(filepath.Join(DEFAULT_FILES_DIR, "temp"))
 
 	for {
-		// Wait for new files, be sure they are not in temp, send file.id into channel.
-		for update := range listener.Updates {
+		select {
+		case update := <-listener.Updates:
 			switch update.(type) {
 			case *client.UpdateFile:
 				newFile := update.(*client.UpdateFile).File
-				if newFile.Local.Path != "" && newFile.Size > 0 && !tempDirMatcher.MatchString(newFile.Local.Path) {
+				if newFile.Local.IsDownloadingCompleted {
 					p.FileChannel <- newFile.Id
 				}
 			}
 		}
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -386,6 +392,8 @@ func receiveMessages(p *Plugin) {
 				messageChatTitle := ""
 				messageChatType := ""
 				messageContent := message.Message.Content
+				messageFileName := ""
+				messageFileSize := int32(0)
 				messageId := message.Message.Id
 				messageMedia := make([]string, 0)
 				messageSenderId := int64(-1)
@@ -444,8 +452,8 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								audio.FileName, audio.Audio.Size, p.OptionFileMaxSize))
+							messageFileName = audio.FileName
+							messageFileSize = audio.Audio.Size
 						}
 
 					case *client.MessageDocument:
@@ -459,8 +467,8 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								document.FileName, document.Document.Size, p.OptionFileMaxSize))
+							messageFileName = document.FileName
+							messageFileSize = document.Document.Size
 						}
 
 					case *client.MessageText:
@@ -487,8 +495,8 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								"photo", photoFile.Photo.Size, p.OptionFileMaxSize))
+							messageFileName = "phone"
+							messageFileSize = photoFile.Photo.Size
 						}
 
 					case *client.MessageVideo:
@@ -502,8 +510,8 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								video.FileName, video.Video.Size, p.OptionFileMaxSize))
+							messageFileName = video.FileName
+							messageFileSize = video.Video.Size
 						}
 
 					case *client.MessageVoiceNote:
@@ -517,8 +525,8 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								"voice note", note.Voice.Size, p.OptionFileMaxSize))
+							messageFileName = "voice note"
+							messageFileSize = note.Voice.Size
 						}
 
 					case *client.MessageVideoNote:
@@ -531,9 +539,18 @@ func receiveMessages(p *Plugin) {
 								messageMedia = append(messageMedia, localFile)
 							}
 						} else {
-							warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-								"video note", note.Video.Size, p.OptionFileMaxSize))
+							messageFileName = "video note"
+							messageFileSize = note.Video.Size
 						}
+					}
+
+					// Warnings.
+					if messageFileSize > 0 {
+						warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+							messageFileName, messageFileSize, p.OptionFileMaxSize))
+
+						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+							messageFileName, messageFileSize, p.OptionFileMaxSize))
 					}
 
 					// Send data to channel.
@@ -573,7 +590,7 @@ func receiveMessages(p *Plugin) {
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "",
-						fmt.Sprintf("chat id is unknown, message excluded: %v", messageChatId))
+						fmt.Sprintf("chat filtered, message excluded: %v", messageChatId))
 				}
 			}
 
