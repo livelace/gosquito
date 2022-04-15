@@ -46,7 +46,7 @@ const (
 var (
 	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
 	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
-	ERROR_DOWNLOAD_TIMEOUT   = errors.New("download timeout: %s")
+	ERROR_FETCH_TIMEOUT      = errors.New("fetch timeout: %s")
 	ERROR_FILE_SIZE_EXCEEDED = errors.New("file size exceeded: %v (%v > %v)")
 	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
 	ERROR_PROXY_TYPE_UNKNOWN = errors.New("proxy type unknown: %s")
@@ -140,7 +140,7 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 			time.Sleep(1 * time.Second)
 
 		}
-		return "", fmt.Errorf(ERROR_DOWNLOAD_TIMEOUT.Error(), remoteId)
+		return "", fmt.Errorf(ERROR_FETCH_TIMEOUT.Error(), remoteId)
 
 	} else {
 		localFile = downloadFile.Local.Path
@@ -1105,8 +1105,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
 	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
 	core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
-	
-  // fetch_timeout.
+
+	// fetch_timeout.
 	setFetchTimeout := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["fetch_timeout"] = 0
@@ -1308,7 +1308,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStatusPeriod((*pluginConfig.PluginParams)["status_period"])
 	core.ShowPluginParam(plugin.LogFields, "status_period", plugin.OptionStatusPeriod)
 
-  // TODO: Do we really need timeout for telegram event model ?
+	// TODO: Do we really need timeout for telegram event model ?
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
