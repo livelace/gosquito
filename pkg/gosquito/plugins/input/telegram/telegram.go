@@ -676,7 +676,7 @@ type Plugin struct {
 	OptionExpireActionTimeout int
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
-	OptionFetchTimeout        time.Duration
+	OptionFetchTimeout        int
 	OptionFileMaxSize         int64
 	OptionForce               bool
 	OptionForceCount          int
@@ -1110,7 +1110,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFetchTimeout := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["fetch_timeout"] = 0
-			plugin.OptionFetchTimeout = time.Duration(v) * time.Second
+			plugin.OptionFetchTimeout = int(v)
 		}
 	}
 	setFetchTimeout(DEFAULT_FETCH_TIMEOUT)
