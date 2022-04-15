@@ -58,6 +58,7 @@ type Telegram struct {
 | **api_hash**      | +        | string | +    | -        | ""            | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | app_version       | -        | string | +    | -        | v3.5.1-b905a4 | "0.0.1"            | Custom application version.                                                                                |
 | device_model      | -        | string | +    | -        | gosquito      | "Redmi Note 42"    | Custom device model.                                                                                       |
+| fetch_timeout     | -        | string | -    | +        | "1h"          | "24h"              | Maximum time for file download.
 | file_max_size     | -        | size   | -    | +        | "10m"         | "1g"               | Maximum file size for download.                                                                            |
 | **input**         | +        | array  | -    | +        | []            | ["breakingmash"]   | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
 | match_signature   | -        | array  | -    | +        | "[]"          | ["source", "time"] | Match new messages by signature.                                                                           |
@@ -71,7 +72,7 @@ type Telegram struct {
 | proxy_type        | -        | string | -    | +        | "socks"       | "http"             | Use original file names with random generated suffix.                                                      |
 | show_chat         | -        | bool   | -    | +        | false         | true               | Show collected chats data in plugin output.                                                                |
 | show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
-| status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                      |
+| status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                                             |
 | status_period     | -        | string | -    | +        | "5m"          | "1h"               | Interval for showing session status in plugin output.                                                      |
 | log_level         | -        | int    | -    | +        | 0             | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 

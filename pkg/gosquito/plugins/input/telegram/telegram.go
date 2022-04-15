@@ -24,6 +24,7 @@ const (
 	DEFAULT_BUFFER_LENGHT     = 1000
 	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_DATABASE_DIR      = "database"
+	DEFAULT_FETCH_TIMEOUT     = "1h"
 	DEFAULT_FILES_DIR         = "files"
 	DEFAULT_FILE_MAX_SIZE     = "10m"
 	DEFAULT_LOG_LEVEL         = 0
@@ -128,7 +129,7 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 
 		// 1. Read files IDs from file channel.
 		// 2. Return error if timeout is happened.
-		for i := 0; i < p.OptionTimeout; i++ {
+		for i := 0; i < p.OptionFetchTimeout; i++ {
 			for id := range p.FileChannel {
 				if id == downloadFile.Id {
 					f, _ := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id})
@@ -627,7 +628,7 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, session := range sessions.Sessions {
 				if session.IsCurrent {
-          info := fmt.Sprintf("geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
+					info := fmt.Sprintf("geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
 						strings.ToLower(session.Country), session.Ip, time.Unix(int64(session.LastActiveDate), 0),
 						time.Unix(int64(session.LogInDate), 0), p.OptionProxyEnable, p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -675,6 +676,7 @@ type Plugin struct {
 	OptionExpireActionTimeout int
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
+	OptionFetchTimeout        time.Duration
 	OptionFileMaxSize         int64
 	OptionForce               bool
 	OptionForceCount          int
@@ -939,6 +941,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"api_hash":          1,
 		"app_version":       -1,
 		"device_model":      -1,
+		"fetch_timeout":     -1,
 		"file_max_size":     -1,
 		"input":             1,
 		"log_level":         -1,
@@ -1102,6 +1105,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
 	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
 	core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
+	
+  // fetch_timeout.
+	setFetchTimeout := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["fetch_timeout"] = 0
+			plugin.OptionFetchTimeout = time.Duration(v) * time.Second
+		}
+	}
+	setFetchTimeout(DEFAULT_FETCH_TIMEOUT)
+	setFetchTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_timeout", template)))
+	setFetchTimeout((*pluginConfig.PluginParams)["fetch_timeout"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_timeout", plugin.OptionFetchTimeout)
 
 	// file_max_size.
 	setFileMaxSize := func(p interface{}) {
@@ -1293,6 +1308,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStatusPeriod((*pluginConfig.PluginParams)["status_period"])
 	core.ShowPluginParam(plugin.LogFields, "status_period", plugin.OptionStatusPeriod)
 
+  // TODO: Do we really need timeout for telegram event model ?
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
