@@ -49,7 +49,7 @@ INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
 
 #### Docker:
 
-
+```shell
 # Docker:
 user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v3.6.0
 user@04a308454349 ~ $ gosquito
