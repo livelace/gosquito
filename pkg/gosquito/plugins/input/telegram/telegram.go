@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"code.cloudfoundry.org/bytefmt"
 	"github.com/google/uuid"
 	"github.com/livelace/go-tdlib/client"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -38,6 +39,7 @@ const (
 	DEFAULT_SHOW_USER         = false
 	DEFAULT_STATUS_ENABLE     = true
 	DEFAULT_STATUS_PERIOD     = "5m"
+	DEFAULT_STORAGE_PERIOD    = "1h"
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
 )
@@ -183,10 +185,10 @@ stopWaiting:
 
 		return newFile, nil
 	}
-	
-  core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, localFile))
-	
-  return localFile, nil
+
+	core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, localFile))
+
+	return localFile, nil
 }
 
 func getClient(p *Plugin) (*client.Client, error) {
@@ -361,7 +363,7 @@ func receiveFiles(p *Plugin) {
 			switch update.(type) {
 			case *client.UpdateFile:
 				newFile := update.(*client.UpdateFile).File
-				if newFile.Local.IsDownloadingCompleted {
+				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
 					p.FileChannel <- newFile.Id
 				}
 			}
@@ -550,7 +552,7 @@ func receiveMessages(p *Plugin) {
 							messageFileName, messageFileSize, p.OptionFileMaxSize))
 
 						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, messageFileSize, p.OptionFileMaxSize))
+							messageFileName, bytefmt.ByteSize(uint64(messageFileSize)), bytefmt.ByteSize(uint64(p.OptionFileMaxSize))))
 					}
 
 					// Send data to channel.
@@ -638,22 +640,39 @@ func saveUsers(p *Plugin) error {
 
 func showStatus(p *Plugin) {
 	for {
-		sessions, err := p.TdlibClient.GetActiveSessions()
+		session, sessionError := p.TdlibClient.GetActiveSessions()
+		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
 
-		if err != nil {
-			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf("error: %v", err))
+		if sessionError != nil || storageError != nil {
+			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf("session error: %v, storage error: %v", sessionError, storageError))
 		} else {
-			for _, session := range sessions.Sessions {
-				if session.IsCurrent {
-					info := fmt.Sprintf("geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
-						strings.ToLower(session.Country), session.Ip, time.Unix(int64(session.LastActiveDate), 0),
-						time.Unix(int64(session.LogInDate), 0), p.OptionProxyEnable, p.ConnectionState)
+			for _, s := range session.Sessions {
+				if s.IsCurrent {
+          info := fmt.Sprintf("database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
+						bytefmt.ByteSize(uint64(storage.DatabaseSize)), storage.FileCount, 
+            bytefmt.ByteSize(uint64(storage.FilesSize)), strings.ToLower(s.Country), 
+            s.Ip, time.Unix(int64(s.LastActiveDate), 0), time.Unix(int64(s.LogInDate), 0), 
+            p.OptionProxyEnable, p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
 		}
 
 		time.Sleep(time.Duration(p.OptionStatusPeriod) * time.Second)
+	}
+}
+
+func storageOptimize(p *Plugin) {
+	for {
+    p.m.Lock()
+		_, err := p.TdlibClient.OptimizeStorage(&client.OptimizeStorageRequest{})
+    p.m.Unlock()
+
+		if err != nil {
+			core.LogInputPlugin(p.LogFields, "storage", fmt.Errorf("error: %v", err))
+		}
+
+		time.Sleep(time.Duration(p.OptionStoragePeriod) * time.Second)
 	}
 }
 
@@ -713,6 +732,7 @@ type Plugin struct {
 	OptionShowUser            bool
 	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
+	OptionStoragePeriod       int64
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
@@ -972,6 +992,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"show_user":         -1,
 		"status_enable":     -1,
 		"status_period":     -1,
+		"storage_period":    -1,
 		"original_filename": -1,
 	}
 
@@ -1325,6 +1346,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStatusPeriod((*pluginConfig.PluginParams)["status_period"])
 	core.ShowPluginParam(plugin.LogFields, "status_period", plugin.OptionStatusPeriod)
 
+	// storage_period.
+	setStoragePeriod := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["storage_period"] = 0
+			plugin.OptionStoragePeriod = v
+		}
+	}
+	setStoragePeriod(DEFAULT_STATUS_PERIOD)
+	setStoragePeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.storage_period", template)))
+	setStoragePeriod((*pluginConfig.PluginParams)["storage_period"])
+	core.ShowPluginParam(plugin.LogFields, "storage_period", plugin.OptionStoragePeriod)
+
 	// TODO: Do we really need timeout for telegram event model ?
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -1515,6 +1548,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	go receiveMessages(&plugin)
 
 	go receiveState(&plugin)
+
+	go storageOptimize(&plugin)
 
 	if plugin.OptionAdsEnable {
 		go receiveAds(&plugin)

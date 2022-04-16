@@ -74,6 +74,7 @@ type Telegram struct {
 | show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
 | status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                                             |
 | status_period     | -        | string | -    | +        | "5m"          | "1h"               | Interval for showing session status in plugin output.                                                      |
+| storage_period    | -        | string | -    | +        | "1h"          | "24h"              | Storage optimization (clean old data) interval.                                                      |
 | log_level         | -        | int    | -    | +        | 0             | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 

@@ -3,6 +3,7 @@ module github.com/livelace/gosquito
 go 1.16
 
 require (
+	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/antchfx/htmlquery v1.2.3
 	github.com/confluentinc/confluent-kafka-go v1.7.0 // indirect
 	github.com/dghubble/go-twitter v0.0.0-20211002212826-ad02880e616b
