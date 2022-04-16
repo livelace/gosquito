@@ -12,21 +12,21 @@
 
 ### Plugin parameters:
 
-| Param        | Required |  Type  | Cred | Template | Text Template |      Default      |             Example             | Description                               |
+| Param        | Required | Type   | Cred | Template | Text Template | Default           | Example                         | Description                               |
 |:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-----------------:|:-------------------------------:|:------------------------------------------|
-| auth         |    -     | string |  -   |    +     |       -       |        ""         |             "basic"             | Auth method (basic, bearer).              |
-| bearer_token |    -     | string |  +   |    -     |       -       |        ""         |            "qwerty"             | Bearer token.                             |
-| body         |    -     | string |  -   |    +     |       +       |        ""         |        "{"foo": "bar"}"         | Request body.                             |
-| headers      |    -     | map[]  |  -   |    +     |       +       |       map[]       |           see example           | Dynamic list of request headers.          |
-| method       |    -     | string |  -   |    +     |       -       |       "GET"       |             "POST"              | Request method (GET, POST).               |
-| **output**   |    +     | array  |  -   |    +     |       -       |       "[]"        | ["https://freegeoip.app/json/"] | List of REST endpoints.                   |
-| params       |    -     | map[]  |  -   |    +     |       +       |       map[]       |           see example           | Dynamic list of request query parameters. |
-| password     |    -     | string |  +   |    -     |       -       |        ""         |               ""                | Basic auth password.                      |
-| proxy        |    -     | string |  -   |    +     |       -       |        ""         |     "http://127.0.0.1:8080"     | Proxy settings.                           |
-| redirect     |    -     |  bool  |  -   |    +     |       -       |       true        |              false              | Follow redirects.                         |
-| ssl_verify   |    -     |  bool  |  -   |    +     |       -       |       true        |              false              | Verify server certificate.                |
-| user_agent   |    -     | string |  -   |    +     |       -       | "gosquito v3.5.1" |         "webchela 1.0"          | Custom User-Agent for feed access.        |
-| username     |    -     | string |  +   |    -     |       -       |        ""         |               ""                | Basic auth username.                      |
+| auth         | -        | string | -    | +        | -             | ""                | "basic"                         | Auth method (basic, bearer).              |
+| bearer_token | -        | string | +    | -        | -             | ""                | "qwerty"                        | Bearer token.                             |
+| body         | -        | string | -    | +        | +             | ""                | "{"foo": "bar"}"                | Request body.                             |
+| headers      | -        | map[]  | -    | +        | +             | map[]             | see example                     | Dynamic list of request headers.          |
+| method       | -        | string | -    | +        | -             | "GET"             | "POST"                          | Request method (GET, POST).               |
+| **output**   | +        | array  | -    | +        | -             | "[]"              | ["https://freegeoip.app/json/"] | List of REST endpoints.                   |
+| params       | -        | map[]  | -    | +        | +             | map[]             | see example                     | Dynamic list of request query parameters. |
+| password     | -        | string | +    | -        | -             | ""                | ""                              | Basic auth password.                      |
+| proxy        | -        | string | -    | +        | -             | ""                | "http://127.0.0.1:8080"         | Proxy settings.                           |
+| redirect     | -        | bool   | -    | +        | -             | true              | false                           | Follow redirects.                         |
+| ssl_verify   | -        | bool   | -    | +        | -             | true              | false                           | Verify server certificate.                |
+| user_agent   | -        | string | -    | +        | -             | "gosquito v3.6.0" | "webchela 1.0"                  | Custom User-Agent for feed access.        |
+| username     | -        | string | +    | -        | -             | ""                | ""                              | Basic auth username.                      |
 
 
 ### Flow sample:
