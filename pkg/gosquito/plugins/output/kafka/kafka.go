@@ -207,7 +207,9 @@ func (p *Plugin) GetOutput() []string {
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
-	// Generate and send messages for every provided topic.
+  p.LogFields["run"] = p.Flow.GetRunID()
+	
+  // Generate and send messages for every provided topic.
 	for _, topic := range p.OptionOutput {
 		messages := make([]*kafka.Message, 0)
 
@@ -297,6 +299,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 		LogFields: log.Fields{
 			"hash":   pluginConfig.Flow.FlowHash,
+			"run":    pluginConfig.Flow.GetRunID(),
 			"flow":   pluginConfig.Flow.FlowName,
 			"file":   pluginConfig.Flow.FlowFile,
 			"plugin": PLUGIN_NAME,

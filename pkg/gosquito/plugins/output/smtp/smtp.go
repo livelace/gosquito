@@ -84,9 +84,10 @@ func (p *Plugin) GetOutput() []string {
 }
 
 func (p *Plugin) Send(data []*core.DataItem) error {
+  p.LogFields["run"] = p.Flow.GetRunID()
+
 	// Connection settings.
 	server := mail.NewSMTPClient()
-
 	server.Host = p.OptionServer
 	server.Port = p.OptionPort
 
@@ -173,6 +174,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 		LogFields: log.Fields{
 			"hash":   pluginConfig.Flow.FlowHash,
+			"run":    pluginConfig.Flow.GetRunID(),
 			"flow":   pluginConfig.Flow.FlowName,
 			"file":   pluginConfig.Flow.FlowFile,
 			"plugin": PLUGIN_NAME,

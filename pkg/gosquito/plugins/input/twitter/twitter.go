@@ -174,6 +174,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
+  p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -375,6 +376,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 		LogFields: log.Fields{
 			"hash":   pluginConfig.Flow.FlowHash,
+			"run":    pluginConfig.Flow.GetRunID(),
 			"flow":   pluginConfig.Flow.FlowName,
 			"file":   pluginConfig.Flow.FlowFile,
 			"plugin": PLUGIN_NAME,

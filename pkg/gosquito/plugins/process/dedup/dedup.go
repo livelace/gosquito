@@ -53,6 +53,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
+  p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
@@ -80,6 +81,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 		LogFields: log.Fields{
 			"hash":   pluginConfig.Flow.FlowHash,
+			"run":    pluginConfig.Flow.GetRunID(),
 			"flow":   pluginConfig.Flow.FlowName,
 			"file":   pluginConfig.Flow.FlowFile,
 			"plugin": PLUGIN_NAME,

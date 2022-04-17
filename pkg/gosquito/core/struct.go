@@ -56,9 +56,10 @@ type Flow struct {
 	m        sync.Mutex
 	instance int
 
-	FlowUUID uuid.UUID
-	FlowHash string
-	FlowName string
+	FlowUUID  uuid.UUID
+	FlowHash  string
+	FlowName  string
+	FlowRunID int64
 
 	FlowFile     string
 	FlowDataDir  string
@@ -88,6 +89,10 @@ func (f *Flow) GetInstance() int {
 	return f.instance
 }
 
+func (f *Flow) GetRunID() int64 {
+  return f.FlowRunID
+}
+
 func (f *Flow) ResetMetric() {
 	f.MetricError = 0
 	f.MetricExpire = 0
@@ -101,6 +106,7 @@ func (f *Flow) Lock() bool {
 	defer f.m.Unlock()
 
 	if f.instance == 0 || f.instance < f.FlowInstance {
+		f.FlowRunID += 1
 		f.instance += 1
 		return true
 	}

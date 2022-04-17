@@ -38,6 +38,7 @@ const (
 
 	LOG_CONFIG_APPLY               = "config apply"
 	LOG_CONFIG_ERROR               = "config error"
+	LOG_FLOW_CLEANUP               = "flow cleanup"
 	LOG_FLOW_IGNORE                = "flow ignore"
 	LOG_FLOW_INVALID               = "flow invalid"
 	LOG_FLOW_LOCK                  = "--- flow lock"

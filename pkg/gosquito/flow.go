@@ -128,6 +128,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		var flowUUID, _ = uuid.NewRandom()
 		var flowHash = core.GenUID()
 		var flowName string
+		var flowRunID = int64(0)
 
 		var flowCleanup bool
 		var flowInstance int
@@ -279,9 +280,10 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		// Create flow.
 
 		flow := &core.Flow{
-			FlowUUID: flowUUID,
-			FlowHash: flowHash,
-			FlowName: flowName,
+			FlowUUID:  flowUUID,
+			FlowHash:  flowHash,
+			FlowName:  flowName,
+			FlowRunID: flowRunID,
 
 			FlowFile:     fileName,
 			FlowDataDir:  filepath.Join(appConfig.GetString(core.VIPER_DEFAULT_FLOW_DATA), flowName, core.DEFAULT_DATA_DIR),
@@ -493,15 +495,15 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
-
 	var err error
-
-	flowLogFields := log.Fields{
-		"hash": flow.FlowHash,
-		"flow": flow.FlowName,
-	}
+	var flowLogFields log.Fields
 
 	if flow.Lock() {
+		flowLogFields = log.Fields{
+			"hash": flow.FlowHash,
+			"run":  flow.GetRunID(),
+			"flow": flow.FlowName,
+		}
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_START)
 		defer flow.Unlock()
 
@@ -516,6 +518,7 @@ func runFlow(flow *core.Flow) {
 	cleanFlowTemp := func() {
 		if flow.FlowCleanup {
 			_ = os.RemoveAll(flow.FlowTempDir)
+			log.WithFields(flowLogFields).Info(core.LOG_FLOW_CLEANUP)
 		}
 	}
 
@@ -528,6 +531,7 @@ func runFlow(flow *core.Flow) {
 
 	log.WithFields(log.Fields{
 		"hash":   flow.FlowHash,
+		"run":    flow.GetRunID(),
 		"flow":   flow.FlowName,
 		"plugin": flow.InputPlugin.GetName(),
 	}).Info(core.LOG_FLOW_RECEIVE)
@@ -573,6 +577,7 @@ func runFlow(flow *core.Flow) {
 	if len(flow.ProcessPlugins) > 0 {
 		log.WithFields(log.Fields{
 			"hash":   flow.FlowHash,
+			"run":    flow.GetRunID(),
 			"flow":   flow.FlowName,
 			"plugin": flow.ProcessPluginsNames,
 		}).Info(core.LOG_FLOW_PROCESS)
@@ -632,6 +637,7 @@ func runFlow(flow *core.Flow) {
 	if flow.OutputPlugin != nil {
 		log.WithFields(log.Fields{
 			"hash":   flow.FlowHash,
+			"run":    flow.GetRunID(),
 			"flow":   flow.FlowName,
 			"plugin": flow.OutputPlugin.GetName(),
 		}).Info(core.LOG_FLOW_SEND)
@@ -687,8 +693,8 @@ func runFlow(flow *core.Flow) {
 			// Skip flow if there are problems with sending.
 			if err != nil {
 				atomic.AddInt32(&flow.MetricError, 1)
-				cleanFlowTemp()
 				flow.OutputPlugin.FlowLog(err)
+				cleanFlowTemp()
 				logFlowStop()
 				return
 
