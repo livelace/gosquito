@@ -169,16 +169,18 @@ stopWaiting:
 		symlinkDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
 
 		if err := core.CreateDirIfNotExist(symlinkDir); err != nil {
-			core.LogInputPlugin(p.LogFields, "",
+			core.LogInputPlugin(p.LogFields, "fetch",
 				fmt.Errorf(core.ERROR_PLUGIN_CREATE_TEMP.Error(), err))
 			return newFile, err
 		}
 
 		if err := core.SymlinkFile(localFile, newFile); err != nil {
-			core.LogInputPlugin(p.LogFields, "",
+			core.LogInputPlugin(p.LogFields, "fetch",
 				fmt.Errorf(core.ERROR_SYMLINK_ERROR.Error(), err))
 			return newFile, err
-		}
+		} else {
+      core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink created: %v -> %v", localFile, newFile))
+    }
 
 		core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, newFile))
 
