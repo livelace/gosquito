@@ -647,11 +647,11 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-          info := fmt.Sprintf("database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
-						core.BytesToSize(storage.DatabaseSize), storage.FileCount, 
+          msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v, state: %v"
+          info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount, 
             core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country), 
             s.Ip, time.Unix(int64(s.LastActiveDate), 0), time.Unix(int64(s.LogInDate), 0), 
-            p.OptionProxyEnable, p.ConnectionState)
+            p.OptionProxyEnable, len(p.ChatsById), len(p.UsersById), p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
