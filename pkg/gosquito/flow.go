@@ -533,7 +533,6 @@ func runFlow(flow *core.Flow) {
 		"hash":   flow.FlowHash,
 		"run":    flow.GetRunID(),
 		"flow":   flow.FlowName,
-		"plugin": flow.InputPlugin.GetName(),
 	}).Info(core.LOG_FLOW_RECEIVE)
 
 	// Get data.
