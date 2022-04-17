@@ -561,7 +561,6 @@ func runFlow(flow *core.Flow) {
 	if len(inputData) == 0 {
 		atomic.AddInt32(&flow.MetricNoData, 1)
 		flow.InputPlugin.FlowLog(core.ERROR_NO_NEW_DATA)
-		cleanFlowTemp()
 		logFlowStop()
 		return
 	} else {

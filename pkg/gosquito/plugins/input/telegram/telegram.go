@@ -179,7 +179,7 @@ stopWaiting:
 				fmt.Errorf(core.ERROR_SYMLINK_ERROR.Error(), err))
 			return newFile, err
 		} else {
-      core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink created: %v -> %v", localFile, newFile))
+      core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink: %v -> %v", localFile, newFile))
     }
 
 		core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, newFile))
