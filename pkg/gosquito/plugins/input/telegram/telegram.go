@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"code.cloudfoundry.org/bytefmt"
 	"github.com/google/uuid"
 	"github.com/livelace/go-tdlib/client"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -549,10 +548,10 @@ func receiveMessages(p *Plugin) {
 					// Warnings.
 					if messageFileSize > 0 {
 						warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, messageFileSize, p.OptionFileMaxSize))
+							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFileMaxSize)))
 
 						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, bytefmt.ByteSize(uint64(messageFileSize)), bytefmt.ByteSize(uint64(p.OptionFileMaxSize))))
+							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFileMaxSize)))
 					}
 
 					// Send data to channel.
@@ -649,8 +648,8 @@ func showStatus(p *Plugin) {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
           info := fmt.Sprintf("database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, state: %v",
-						bytefmt.ByteSize(uint64(storage.DatabaseSize)), storage.FileCount, 
-            bytefmt.ByteSize(uint64(storage.FilesSize)), strings.ToLower(s.Country), 
+						core.BytesToSize(storage.DatabaseSize), storage.FileCount, 
+            core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country), 
             s.Ip, time.Unix(int64(s.LastActiveDate), 0), time.Unix(int64(s.LogInDate), 0), 
             p.OptionProxyEnable, p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)

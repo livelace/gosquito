@@ -8,12 +8,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/dgraph-io/badger/v3"
-	"github.com/gabriel-vasile/mimetype"
-	"github.com/google/renameio"
-	"github.com/itchyny/gojq"
-	log "github.com/livelace/logrus"
-	"github.com/spf13/viper"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -25,6 +19,14 @@ import (
 	"strings"
 	tmpl "text/template"
 	"time"
+
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/dgraph-io/badger/v3"
+	"github.com/gabriel-vasile/mimetype"
+	"github.com/google/renameio"
+	"github.com/itchyny/gojq"
+	log "github.com/livelace/logrus"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -48,6 +50,10 @@ func Base64Decode(s string) (string, error) {
 
 func Base64Encode(s string) string {
 	return b64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func BytesToSize(s int64) string {
+  return bytefmt.ByteSize(uint64(s)) 
 }
 
 func CheckPluginParams(availableParams *map[string]int, params *map[string]interface{}) error {
