@@ -3,8 +3,8 @@ properties([
         artifactDaysToKeepStr: '',
         artifactNumToKeepStr: '',
         daysToKeepStr: '30',
-        numToKeepStr: '30')
-    ),
+        numToKeepStr: '30'
+    )),
     parameters([
         separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a4f'),
         [
