@@ -38,6 +38,7 @@ const (
 	DEFAULT_SHOW_USER         = false
 	DEFAULT_STATUS_ENABLE     = true
 	DEFAULT_STATUS_PERIOD     = "5m"
+	DEFAULT_STORAGE_OPTIMIZE  = true
 	DEFAULT_STORAGE_PERIOD    = "1h"
 	DEFAULT_USERS_DATA        = "users.data"
 	MAX_INSTANCE_PER_APP      = 1
@@ -152,41 +153,6 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 	}
 
 stopWaiting:
-
-	// Create symlink with new file name inside plugin's temp dir.
-	if p.OptionOriginalFileName {
-		var oldName = ""
-		var oldExt = ""
-
-		if originalFileName != "" {
-			oldName, oldExt = core.GetFileNameAndExtension(originalFileName)
-		} else {
-			oldName, oldExt = core.GetFileNameAndExtension(localFile)
-		}
-
-		newName := fmt.Sprintf("%s_%s%s", oldName, core.GenUID(), oldExt)
-		newFile := filepath.Join(p.PluginTempDir, newName)
-		symlinkDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
-
-		if err := core.CreateDirIfNotExist(symlinkDir); err != nil {
-			core.LogInputPlugin(p.LogFields, "fetch",
-				fmt.Errorf(core.ERROR_PLUGIN_CREATE_TEMP.Error(), err))
-			return newFile, err
-		}
-
-		if err := core.SymlinkFile(localFile, newFile); err != nil {
-			core.LogInputPlugin(p.LogFields, "fetch",
-				fmt.Errorf(core.ERROR_SYMLINK_ERROR.Error(), err))
-			return newFile, err
-		} else {
-			core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink: %v -> %v", localFile, newFile))
-		}
-
-		core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, newFile))
-
-		return newFile, nil
-	}
-
 	core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, localFile))
 
 	return localFile, nil
@@ -718,6 +684,7 @@ type Plugin struct {
 	OptionFilePath            string
 	OptionForce               bool
 	OptionForceCount          int
+	OptionIgnoreFileName      bool
 	OptionInput               []string
 	OptionLogLevel            int
 	OptionMatchSignature      []string
@@ -734,6 +701,7 @@ type Plugin struct {
 	OptionShowUser            bool
 	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
+	OptionStorageOptimize     bool
 	OptionStoragePeriod       int64
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
@@ -997,6 +965,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"show_user":         -1,
 		"status_enable":     -1,
 		"status_period":     -1,
+		"storage_optimize":  -1,
 		"storage_period":    -1,
 		"original_filename": -1,
 	}
@@ -1267,6 +1236,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
 	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
 
+	if plugin.OptionOriginalFileName {
+		plugin.OptionIgnoreFileName = false
+	} else {
+		plugin.OptionIgnoreFileName = true
+	}
+
 	// proxy_enable.
 	setProxyEnable := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1363,6 +1338,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStatusPeriod((*pluginConfig.PluginParams)["status_period"])
 	core.ShowPluginParam(plugin.LogFields, "status_period", plugin.OptionStatusPeriod)
 
+	// storage_optimize.
+	setStorageOptimize := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["storage_optimize"] = 0
+			plugin.OptionStorageOptimize = v
+		}
+	}
+	setStorageOptimize(DEFAULT_STORAGE_OPTIMIZE)
+	setStorageOptimize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.storage_optimize", template)))
+	setStorageOptimize((*pluginConfig.PluginParams)["storage_optimize"])
+	core.ShowPluginParam(plugin.LogFields, "storage_optimize", plugin.OptionStorageOptimize)
+
 	// storage_period.
 	setStoragePeriod := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
@@ -1435,9 +1422,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		ApplicationVersion:     plugin.OptionAppVersion,
 		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            plugin.OptionDeviceModel,
-		EnableStorageOptimizer: true,
+		EnableStorageOptimizer: plugin.OptionStorageOptimize,
 		FilesDirectory:         plugin.OptionFilePath,
-		IgnoreFileNames:        true,
+		IgnoreFileNames:        plugin.OptionIgnoreFileName,
 		SystemLanguageCode:     "en",
 		SystemVersion:          plugin.Flow.FlowName,
 		UseChatInfoDatabase:    true,
