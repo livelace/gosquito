@@ -179,8 +179,8 @@ stopWaiting:
 				fmt.Errorf(core.ERROR_SYMLINK_ERROR.Error(), err))
 			return newFile, err
 		} else {
-      core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink: %v -> %v", localFile, newFile))
-    }
+			core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("symlink: %v -> %v", localFile, newFile))
+		}
 
 		core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, newFile))
 
@@ -649,11 +649,11 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-          msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v, state: %v"
-          info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount, 
-            core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country), 
-            s.Ip, time.Unix(int64(s.LastActiveDate), 0), time.Unix(int64(s.LogInDate), 0), 
-            p.OptionProxyEnable, len(p.ChatsById), len(p.UsersById), p.ConnectionState)
+					msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v, state: %v"
+					info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
+						s.Ip, time.Unix(int64(s.LastActiveDate), 0), time.Unix(int64(s.LogInDate), 0),
+						p.OptionProxyEnable, len(p.ChatsById), len(p.UsersById), p.ConnectionState)
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
@@ -665,9 +665,9 @@ func showStatus(p *Plugin) {
 
 func storageOptimize(p *Plugin) {
 	for {
-    p.m.Lock()
+		p.m.Lock()
 		_, err := p.TdlibClient.OptimizeStorage(&client.OptimizeStorageRequest{})
-    p.m.Unlock()
+		p.m.Unlock()
 
 		if err != nil {
 			core.LogInputPlugin(p.LogFields, "storage", fmt.Errorf("error: %v", err))
@@ -715,6 +715,7 @@ type Plugin struct {
 	OptionExpireLast          int64
 	OptionFetchTimeout        int
 	OptionFileMaxSize         int64
+	OptionFilePath            string
 	OptionForce               bool
 	OptionForceCount          int
 	OptionInput               []string
@@ -781,7 +782,7 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	temp := make([]*core.DataItem, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -942,7 +943,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Flow: pluginConfig.Flow,
 		LogFields: log.Fields{
 			"hash":   pluginConfig.Flow.FlowHash,
-			"run":   pluginConfig.Flow.GetRunID(),
+			"run":    pluginConfig.Flow.GetRunID(),
 			"flow":   pluginConfig.Flow.FlowName,
 			"file":   pluginConfig.Flow.FlowFile,
 			"plugin": PLUGIN_NAME,
@@ -983,6 +984,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"device_model":      -1,
 		"fetch_timeout":     -1,
 		"file_max_size":     -1,
+		"file_path":         -1,
 		"input":             1,
 		"log_level":         -1,
 		"match_signature":   -1,
@@ -1170,6 +1172,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFileMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_max_size", template)))
 	setFileMaxSize((*pluginConfig.PluginParams)["file_max_size"])
 	core.ShowPluginParam(plugin.LogFields, "file_max_size", plugin.OptionFileMaxSize)
+
+	// file_path.
+	setFilePath := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["file_path"] = 0
+			plugin.OptionFilePath = v
+		}
+	}
+	setFilePath(filepath.Join(plugin.PluginDataDir, DEFAULT_FILES_DIR))
+	setFilePath(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_path", template)))
+	setFilePath((*pluginConfig.PluginParams)["file_path"])
+	core.ShowPluginParam(plugin.LogFields, "file_path", plugin.OptionFilePath)
 
 	// force.
 	setForce := func(p interface{}) {
@@ -1422,7 +1436,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            plugin.OptionDeviceModel,
 		EnableStorageOptimizer: true,
-		FilesDirectory:         filepath.Join(plugin.PluginDataDir, DEFAULT_FILES_DIR),
+		FilesDirectory:         plugin.OptionFilePath,
 		IgnoreFileNames:        true,
 		SystemLanguageCode:     "en",
 		SystemVersion:          plugin.Flow.FlowName,

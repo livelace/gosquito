@@ -59,6 +59,7 @@ type Telegram struct {
 | app_version       | -        | string | +    | -        | v3.6.0-2158be | "0.0.1"            | Custom application version.                                                                                |
 | device_model      | -        | string | +    | -        | gosquito      | "Redmi Note 42"    | Custom device model.                                                                                       |
 | fetch_timeout     | -        | string | -    | +        | "1h"          | "24h"              | Maximum time for file download.
+| file_path         | -        | string | -    | +        | <PLUGIN_DIR>  | "/data/files"      | Directory where all downloaded files will be saved.
 | file_max_size     | -        | size   | -    | +        | "10m"         | "1g"               | Maximum file size for download.                                                                            |
 | **input**         | +        | array  | -    | +        | []            | ["breakingmash"]   | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
 | match_signature   | -        | array  | -    | +        | "[]"          | ["source", "time"] | Match new messages by signature.                                                                           |
