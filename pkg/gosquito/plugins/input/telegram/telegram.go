@@ -1553,14 +1553,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	go receiveState(&plugin)
 
-	go storageOptimize(&plugin)
-
 	if plugin.OptionAdsEnable {
 		go receiveAds(&plugin)
 	}
 
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
+	}
+
+	if plugin.OptionStorageOptimize {
+		go storageOptimize(&plugin)
 	}
 	// -------------------------------------------------------------------------
 
