@@ -945,7 +945,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_zone":             -1,
 
 		"ads_enable":        -1,
-		"ads_period":        -1,
+		"ads_period":        1,
 		"api_id":            1,
 		"api_hash":          1,
 		"app_version":       -1,
@@ -961,6 +961,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"proxy_port":        -1,
 		"proxy_server":      -1,
 		"proxy_type":        -1,
+		"session_ttl":       -1,
 		"show_chat":         -1,
 		"show_user":         -1,
 		"status_enable":     -1,
@@ -1290,6 +1291,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setProxyType((*pluginConfig.PluginParams)["proxy_type"])
 	core.ShowPluginParam(plugin.LogFields, "proxy_type", plugin.OptionProxyType)
 
+	// session_ttl.
+	setSessionTTL := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["session_ttl"] = 0
+			plugin.OptionSessionTTL = v
+		}
+	}
+	setSessionTTL(DEFAULT_SESSION_TTL)
+	setSessionTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.session_ttl", template)))
+	setSessionTTL((*pluginConfig.PluginParams)["session_ttl"])
+	core.ShowPluginParam(plugin.LogFields, "session_ttl", plugin.OptionSessionTTL)
+
 	// show_chat.
 	setShowChat := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1441,6 +1454,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	} else {
 		plugin.TdlibClient = tdlibClient
 	}
+
+  // Set session TTL.
+	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: int32(plugin.OptionSessionTTL)})
 
 	// Load already known chats ID mappings by their username (not available in API).
 	// interfax_ru = -1001019826615

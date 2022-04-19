@@ -4,23 +4,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
+	"time"
+
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"reflect"
-	"time"
 )
 
 const (
 	PLUGIN_NAME = "minio"
 
-	DEFAULT_SSL_ENABLE = true
+	DEFAULT_SOURCE_DELETE = false
+	DEFAULT_SSL_ENABLE    = true
 )
 
 var (
 	ERROR_ACTION_UNKNOWN = errors.New("action unknown: %s")
 	ERROR_IN_OUT_AMOUNT  = errors.New("input and output objects amount not equal: %d != %d")
+	ERROR_DELETE_FILE    = errors.New("cannot delete file: %s, %v")
 )
 
 func minioPut(p *Plugin, file string, object string, timeout int) error {
@@ -55,6 +59,13 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 		return fmt.Errorf("timeout: %s", file)
 	}
 
+	if p.OptionSourceDelete {
+		err := os.Remove(file)
+		if err != nil {
+			core.LogProcessPlugin(p.LogFields, "", fmt.Errorf(ERROR_DELETE_FILE.Error(), file, err))
+		}
+	}
+
 	return nil
 }
 
@@ -68,17 +79,18 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionAccessKey string
-	OptionAction    string
-	OptionBucket    string
-	OptionInclude   bool
-	OptionInput     []string
-	OptionOutput    []string
-	OptionRequire   []int
-	OptionSSL       bool
-	OptionSecretKey string
-	OptionServer    string
-	OptionTimeout   int
+	OptionAccessKey    string
+	OptionAction       string
+	OptionBucket       string
+	OptionInclude      bool
+	OptionInput        []string
+	OptionOutput       []string
+	OptionRequire      []int
+	OptionSourceDelete bool
+	OptionSSL          bool
+	OptionSecretKey    string
+	OptionServer       string
+	OptionTimeout      int
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -109,7 +121,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	temp := make([]*core.DataItem, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
@@ -189,16 +201,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require":  -1,
 		"template": -1,
 
-		"access_key": 1,
-		"action":     1,
-		"bucket":     1,
-		"cred":       -1,
-		"input":      1,
-		"output":     1,
-		"secret_key": 1,
-		"server":     1,
-		"ssl":        -1,
-		"timeout":    -1,
+		"access_key":    1,
+		"action":        1,
+		"bucket":        1,
+		"cred":          -1,
+		"input":         1,
+		"output":        1,
+		"secret_key":    1,
+		"server":        1,
+		"source_delete": -1,
+		"ssl":           -1,
+		"timeout":       -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -308,6 +321,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRequire(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.require", template)))
 	setRequire((*pluginConfig.PluginParams)["require"])
 	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
+
+	// source_delete.
+	setSourceDelete := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["source_delete"] = 0
+			plugin.OptionSourceDelete = v
+		}
+	}
+	setSourceDelete(DEFAULT_SOURCE_DELETE)
+	setSourceDelete(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.source_delete", template)))
+	setSourceDelete((*pluginConfig.PluginParams)["source_delete"])
+	core.ShowPluginParam(plugin.LogFields, "source_delete", plugin.OptionSourceDelete)
 
 	// ssl.
 	setSSL := func(p interface{}) {

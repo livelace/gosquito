@@ -64,19 +64,20 @@ type Telegram struct {
 | **input**         | +        | array  | -    | +        | []            | ["breakingmash"]   | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
 | match_signature   | -        | array  | -    | +        | "[]"          | ["source", "time"] | Match new messages by signature.                                                                           |
 | match_ttl         | -        | string | -    | +        | "1d"          | "24h"              | TTL (Time To Live) for matched signatures.                                                                 |
-| original_filename | -        | bool   | -    | +        | true          | false              | Use original file names with random generated suffix.                                                      |
+| original_filename | -        | bool   | -    | +        | true          | false              | Use original file names.                                                                                   |
 | proxy_enable      | -        | bool   | -    | +        | false         | true               | Enable/disable proxy.
 | proxy_port        | -        | int    | -    | +        | 9050          | true               | Proxy port number.
 | proxy_server      | -        | string | -    | +        | "127.0.0.1"   | true               | Proxy server address.
 | proxy_username    | -        | string | +    | -        | ""            | "alex"             | Proxy username.                                                                                            |
 | proxy_password    | -        | string | +    | -        | ""            | "a1eXPass"         | Proxy password.                                                                                            |
 | proxy_type        | -        | string | -    | +        | "socks"       | "http"             | Use original file names with random generated suffix.                                                      |
+| session_ttl       | -        | int    | -    | +        | 366           | 90                 | Session TTL (days).
 | show_chat         | -        | bool   | -    | +        | false         | true               | Show collected chats data in plugin output.                                                                |
 | show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
 | status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                                             |
 | status_period     | -        | string | -    | +        | "5m"          | "1h"               | Interval for showing session status in plugin output.                                                      |
-| storage_optimize  | -        | bool   | -    | +        | true          | false              | Enable/disable storage optimization (clean old data).                                                            |
-| storage_period    | -        | string | -    | +        | "1h"          | "24h"              | Storage optimization interval.                                                            |
+| storage_optimize  | -        | bool   | -    | +        | true          | false              | Enable/disable storage optimization (clean old data).                                                      |
+| storage_period    | -        | string | -    | +        | "1h"          | "24h"              | Storage optimization interval.                                                                             |
 | log_level         | -        | int    | -    | +        | 0             | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 
