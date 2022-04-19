@@ -62,7 +62,7 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 	if p.OptionSourceDelete {
 		err := os.Remove(file)
 		if err != nil {
-			core.LogProcessPlugin(p.LogFields, "", fmt.Errorf(ERROR_DELETE_FILE.Error(), file, err))
+			core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_DELETE_FILE.Error(), file, err))
 		}
 	}
 
