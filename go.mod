@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/go-getter v1.5.9
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
-	github.com/livelace/go-tdlib v0.6.1-0.20220415194230-347cf81c89f1
+	github.com/livelace/go-tdlib v0.6.1-0.20220420134107-ab494efe4e0d
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost-server/v6 v6.0.2
 	github.com/minio/minio-go/v7 v7.0.15
