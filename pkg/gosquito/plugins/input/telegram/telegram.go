@@ -20,7 +20,7 @@ const (
 	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_ENABLE        = true
 	DEFAULT_ADS_PERIOD        = "5m"
-	DEFAULT_BUFFER_LENGHT     = 100000000
+	DEFAULT_BUFFER_LENGHT     = 2000000
 	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
