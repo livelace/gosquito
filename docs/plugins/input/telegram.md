@@ -100,23 +100,55 @@ flow:
       cred: "creds.telegram.default"
       template: "templates.telegram.default"
       input: ["breakingmash", "interfax_ru", "izvestia"]
+      fetch_timeout: "3h"
+      file_path: "/tmp"
+      status_period: "5m"
+      storage_period: "5h"
 
   process:
     - id: 0
-      alias: "replace newline"
-      plugin: "regexpreplace"
+      alias: "exclude ads"
+      plugin: "regexpmatch"
       params:
-        input:  ["telegram.text"]
-        output: ["data.text0"]
-        regexp: ["\n"]
-        replace: ["<br>"]
+        include: true
+        input:  ["telegram.username"]
+        regexp: ["ads"]
+        match_not: true
 
     - id: 1
-      plugin: "echo"
-      alias: "show replaced text"
+      alias: "extract filename"
+      plugin: "regexpfind"
       params:
-        input: ["data.text0"]
+        require: [0]
+        input:  ["telegram.messagemedia"]
+        output: ["data.array0"]
+        regexp: ["^(.+)\\/([^\\/]+)$"]
+        group:  [[2]]
 
+    - id: 2
+      plugin: "echo"
+      alias: "show text"
+      params:
+        require: [0]
+        input: [
+          "telegram.chattitle", 
+          "telegram.chattype", 
+          "telegram.messageid", 
+          "telegram.messagemedia", 
+          "telegram.messagesenderid", 
+          "telegram.messagetext", 
+          "telegram.messagetexturl", 
+          "telegram.messagetype", 
+          "telegram.messageurl", 
+          "telegram.userid", 
+          "telegram.username", 
+          "telegram.usertype", 
+          "telegram.userfirstname", 
+          "telegram.userlastname", 
+          "telegram.userphone", 
+          "data.array0",
+          "---", 
+        ]
 ```
 
 
@@ -128,7 +160,7 @@ api_id = "<API_ID>"
 api_hash = "<API_HASH>"
 
 [templates.telegram.default]
-#file_max_size = "30m"
+file_max_size = "3g"
 #log_level = 90
 ```
 
