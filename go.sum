@@ -624,6 +624,8 @@ github.com/livelace/go-tdlib v0.6.1-0.20220422124229-d83aa5100c37 h1:GhCgQv61xkd
 github.com/livelace/go-tdlib v0.6.1-0.20220422124229-d83aa5100c37/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
 github.com/livelace/go-tdlib v0.6.1-0.20220422141540-a6be12d83b93 h1:++x9COBv1bn636w7tpEnVjO2dPMfTSoQ28/tlO63OoI=
 github.com/livelace/go-tdlib v0.6.1-0.20220422141540-a6be12d83b93/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
+github.com/livelace/go-tdlib v0.6.1-0.20220422154044-d5f09ef7cc20 h1:VbwAkDmhyEJ6a42c5d6SrMKNe9KDjrMk5arvfs5ZCMA=
+github.com/livelace/go-tdlib v0.6.1-0.20220422154044-d5f09ef7cc20/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
 github.com/livelace/logrus v1.6.1 h1:mdaba7YSyZaywEV2Wo88Gnbv15e8TDQKpo6qH4zllSg=
 github.com/livelace/logrus v1.6.1/go.mod h1:OEe+iWSGmgDZ8hTnPzfb9RuwVNvifXCsdg/jAacLKsw=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
