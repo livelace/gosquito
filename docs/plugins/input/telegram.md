@@ -75,7 +75,7 @@ type Telegram struct {
 | show_chat         | -        | bool   | -    | +        | false         | true               | Show collected chats data in plugin output.                                                                |
 | show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
 | status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                                             |
-| status_period     | -        | string | -    | +        | "5m"          | "1h"               | Interval for showing session status in plugin output.                                                      |
+| status_period     | -        | string | -    | +        | "1h"          | "5m"               | Interval for showing session status in plugin output.                                                      |
 | storage_optimize  | -        | bool   | -    | +        | true          | false              | Enable/disable storage optimization (clean old data).                                                      |
 | storage_period    | -        | string | -    | +        | "1h"          | "24h"              | Storage optimization interval.                                                                             |
 | log_level         | -        | int    | -    | +        | 0             | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
