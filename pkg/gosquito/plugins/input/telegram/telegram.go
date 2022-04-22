@@ -342,8 +342,8 @@ func receiveMessages(p *Plugin) {
 	listener := p.TdlibClient.GetListener()
 
 	for {
-		// Loop over message events.
-		for update := range listener.Updates {
+		select {
+		case update := <-listener.Updates:
 			switch update.(type) {
 
 			// Log all updated users profiles. Passive data gathering.
@@ -561,13 +561,11 @@ func receiveMessages(p *Plugin) {
 					core.LogInputPlugin(p.LogFields, "",
 						fmt.Sprintf("chat filtered, message excluded: %v", messageChatId))
 				}
+
+				// Save users between updates receiving.
+				_ = saveUsers(p)
 			}
-
-			// Save users between updates receiving.
-			_ = saveUsers(p)
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -575,7 +573,8 @@ func receiveState(p *Plugin) {
 	listener := p.TdlibClient.GetListener()
 
 	for {
-		for update := range listener.Updates {
+		select {
+		case update := <-listener.Updates:
 			switch update.(type) {
 			case *client.UpdateConnectionState:
 				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
@@ -592,8 +591,6 @@ func receiveState(p *Plugin) {
 				}
 			}
 		}
-
-		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -615,7 +612,7 @@ func showStatus(p *Plugin) {
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-          msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, last state: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v"
+					msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, last state: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v"
 					info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount,
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0), p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
@@ -1455,7 +1452,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		plugin.TdlibClient = tdlibClient
 	}
 
-  // Set session TTL.
+	// Set session TTL.
 	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: int32(plugin.OptionSessionTTL)})
 
 	// Load already known chats ID mappings by their username (not available in API).
