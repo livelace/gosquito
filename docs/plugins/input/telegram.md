@@ -56,7 +56,7 @@ type Telegram struct {
 | ads_period        | -        | string | -    | -        | "5m"          | "1h"               | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
 | **api_id**        | +        | string | +    | -        | ""            | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | **api_hash**      | +        | string | +    | -        | ""            | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| app_version       | -        | string | +    | -        | v3.6.1-cea7d3 | "0.0.1"            | Custom application version.                                                                                |
+| app_version       | -        | string | +    | -        | v3.6.2-439100 | "0.0.1"            | Custom application version.                                                                                |
 | device_model      | -        | string | +    | -        | gosquito      | "Redmi Note 42"    | Custom device model.                                                                                       |
 | fetch_timeout     | -        | string | -    | +        | "1h"          | "24h"              | Maximum time for file download.
 | file_path         | -        | string | -    | +        | <PLUGIN_DIR>  | "/data/files"      | Directory where all downloaded files will be saved.
