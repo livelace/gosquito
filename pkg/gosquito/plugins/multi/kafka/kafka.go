@@ -291,7 +291,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		// Try to decode message.
 		var messageData interface{}
 
-		if p.OptionConfluentAvro {
+		if p.OptionConfluentAvro && message.Value[0] == 0 {
 			schemaId := binary.BigEndian.Uint32(message.Value[1:5])
 
 			if _, ok := p.SchemaCache[schemaId]; !ok {
