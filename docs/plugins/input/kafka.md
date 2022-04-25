@@ -4,13 +4,30 @@
 
 ### Data structure:
 
+There is no static structure of inbound Kafka messages. Schema may specefied by user or fetched from schema registry.
+Schema's fields are just copied to DataItem fields:
+
 ```go
-type Kafka struct {
-	LANG* string
-	MEDIA []string
-	TAGS  []string
-	TEXT* string
-	URLS  []string
+type Data struct {
+	ARRAY0 []string
+	ARRAY1 []string
+	ARRAY2 []string
+	ARRAY3 []string
+	ARRAY4 []string
+	ARRAY6 []string
+	ARRAY7 []string
+	ARRAY8 []string
+	ARRAY9 []string
+	TEXT0  string
+	TEXT1  string
+	TEXT2  string
+	TEXT3  string
+	TEXT4  string
+	TEXT5  string
+	TEXT6  string
+	TEXT7  string
+	TEXT8  string
+	TEXT9  string
 }
 ```
 
