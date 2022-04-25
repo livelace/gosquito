@@ -48,16 +48,16 @@ type Data struct {
 	ARRAY7 []string
 	ARRAY8 []string
 	ARRAY9 []string
-	TEXT0  string
-	TEXT1  string
-	TEXT2  string
-	TEXT3  string
-	TEXT4  string
-	TEXT5  string
-	TEXT6  string
-	TEXT7  string
-	TEXT8  string
-	TEXT9  string
+	TEXT0*  string
+	TEXT1*  string
+	TEXT2*  string
+	TEXT3*  string
+	TEXT4*  string
+	TEXT5*  string
+	TEXT6*  string
+	TEXT7*  string
+	TEXT8*  string
+	TEXT9*  string
 }
 ```
 
