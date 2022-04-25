@@ -14,26 +14,27 @@ Kafka messages are generated in [Avro](https://en.wikipedia.org/wiki/Apache_Avro
 
 ### Plugin parameters:
 
-| Param                   | Required |  Type  | Template |         Default         |                      Example                       | Description                                                                                                                           |
-|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:--------------------------------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------|
-| **brokers**             |    +     | string |    +     |           ""            |             "127.0.0.1:9092,host:1111"             | List of Kafka brokers.                                                                                                                |
-| client_id               |    -     | string |    +     |       <FLOW_NAME>       |                     "gosquito"                     | Client identification.                                                                                                                |
-| compress                |    -     | string |    +     |         "none"          |                       "zstd"                       | Compression algorithm.                                                                                                                |
-| confluent_avro          |    -     |  bool  |    +     |          false          |                        true                        | Send [Confluent Avro (magic byte + schema)](https://docs.confluent.io/current/schema-registry/serdes-develop/index.html#wire-format). |
-| message_key             |    -     | string |    +     |         "none"          |                     "partkey1"                     | Message partition key.                                                                                                                |
-| **output**              |    +     | array  |    +     |           []            |                      ["news"]                      | List of Kafka topics.                                                                                                                 |
-| **schema**              |    +     |  map   |    +     |          map[]          |                    see example                     | Dynamic schema for Kafka messages.                                                                                                    |
-| schema_record_name      |    -     | string |    +     |       "DataItem"        |                      "event"                       | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                    |
-| schema_record_namespace |    -     | string |    +     | "ru.livelace.gosquito"  |                   "com.example"                    | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                               |
-| schema_registry         |    -     | string |    +     | "http://127.0.0.1:8081" |             "https://host.example.com"             | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                            |
-| schema_subject_strategy |    -     | string |    +     |       "TopicName"       | "TopicName",<br>"RecordName",<br>"TopicRecordName" | [Subject name strategy](https://docs.confluent.io/current/schema-registry/serdes-develop/index.html#subject-name-strategy).           |
+| Param                   | Required | Type   | Template | Default                 | Example                                            | Description                                                                                                                                    |
+|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:--------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------|
+| **brokers**             | +        | string | +        | ""                      | "127.0.0.1:9092,host:1111"                         | List of Kafka brokers.                                                                                                                         |
+| client_id               | -        | string | +        | <FLOW_NAME>             | "gosquito"                                         | Client identification.                                                                                                                         |
+| compress                | -        | string | +        | "none"                  | "zstd"                                             | Compression algorithm.                                                                                                                         |
+| confluent_avro          | -        | bool   | +        | false                   | true                                               | Send [Confluent Avro (magic byte + schema)](https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format). |
+| log_level               | -        | int    | +        | 0                       | 7                                                  | librdkafka log level.                                                                                                                          |
+| message_key             | -        | string | +        | "none"                  | "partkey1"                                         | Message partition key.                                                                                                                         |
+| **output**              | +        | array  | +        | []                      | ["news"]                                           | List of Kafka topics.                                                                                                                          |
+| **schema**              | +        | map    | +        | map[]                   | see example                                        | Dynamic schema for Kafka messages.                                                                                                             |
+| schema_record_name      | -        | string | +        | "DataItem"              | "event"                                            | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                             |
+| schema_record_namespace | -        | string | +        | "ru.livelace.gosquito"  | "com.example"                                      | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                        |
+| schema_registry         | -        | string | +        | "http://127.0.0.1:8081" | "https://host.example.com"                         | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                     |
+| schema_subject_strategy | -        | string | +        | "TopicName"             | "TopicName",<br>"RecordName",<br>"TopicRecordName" | [Subject name strategy](https://docs.confluent.io/current/schema-registry/serdes-develop/index.html#subject-name-strategy).                    |
 
 
 ### Flow sample:
 
 ```yaml
 flow:
-  name: "kafka-example"
+  name: "kafka-output-example"
 
   input:
     plugin: "rss"
@@ -45,8 +46,8 @@ flow:
   output:
     plugin: "kafka"
     params:
-      template: "templates.rss.kafka.default"
-      output: ["kafka-example"]
+      template: "templates.kafka.output.default"
+      output: ["test"]
       
       # These fields have higher priority over template fields.
       # Fields will be merged and sorted alphabetically. 
@@ -59,10 +60,10 @@ flow:
 ### Config sample:
 
 ```toml
-[templates.rss.kafka.default]
+[templates.kafka.output.default]
 brokers = "127.0.0.1:9092"
 
-[templates.rss.kafka.default.schema]
+[templates.kafka.output.default.schema]
 flow     = "flow"
 plugin   = "plugin"
 source   = "source"

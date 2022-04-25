@@ -255,7 +255,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -528,13 +528,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// "1" - strictly required.
 	// "0" - will be set if parameter is set somehow (defaults, template, config etc.).
 	availableParams := map[string]int{
-		"cred":        -1,
-		"include":     -1,
-		"require":     -1,
-		"template":    -1,
-		"timeout":     -1,
-		"time_format": -1,
-		"time_zone":   -1,
+		"cred":     -1,
+		"include":  -1,
+		"require":  -1,
+		"template": -1,
+		"timeout":  -1,
 
 		"auth":       -1,
 		"body":       -1,
@@ -556,6 +554,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["input"] = 1
 		availableParams["match_signature"] = -1
 		availableParams["match_ttl"] = -1
+		availableParams["time_format"] = -1
+		availableParams["time_zone"] = -1
 		break
 	case "process":
 		availableParams["input"] = 1
@@ -694,6 +694,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 		core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
+		// time_format.
+		setTimeFormat := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["time_format"] = 0
+				plugin.OptionTimeFormat = v
+			}
+		}
+		setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+		setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
+		setTimeFormat((*pluginConfig.PluginParams)["time_format"])
+		core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
+
+		// time_zone.
+		setTimeZone := func(p interface{}) {
+			if v, b := core.IsTimeZone(p); b {
+				availableParams["time_zone"] = 0
+				plugin.OptionTimeZone = v
+			}
+		}
+		setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+		setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
+		setTimeZone((*pluginConfig.PluginParams)["time_zone"])
+		core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 		break
 
 	case "process":
@@ -884,30 +907,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
 	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
-
-	// time_format.
-	setTimeFormat := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["time_format"] = 0
-			plugin.OptionTimeFormat = v
-		}
-	}
-	setTimeFormat(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
-	setTimeFormat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format", template)))
-	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
-	core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
-
-	// time_zone.
-	setTimeZone := func(p interface{}) {
-		if v, b := core.IsTimeZone(p); b {
-			availableParams["time_zone"] = 0
-			plugin.OptionTimeZone = v
-		}
-	}
-	setTimeZone(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
-	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
-	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
-	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {

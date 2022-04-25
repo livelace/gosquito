@@ -794,14 +794,14 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		if len(p.OptionMatchSignature) > 0 {
 			for _, v := range p.OptionMatchSignature {
 				switch v {
-				case "messagetext":
-					itemSignature += item.TELEGRAM.MESSAGETEXT
-					break
-				case "messageurl":
-					itemSignature += item.TELEGRAM.MESSAGEURL
-					break
 				case "source":
 					itemSignature += item.SOURCE
+					break
+				case "telegram.messagetext":
+					itemSignature += item.TELEGRAM.MESSAGETEXT
+					break
+				case "telegram.messageurl":
+					itemSignature += item.TELEGRAM.MESSAGEURL
 					break
 				case "time":
 					itemSignature += item.TIME.String()
@@ -1209,6 +1209,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+    
+    for i := 0; i < len(plugin.OptionMatchSignature); i++ {
+        plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
+    }
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {

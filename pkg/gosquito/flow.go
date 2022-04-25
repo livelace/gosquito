@@ -7,8 +7,8 @@ import (
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
 	telegramIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/telegram"
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
+	kafkaMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/kafka"
 	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
-	kafkaOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/kafka"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
 	smtpOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/smtp"
@@ -316,6 +316,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		// Available "input" plugins.
 		switch flowBody.Flow.Input.Plugin {
+		case "kafka":
+			inputPlugin, err = kafkaMulti.Init(&inputPluginConfig)
 		case "resty":
 			inputPlugin, err = restyMulti.Init(&inputPluginConfig)
 		case "rss":
@@ -456,7 +458,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			// Available "output" plugins.
 			switch flowBody.Flow.Output.Plugin {
 			case "kafka":
-				outputPlugin, err = kafkaOut.Init(&outputPluginConfig)
+				outputPlugin, err = kafkaMulti.Init(&outputPluginConfig)
 			case "mattermost":
 				outputPlugin, err = mattermostOut.Init(&outputPluginConfig)
 			case "resty":
@@ -530,9 +532,9 @@ func runFlow(flow *core.Flow) {
 	// Input plugin.
 
 	log.WithFields(log.Fields{
-		"hash":   flow.FlowHash,
-		"run":    flow.GetRunID(),
-		"flow":   flow.FlowName,
+		"hash": flow.FlowHash,
+		"run":  flow.GetRunID(),
+		"flow": flow.FlowName,
 	}).Info(core.LOG_FLOW_RECEIVE)
 
 	// Get data.

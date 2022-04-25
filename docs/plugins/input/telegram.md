@@ -35,50 +35,50 @@ type Telegram struct {
 
 ### Generic parameters:
 
-| Param                 | Required |  Type  | Template |        Default        |
+| Param                 | Required | Type   | Template | Default               |
 |:----------------------|:--------:|:------:|:--------:|:---------------------:|
-| expire_action         |    -     | array  |    +     |          []           |
-| expire_action_delay   |    -     | string |    +     |         "1d"          |
-| expire_action_timeout |    -     |  int   |    +     |          30           |
-| expire_interval       |    -     | string |    +     |         "7d"          |
-| force                 |    -     |  bool  |    +     |         false         |
-| force_count           |    -     |  int   |    +     |          100          |
-| timeout               |    -     |  int   |    +     |          60           |
-| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
-| time_zone             |    -     | string |    +     |         "UTC"         |
+| expire_action         | -        | array  | +        | []                    |
+| expire_action_delay   | -        | string | +        | "1d"                  |
+| expire_action_timeout | -        | int    | +        | 30                    |
+| expire_interval       | -        | string | +        | "7d"                  |
+| force                 | -        | bool   | +        | false                 |
+| force_count           | -        | int    | +        | 100                   |
+| timeout               | -        | int    | +        | 60                    |
+| time_format           | -        | string | +        | "15:04:05 02.01.2006" |
+| time_zone             | -        | string | +        | "UTC"                 |
 
 
 ### Plugin parameters:
 
-| Param             | Required | Type   | Cred | Template | Default       | Example            | Description                                                                                                |
-|:------------------|:--------:|:------:|:----:|:--------:|:-------------:|:------------------:|:-----------------------------------------------------------------------------------------------------------|
-| ads_enable        | -        | bool   | -    | -        | true          | false              | Enable/disable asking for sponsored messages.                                                              |
-| ads_period        | -        | string | -    | -        | "5m"          | "1h"               | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
-| **api_id**        | +        | string | +    | -        | ""            | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| **api_hash**      | +        | string | +    | -        | ""            | ""                 | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| app_version       | -        | string | +    | -        | v3.6.2-439100 | "0.0.1"            | Custom application version.                                                                                |
-| device_model      | -        | string | +    | -        | gosquito      | "Redmi Note 42"    | Custom device model.                                                                                       |
-| fetch_timeout     | -        | string | -    | +        | "1h"          | "24h"              | Maximum time for file download.
-| file_path         | -        | string | -    | +        | <PLUGIN_DIR>  | "/data/files"      | Directory where all downloaded files will be saved.
-| file_max_size     | -        | size   | -    | +        | "10m"         | "1g"               | Maximum file size for download.                                                                            |
-| **input**         | +        | array  | -    | +        | []            | ["breakingmash"]   | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
-| match_signature   | -        | array  | -    | +        | "[]"          | ["source", "time"] | Match new messages by signature.                                                                           |
-| match_ttl         | -        | string | -    | +        | "1d"          | "24h"              | TTL (Time To Live) for matched signatures.                                                                 |
-| original_filename | -        | bool   | -    | +        | true          | false              | Use original file names.                                                                                   |
-| proxy_enable      | -        | bool   | -    | +        | false         | true               | Enable/disable proxy.
-| proxy_port        | -        | int    | -    | +        | 9050          | true               | Proxy port number.
-| proxy_server      | -        | string | -    | +        | "127.0.0.1"   | true               | Proxy server address.
-| proxy_username    | -        | string | +    | -        | ""            | "alex"             | Proxy username.                                                                                            |
-| proxy_password    | -        | string | +    | -        | ""            | "a1eXPass"         | Proxy password.                                                                                            |
-| proxy_type        | -        | string | -    | +        | "socks"       | "http"             | Use original file names with random generated suffix.                                                      |
-| session_ttl       | -        | int    | -    | +        | 366           | 90                 | Session TTL (days).
-| show_chat         | -        | bool   | -    | +        | false         | true               | Show collected chats data in plugin output.                                                                |
-| show_user         | -        | bool   | -    | +        | false         | true               | Show collected users data in plugin output.                                                                |
-| status_enable     | -        | bool   | -    | +        | true          | false              | Enable/disable session status.                                                                             |
-| status_period     | -        | string | -    | +        | "1h"          | "5m"               | Interval for showing session status in plugin output.                                                      |
-| storage_optimize  | -        | bool   | -    | +        | true          | false              | Enable/disable storage optimization (clean old data).                                                      |
-| storage_period    | -        | string | -    | +        | "1h"          | "24h"              | Storage optimization interval.                                                                             |
-| log_level         | -        | int    | -    | +        | 0             | 90                 | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
+| Param             | Required | Type   | Cred | Template | Default       | Example                                         | Description                                                                                                |
+|:------------------|:--------:|:------:|:----:|:--------:|:-------------:|:-----------------------------------------------:|:-----------------------------------------------------------------------------------------------------------|
+| ads_enable        | -        | bool   | -    | -        | true          | false                                           | Enable/disable asking for sponsored messages.                                                              |
+| ads_period        | -        | string | -    | -        | "5m"          | "1h"                                            | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
+| **api_id**        | +        | string | +    | -        | ""            | ""                                              | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
+| **api_hash**      | +        | string | +    | -        | ""            | ""                                              | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
+| app_version       | -        | string | +    | -        | v3.6.2-439100 | "0.0.1"                                         | Custom application version.                                                                                |
+| device_model      | -        | string | +    | -        | gosquito      | "Redmi Note 42"                                 | Custom device model.                                                                                       |
+| fetch_timeout     | -        | string | -    | +        | "1h"          | "24h"                                           | Maximum time for file download.
+| file_path         | -        | string | -    | +        | <PLUGIN_DIR>  | "/data/files"                                   | Directory where all downloaded files will be saved.
+| file_max_size     | -        | size   | -    | +        | "10m"         | "1g"                                            | Maximum file size for download.                                                                            |
+| **input**         | +        | array  | -    | +        | []            | ["breakingmash"]                                | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
+| match_signature   | -        | array  | -    | +        | "[]"          | ["telegram.messagetext", "telegram.messageurl"] | Match new messages by signature.                                                                           |
+| match_ttl         | -        | string | -    | +        | "1d"          | "24h"                                           | TTL (Time To Live) for matched signatures.                                                                 |
+| original_filename | -        | bool   | -    | +        | true          | false                                           | Use original file names.                                                                                   |
+| proxy_enable      | -        | bool   | -    | +        | false         | true                                            | Enable/disable proxy.
+| proxy_port        | -        | int    | -    | +        | 9050          | true                                            | Proxy port number.
+| proxy_server      | -        | string | -    | +        | "127.0.0.1"   | true                                            | Proxy server address.
+| proxy_username    | -        | string | +    | -        | ""            | "alex"                                          | Proxy username.                                                                                            |
+| proxy_password    | -        | string | +    | -        | ""            | "a1eXPass"                                      | Proxy password.                                                                                            |
+| proxy_type        | -        | string | -    | +        | "socks"       | "http"                                          | Use original file names with random generated suffix.                                                      |
+| session_ttl       | -        | int    | -    | +        | 366           | 90                                              | Session TTL (days).
+| show_chat         | -        | bool   | -    | +        | false         | true                                            | Show collected chats data in plugin output.                                                                |
+| show_user         | -        | bool   | -    | +        | false         | true                                            | Show collected users data in plugin output.                                                                |
+| status_enable     | -        | bool   | -    | +        | true          | false                                           | Enable/disable session status.                                                                             |
+| status_period     | -        | string | -    | +        | "1h"          | "5m"                                            | Interval for showing session status in plugin output.                                                      |
+| storage_optimize  | -        | bool   | -    | +        | true          | false                                           | Enable/disable storage optimization (clean old data).                                                      |
+| storage_period    | -        | string | -    | +        | "1h"          | "24h"                                           | Storage optimization interval.                                                                             |
+| log_level         | -        | int    | -    | +        | 0             | 90                                              | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 
 
 ### Flow sample:

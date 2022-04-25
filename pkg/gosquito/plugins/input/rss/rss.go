@@ -4,13 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
-	"net/http"
-	"sync"
-	"time"
 )
 
 const (
@@ -154,7 +156,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -222,25 +224,25 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "content":
+					case "rss.content":
 						itemSignature += item.Content
 						break
-					case "description":
+					case "rss.description":
 						itemSignature += item.Description
 						break
-					case "guid":
+					case "rss.guid":
 						itemSignature += item.GUID
 						break
-					case "link":
+					case "rss.link":
 						itemSignature += item.Link
+						break
+					case "rss.title":
+						itemSignature += item.Title
 						break
 					case "source":
 						itemSignature += source
 					case "time":
 						itemSignature += itemTime.String()
-						break
-					case "title":
-						itemSignature += item.Title
 						break
 					}
 				}
@@ -500,6 +502,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+
+	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
+		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
+	}
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {

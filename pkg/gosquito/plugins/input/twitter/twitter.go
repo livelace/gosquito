@@ -174,7 +174,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.DataItem, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -236,17 +236,17 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "lang":
-						itemSignature += item.Lang
-						break
 					case "source":
 						itemSignature += source
 						break
-					case "text":
-						itemSignature += item.Text
-						break
 					case "time":
 						itemSignature += itemTime.String()
+						break
+					case "twitter.lang":
+						itemSignature += item.Lang
+						break
+					case "twitter.text":
+						itemSignature += item.Text
 						break
 					}
 				}
@@ -559,6 +559,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+
+    for i := 0; i < len(plugin.OptionMatchSignature); i++ {
+        plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
+    }
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {
