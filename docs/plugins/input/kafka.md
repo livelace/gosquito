@@ -14,10 +14,21 @@ type Data struct {
 	ARRAY2 []string
 	ARRAY3 []string
 	ARRAY4 []string
+	ARRAY5 []string
 	ARRAY6 []string
 	ARRAY7 []string
 	ARRAY8 []string
 	ARRAY9 []string
+	ARRAY10 []string
+	ARRAY11 []string
+	ARRAY12 []string
+	ARRAY13 []string
+	ARRAY14 []string
+	ARRAY15 []string
+	ARRAY16 []string
+	ARRAY17 []string
+	ARRAY18 []string
+	ARRAY19 []string
 	TEXT0*  string
 	TEXT1*  string
 	TEXT2*  string
@@ -28,6 +39,16 @@ type Data struct {
 	TEXT7*  string
 	TEXT8*  string
 	TEXT9*  string
+	TEXT10*  string
+	TEXT11*  string
+	TEXT12*  string
+	TEXT13*  string
+	TEXT14*  string
+	TEXT15*  string
+	TEXT16*  string
+	TEXT17*  string
+	TEXT18*  string
+	TEXT19*  string
 }
 ```
 
@@ -56,21 +77,21 @@ type Data struct {
 
 ### Plugin parameters:
 
-| Param                   | Required | Type   | Template | Default                 | Example                      | Description                                                                                                                                                                                                                    |
-|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:----------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **brokers**             | +        | string | +        | ""                      | "127.0.0.1:9092,host:1111"   | List of Kafka brokers.                                                                                                                                                                                                         |
-| client_id               | -        | string | +        | <FLOW_NAME>             | "gosquito"                   | Client identification.                                                                                                                                                                                                         |
-| confluent_avro          | -        | bool   | +        | false                   | true                         | Get [Confluent Avro](https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format) schema from [schema registry](https://docs.confluent.io/current/schema-registry/index.html). |
-| group_id                | -        | string | +        | <FLOW_NAME>             | "gosquito"                   | Group identification.                                                                                                                                                                                                          |
-| **input**               | +        | array  | +        | []                      | ["news"]                     | List of Kafka topics.                                                                                                                                                                                                          |
-| log_level               | -        | int    | +        | 0                       | 7                            | librdkafka log level.                                                                                                                                                                                                          |
-| match_signature         | -        | array  | +        | "[]"                    | ["data.text0", "data.text9"] | Match new messages by signature.                                                                                                                                                                                               |
-| match_ttl               | -        | string | +        | "1d"                    | "24h"                        | TTL (Time To Live) for matched signatures.                                                                                                                                                                                     |
-| offset                  | -        | string | +        | "end"                   | "beginning"                  | Client identification.                                                                                                                                                                                                         |
-| schema                  | *        | map    | +        | map[]                   | see example                  | Dynamic schema for Kafka messages.                                                                                                                                                                                             |
-| schema_record_name      | -        | string | +        | "DataItem"              | "event"                      | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                             |
-| schema_record_namespace | -        | string | +        | "ru.livelace.gosquito"  | "com.example"                | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                        |
-| schema_registry         | -        | string | +        | "http://127.0.0.1:8081" | "https://host.example.com"   | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                                                                                                     |
+| Param                   | Required | Type   | Template | Default                 | Example                       | Description                                                                                                                                                                                                         |
+|:------------------------|:--------:|:------:|:--------:|:-----------------------:|:-----------------------------:|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **brokers**             | +        | string | +        | ""                      | "127.0.0.1:9092,host:1111"    | List of Kafka brokers.                                                                                                                                                                                              |
+| client_id               | -        | string | +        | <FLOW_NAME>             | "gosquito"                    | Client identification.                                                                                                                                                                                              |
+| confluent_avro          | -        | bool   | +        | false                   | true                          | Get [Confluent Avro](https://docs.confluent.io/platform/current/schema-registry/serdes-develop/index.html#wire-format) schema from [schema registry](https://docs.confluent.io/current/schema-registry/index.html). |
+| group_id                | -        | string | +        | <FLOW_NAME>             | "gosquito"                    | Group identification.                                                                                                                                                                                               |
+| **input**               | +        | array  | +        | []                      | ["news"]                      | List of Kafka topics.                                                                                                                                                                                               |
+| log_level               | -        | int    | +        | 0                       | 7                             | librdkafka log level.                                                                                                                                                                                               |
+| match_signature         | -        | array  | +        | "[]"                    | ["data.text0", "data.text19"] | Match new messages by signature.                                                                                                                                                                                    |
+| match_ttl               | -        | string | +        | "1d"                    | "24h"                         | TTL (Time To Live) for matched signatures.                                                                                                                                                                          |
+| offset                  | -        | string | +        | "end"                   | "beginning"                   | Client identification.                                                                                                                                                                                              |
+| **schema**              | *        | map    | +        | map[]                   | see example                   | Dynamic schema for Kafka messages.                                                                                                                                                                                  |
+| schema_record_name      | -        | string | +        | "DataItem"              | "event"                       | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                  |
+| schema_record_namespace | -        | string | +        | "ru.livelace.gosquito"  | "com.example"                 | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                                                                                             |
+| schema_registry         | -        | string | +        | "http://127.0.0.1:8081" | "https://host.example.com"    | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                                                                                          |
 
 ### Flow sample:
 

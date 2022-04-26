@@ -401,18 +401,17 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 				itemNew = true
 			}
 
-
-            // Update stat and append item to results.
+			// Update stat and append item to results.
 			if itemNew {
 				flowStates[item.SOURCE] = currentTime
 				sourceNewStat[item.SOURCE] += 1
-                temp = append(temp, &item)
+				temp = append(temp, &item)
 			}
 
-            // Stop processing messages if force is set.
-            if p.OptionForce && len(temp) >= p.OptionForceCount {
-                break
-            }
+			// Stop processing messages if force is set.
+			if p.OptionForce && len(temp) >= p.OptionForceCount {
+				break
+			}
 		}
 	}
 
@@ -703,8 +702,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
 		setForceCount((*pluginConfig.PluginParams)["force_count"])
 		core.ShowPluginParam(plugin.LogFields, "force_count", plugin.OptionForceCount)
-		
-        // group_id.
+
+		// group_id.
 		setGroupId := func(p interface{}) {
 			if v, b := core.IsString(p); b {
 				availableParams["group_id"] = 0
@@ -976,7 +975,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if plugin.PluginType == "input" {
+	if plugin.PluginType == "input" && plugin.OptionOffset != "" {
 		if plugin.OptionOffset != "earliest" && plugin.OptionOffset != "latest" && plugin.OptionOffset != "none" {
 			return &Plugin{}, fmt.Errorf(ERROR_OFFSET_UNKNOWN.Error(), plugin.OptionOffset)
 		}
@@ -994,7 +993,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	switch plugin.PluginType {
 	case "input":
-		kafkaConfig["auto.offset.reset"] = plugin.OptionOffset
+		if plugin.OptionOffset != "" {
+			kafkaConfig["auto.offset.reset"] = plugin.OptionOffset
+		}
 		kafkaConfig["group.id"] = plugin.OptionGroupId
 		break
 	case "output":

@@ -44,10 +44,21 @@ type Data struct {
 	ARRAY2 []string
 	ARRAY3 []string
 	ARRAY4 []string
+	ARRAY5 []string
 	ARRAY6 []string
 	ARRAY7 []string
 	ARRAY8 []string
 	ARRAY9 []string
+	ARRAY10 []string
+	ARRAY11 []string
+	ARRAY12 []string
+	ARRAY13 []string
+	ARRAY14 []string
+	ARRAY15 []string
+	ARRAY16 []string
+	ARRAY17 []string
+	ARRAY18 []string
+	ARRAY19 []string
 	TEXT0  string
 	TEXT1  string
 	TEXT2  string
@@ -58,6 +69,16 @@ type Data struct {
 	TEXT7  string
 	TEXT8  string
 	TEXT9  string
+	TEXT10  string
+	TEXT11  string
+	TEXT12  string
+	TEXT13  string
+	TEXT14  string
+	TEXT15  string
+	TEXT16  string
+	TEXT17  string
+	TEXT18  string
+	TEXT19  string
 }
 ```
 
