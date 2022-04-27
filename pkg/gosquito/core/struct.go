@@ -170,30 +170,57 @@ type Data struct {
 	ARRAY13 []string
 	ARRAY14 []string
 	ARRAY15 []string
-	ARRAY16 []string
-	ARRAY17 []string
-	ARRAY18 []string
-	ARRAY19 []string
-	TEXT0  string
-	TEXT1  string
-	TEXT2  string
-	TEXT3  string
-	TEXT4  string
-	TEXT5  string
-	TEXT6  string
-	TEXT7  string
-	TEXT8  string
-	TEXT9  string
-	TEXT10  string
-	TEXT11  string
-	TEXT12  string
-	TEXT13  string
-	TEXT14  string
-	TEXT15  string
-	TEXT16  string
-	TEXT17  string
-	TEXT18  string
-	TEXT19  string
+
+    ARRAYA []string
+	ARRAYB []string
+	ARRAYC []string
+	ARRAYD []string
+	ARRAYE []string
+	ARRAYF []string
+	ARRAYG []string
+	ARRAYH []string
+	ARRAYI []string
+	ARRAYJ []string
+	ARRAYK []string
+	ARRAYL []string
+	ARRAYM []string
+	ARRAYN []string
+	ARRAYO []string
+	ARRAYP []string
+	
+    TEXT0 string
+	TEXT1 string
+	TEXT2 string
+	TEXT3 string
+	TEXT4 string
+	TEXT5 string
+	TEXT6 string
+	TEXT7 string
+	TEXT8 string
+	TEXT9 string
+	TEXT10 string
+	TEXT11 string
+	TEXT12 string
+	TEXT13 string
+	TEXT14 string
+	TEXT15 string
+	
+    TEXTA string
+	TEXTB string
+	TEXTC string
+	TEXTD string
+	TEXTE string
+	TEXTF string
+	TEXTG string
+	TEXTH string
+	TEXTI string
+	TEXTJ string
+	TEXTK string
+	TEXTL string
+	TEXTM string
+	TEXTN string
+	TEXTO string
+	TEXTP string
 }
 
 type Iter struct {
