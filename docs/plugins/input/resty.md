@@ -6,10 +6,10 @@
 
 ```go
 type Resty struct {
-	BODY*       string
-	PROTO*      string
-	STATUS*     string
-	STATUSCODE* string
+	BODY*      string
+	PROTO      string
+	STATUS     string
+	STATUSCODE string
 }
 ```
 
@@ -37,7 +37,7 @@ type Resty struct {
 | body            | -        | string | -    | +        | +             | ""                | "{"foo": "bar"}"                | Request body.                              |
 | headers         | -        | map[]  | -    | +        | +             | map[]             | see example                     | Dynamic list of request headers.           |
 | **input**       | +        | array  | -    | +        | -             | "[]"              | ["https://freegeoip.app/json/"] | List of REST endpoints.                    |
-| match_signature | -        | array  | -    | +        | -             | "[]"              | ["source", "time"]              | Match new articles by signature.           |
+| match_signature | -        | array  | -    | +        | -             | "[]"              | ["resty.body"]                  | Match new articles by signature.           |
 | match_ttl       | -        | string | -    | +        | -             | "1d"              | "24h"                           | TTL (Time To Live) for matched signatures. |
 | method          | -        | string | -    | +        | -             | "GET"             | "POST"                          | Request method (GET, POST).                |
 | params          | -        | map[]  | -    | +        | +             | map[]             | see example                     | Dynamic list of request query parameters.  |

@@ -361,35 +361,53 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "data.text0":
-						itemSignature += item.DATA.TEXT0
+					case "DATA.TEXTA":
+						itemSignature += item.DATA.TEXTA
 						break
-					case "data.text1":
-						itemSignature += item.DATA.TEXT1
+					case "DATA.TEXTB":
+						itemSignature += item.DATA.TEXTB
 						break
-					case "data.text2":
-						itemSignature += item.DATA.TEXT2
+					case "DATA.TEXTC":
+						itemSignature += item.DATA.TEXTC
 						break
-					case "data.text3":
-						itemSignature += item.DATA.TEXT3
+					case "DATA.TEXTD":
+						itemSignature += item.DATA.TEXTD
 						break
-					case "data.text4":
-						itemSignature += item.DATA.TEXT4
+					case "DATA.TEXTE":
+						itemSignature += item.DATA.TEXTE
 						break
-					case "data.text5":
-						itemSignature += item.DATA.TEXT5
+					case "DATA.TEXTF":
+						itemSignature += item.DATA.TEXTF
 						break
-					case "data.text6":
-						itemSignature += item.DATA.TEXT6
+					case "DATA.TEXTG":
+						itemSignature += item.DATA.TEXTG
 						break
-					case "data.text7":
-						itemSignature += item.DATA.TEXT7
+					case "DATA.TEXTH":
+						itemSignature += item.DATA.TEXTH
 						break
-					case "data.text8":
-						itemSignature += item.DATA.TEXT8
+					case "DATA.TEXTI":
+						itemSignature += item.DATA.TEXTI
 						break
-					case "data.text9":
-						itemSignature += item.DATA.TEXT9
+					case "DATA.TEXTJ":
+						itemSignature += item.DATA.TEXTJ
+						break
+					case "DATA.TEXTK":
+						itemSignature += item.DATA.TEXTK
+						break
+					case "DATA.TEXTL":
+						itemSignature += item.DATA.TEXTL
+						break
+					case "DATA.TEXTM":
+						itemSignature += item.DATA.TEXTM
+						break
+					case "DATA.TEXTN":
+						itemSignature += item.DATA.TEXTN
+						break
+					case "DATA.TEXTO":
+						itemSignature += item.DATA.TEXTO
+						break
+					case "DATA.TEXTP":
+						itemSignature += item.DATA.TEXTP
 						break
 					}
 				}
@@ -748,10 +766,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-
-		for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-			plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-		}
+        core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 		// match_ttl.
 		setMatchTTL := func(p interface{}) {

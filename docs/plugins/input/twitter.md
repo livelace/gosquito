@@ -6,7 +6,7 @@
 
 ```go
 type Twitter struct {
-	LANG* string
+	LANG  string
 	MEDIA []string
 	TAGS  []string
 	TEXT* string

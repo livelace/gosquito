@@ -12,13 +12,13 @@ type Telegram struct {
     CHATTITLE string
     CHATTYPE  string
     
-    MESSAGEID       string
-    MESSAGEMEDIA    []string
-    MESSAGESENDERID string
-    MESSAGETEXT*    string
-    MESSAGETEXTURL  []string
-    MESSAGETYPE     string
-    MESSAGEURL*     string
+    MESSAGEID        string
+    MESSAGEMEDIA     []string
+    MESSAGESENDERID* string
+    MESSAGETEXT*     string
+    MESSAGETEXTURL   []string
+    MESSAGETYPE      string
+    MESSAGEURL*      string
     
     USERID        string
     USERNAME      string

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -224,32 +223,27 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "rss.content":
+					case "RSS.CONTENT":
 						itemSignature += item.Content
 						break
-					case "rss.description":
+					case "RSS.DESCRIPTION":
 						itemSignature += item.Description
 						break
-					case "rss.guid":
+					case "RSS.GUID":
 						itemSignature += item.GUID
 						break
-					case "rss.link":
+					case "RSS.LINK":
 						itemSignature += item.Link
 						break
-					case "rss.title":
+					case "RSS.TITLE":
 						itemSignature += item.Title
-						break
-					case "source":
-						itemSignature += source
-					case "time":
-						itemSignature += itemTime.String()
 						break
 					}
 				}
 
 				// set default value for signature if user provided wrong values.
 				if len(itemSignature) == 0 {
-					itemSignature += item.Title + itemTime.String()
+					itemSignature += source
 				}
 
 				itemSignatureHash = core.HashString(&itemSignature)
@@ -502,10 +496,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-
-	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-	}
+    core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {

@@ -330,18 +330,15 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "body":
+					case "RESTY.BODY":
 						itemSignature += itemBody
-						break
-					case "source":
-						itemSignature += source
 						break
 					}
 				}
 
 				// set default value for signature if user provided wrong values.
 				if len(itemSignature) == 0 {
-					itemSignature += itemBody
+					itemSignature += source
 				}
 
 				itemSignatureHash = core.HashString(&itemSignature)
@@ -681,6 +678,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+        core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 		// match_ttl.
 		setMatchTTL := func(p interface{}) {
@@ -943,9 +941,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-
 	// Create resty client.
-	plugin.RestyClient = restyClient(&plugin)
+	
+    plugin.RestyClient = restyClient(&plugin)
 
 	// -----------------------------------------------------------------------------------------------------------------
 

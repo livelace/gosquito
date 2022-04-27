@@ -794,24 +794,21 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		if len(p.OptionMatchSignature) > 0 {
 			for _, v := range p.OptionMatchSignature {
 				switch v {
-				case "source":
-					itemSignature += item.SOURCE
+				case "TELEGRAM.MESSAGESENDERID":
+					itemSignature += item.TELEGRAM.MESSAGESENDERID
 					break
-				case "telegram.messagetext":
+				case "TELEGRAM.MESSAGETEXT":
 					itemSignature += item.TELEGRAM.MESSAGETEXT
 					break
-				case "telegram.messageurl":
+				case "TELEGRAM.MESSAGEURL":
 					itemSignature += item.TELEGRAM.MESSAGEURL
-					break
-				case "time":
-					itemSignature += item.TIME.String()
 					break
 				}
 			}
 
 			// set default value for signature if user provided wrong values.
 			if len(itemSignature) == 0 {
-				itemSignature += item.TELEGRAM.MESSAGETEXT + item.TIME.String()
+				itemSignature += item.TELEGRAM.CHATID
 			}
 
 			itemSignatureHash = core.HashString(&itemSignature)

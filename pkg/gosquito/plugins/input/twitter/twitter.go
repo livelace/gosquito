@@ -236,16 +236,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			if len(p.OptionMatchSignature) > 0 {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
-					case "source":
-						itemSignature += source
-						break
-					case "time":
-						itemSignature += itemTime.String()
-						break
-					case "twitter.lang":
-						itemSignature += item.Lang
-						break
-					case "twitter.text":
+					case "TWITTER.TEXT":
 						itemSignature += item.Text
 						break
 					}
@@ -253,7 +244,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 				// set default value for signature if user provided wrong values.
 				if len(itemSignature) == 0 {
-					itemSignature += item.Text + itemTime.String()
+					itemSignature += source
 				}
 
 				itemSignatureHash = core.HashString(&itemSignature)
@@ -559,10 +550,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-
-    for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-        plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-    }
+    core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {
