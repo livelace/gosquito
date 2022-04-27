@@ -26,7 +26,7 @@ flow:
       force: true
       force_count: 10
       input: ["https://www.opennet.ru/opennews/opennews_all.rss"]
-      match_signature: ["title", "link"]
+      match_signature: ["rss.link", "rss.title"]
 
   process:
     - id: 0
