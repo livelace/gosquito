@@ -47,7 +47,7 @@ type Data struct {
 
 | Param   | Required | Type | Template | Default |
 |:--------|:--------:|:----:|:--------:|:-------:|
-| timeout |    -     | int  |    +     |    3    |
+| timeout | -        | int  | +        | 3       |
 
 
 ### Plugin parameters:
@@ -81,6 +81,16 @@ flow:
       input: ["news"]
       schema:
         title: "data.text0"
+  
+  process:
+    - id: 0
+      plugin: "echo"
+      params:
+        input: [
+          "data.text0", 
+          "data.text1", 
+          "---"
+        ]
 ```
 
 ### Config sample:
