@@ -14,7 +14,6 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/renameio v0.1.0
 	github.com/google/uuid v1.2.0
-	github.com/gophercloud/gophercloud v0.24.0
 	github.com/hashicorp/go-getter v1.5.9
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
@@ -28,6 +27,7 @@ require (
 	github.com/slack-go/slack v0.9.5
 	github.com/spf13/viper v1.7.1
 	github.com/xhit/go-simple-mail/v2 v2.10.0
+	golang.org/x/crypto v0.0.0-20211202192323-5770296d904e // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
