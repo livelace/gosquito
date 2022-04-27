@@ -9,13 +9,13 @@ Schema's fields are just copied to DataItem fields:
 
 ```go
 type Data struct {
-    ARRAY0 []string
+    ARRAY0  []string
     ARRAY15 []string
-    ARRAYA []string
-    ARRAYP []string
+    ARRAYA  []string
+    ARRAYP  []string
 	
-    TEXT0 string
-    TEXT15 string
+    TEXT0   string
+    TEXT15  string
     TEXTA*  string
     TEXTP*  string
 }
