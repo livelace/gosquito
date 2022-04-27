@@ -10,71 +10,19 @@ Schema's fields are just copied to DataItem fields:
 ```go
 type Data struct {
 	ARRAY0 []string
-	ARRAY1 []string
-	ARRAY2 []string
-	ARRAY3 []string
-	ARRAY4 []string
-	ARRAY5 []string
-	ARRAY6 []string
-	ARRAY7 []string
-	ARRAY8 []string
-	ARRAY9 []string
-	ARRAY10 []string
-	ARRAY11 []string
-	ARRAY12 []string
-	ARRAY13 []string
-	ARRAY14 []string
+    ...
 	ARRAY15 []string
 
     ARRAYA []string
-	ARRAYB []string
-	ARRAYC []string
-	ARRAYD []string
-	ARRAYE []string
-	ARRAYF []string
-	ARRAYG []string
-	ARRAYH []string
-	ARRAYI []string
-	ARRAYJ []string
-	ARRAYK []string
-	ARRAYL []string
-	ARRAYM []string
-	ARRAYN []string
-	ARRAYO []string
+    ...
 	ARRAYP []string
 	
     TEXT0*  string
-	TEXT1*  string
-	TEXT2*  string
-	TEXT3*  string
-	TEXT4*  string
-	TEXT5*  string
-	TEXT6*  string
-	TEXT7*  string
-	TEXT8*  string
-	TEXT9*  string
-	TEXT10*  string
-	TEXT11*  string
-	TEXT12*  string
-	TEXT13*  string
-	TEXT14*  string
+    ...
 	TEXT15*  string
 	
     TEXTA*  string
-	TEXTB*  string
-	TEXTC*  string
-	TEXTD*  string
-	TEXTE*  string
-	TEXTF*  string
-	TEXTG*  string
-	TEXTH*  string
-	TEXTI*  string
-	TEXTJ*  string
-	TEXTK*  string
-	TEXTL*  string
-	TEXTM*  string
-	TEXTN*  string
-	TEXTO*  string
+    ...
 	TEXTP*  string
 }
 ```

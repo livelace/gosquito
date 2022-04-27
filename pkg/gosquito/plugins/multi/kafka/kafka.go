@@ -41,7 +41,7 @@ const (
 	DEFAULT_SCHEMA_RECORD_NAME      = "DataItem"
 	DEFAULT_SCHEMA_RECORD_NAMESPACE = "ru.livelace.gosquito"
 	DEFAULT_SCHEMA_REGISTRY         = "http://127.0.0.1:8081"
-	DEFAULT_SCHEMA_SUBJECT_STRATEGY = "TopicName"
+	DEFAULT_SCHEMA_SUBJECT_STRATEGY = "TopicRecordName"
 	DEFAULT_TIMEOUT                 = 3
 )
 
@@ -272,6 +272,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	}
 
 	// Source stat.
+	sourceFailStat := make(map[string]int32)
 	sourceNewStat := make(map[string]int32)
 	sourceTotalStat := make(map[string]int32)
 
@@ -290,9 +291,11 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 		// Try to decode message.
 		var messageData interface{}
+		var schemaId uint32
+		isConfluentAvro := p.OptionConfluentAvro && len(message.Value) > 5 && message.Value[0] == 0
 
-		if p.OptionConfluentAvro && message.Value[0] == 0 {
-			schemaId := binary.BigEndian.Uint32(message.Value[1:5])
+		if isConfluentAvro {
+			schemaId = binary.BigEndian.Uint32(message.Value[1:5])
 
 			if _, ok := p.SchemaCache[schemaId]; !ok {
 				if registrySchema, err := p.SchemaRegistryClient.GetSchema(int(schemaId)); err == nil {
@@ -309,7 +312,13 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		}
 
 		if err != nil {
-			core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("skip message: %v", err))
+			sourceFailStat[*message.TopicPartition.Topic] += 1
+
+			if isConfluentAvro {
+                core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("schema id: %d, skip message: %v", schemaId, err))
+			} else {
+				core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("skip message: %v", err))
+			}
 			continue
 		}
 
@@ -419,9 +428,9 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 	err = consumer.Close()
 
 	// Show source (topics) statistics.
-	for source := range sourceTotalStat {
-		core.LogInputPlugin(p.LogFields, source, fmt.Sprintf("last update: %s, received data: %d, new data: %d",
-			flowStates[source], sourceTotalStat[source], sourceNewStat[source]))
+	for _, source := range p.OptionInput {
+		core.LogInputPlugin(p.LogFields, source, fmt.Sprintf("last update: %s, received: %d, new: %d, skipped: %d",
+			flowStates[source], sourceTotalStat[source], sourceNewStat[source], sourceFailStat[source]))
 	}
 
 	// Save updated flow states.
@@ -889,7 +898,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionSchemaRecordName = v
 		}
 	}
-	setSchemaRecordName(DEFAULT_SCHEMA_RECORD_NAME)
+	setSchemaRecordName(strings.ReplaceAll(plugin.Flow.FlowName, "-", "_"))
 	setSchemaRecordName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_record_name", template)))
 	setSchemaRecordName((*pluginConfig.PluginParams)["schema_record_name"])
 	core.ShowPluginParam(plugin.LogFields, "schema_record_name", plugin.OptionSchemaRecordName)
