@@ -46,6 +46,7 @@ const (
 
 var (
 	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
+	ERROR_CHAT_GET_ERROR     = errors.New("cannot get chat: %s, %s")
 	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
 	ERROR_FETCH_ERROR        = errors.New("fetch error: %s")
 	ERROR_FETCH_TIMEOUT      = errors.New("fetch timeout: %s")
@@ -216,7 +217,7 @@ func getPrivateChatId(p *Plugin, name string) (int64, error) {
 		return chatInfo.ChatId, nil
 
 	} else if err != nil {
-		return 0, err
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), name, err)
 
 	} else {
 		return chat.Id, nil
@@ -226,7 +227,7 @@ func getPrivateChatId(p *Plugin, name string) (int64, error) {
 func getPublicChatId(p *Plugin, name string) (int64, error) {
 	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: name})
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), name, err)
 	} else {
 		return chat.Id, nil
 	}
@@ -238,7 +239,6 @@ func joinToChat(p *Plugin, name string, id int64) error {
 	if err != nil {
 		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), name, err)
 	}
-
 	return nil
 }
 
@@ -1209,10 +1209,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-    
-    for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-        plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-    }
+
+	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
+		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
+	}
 
 	// match_ttl.
 	setMatchTTL := func(p interface{}) {
@@ -1495,7 +1495,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 			} else {
 				// Don't accept any joining errors.
-				return &Plugin{}, fmt.Errorf(ERROR_CHAT_COMMON_ERROR.Error(), chatName, err)
+				return &Plugin{}, err
 			}
 
 		} else {
