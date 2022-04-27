@@ -55,6 +55,7 @@ type Data struct {
   ARRAY13 []string
   ARRAY14 []string
   ARRAY15 []string
+
   ARRAYA []string
   ARRAYB []string
   ARRAYC []string
@@ -71,6 +72,7 @@ type Data struct {
   ARRAYN []string
   ARRAYO []string
   ARRAYP []string
+
   TEXT0 string
   TEXT1 string
   TEXT2 string
@@ -86,7 +88,8 @@ type Data struct {
   TEXT12 string
   TEXT13 string
   TEXT14 string
-  TEXT15 string	
+  TEXT15 string
+
   TEXTA string
   TEXTB string
   TEXTC string
