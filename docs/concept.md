@@ -72,7 +72,7 @@ type Data struct {
 	ARRAYN []string
 	ARRAYO []string
 	ARRAYP []string
-	
+
     TEXT0 string
 	TEXT1 string
 	TEXT2 string
