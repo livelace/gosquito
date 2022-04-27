@@ -9,7 +9,7 @@ type Rss struct {
 	CATEGORIES   []string
 	CONTENT*     string
 	DESCRIPTION* string
-	GUID*        string
+	GUID         string
 	LINK*        string
 	TITLE*       string
 }

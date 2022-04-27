@@ -229,9 +229,6 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					case "RSS.DESCRIPTION":
 						itemSignature += item.Description
 						break
-					case "RSS.GUID":
-						itemSignature += item.GUID
-						break
 					case "RSS.LINK":
 						itemSignature += item.Link
 						break
