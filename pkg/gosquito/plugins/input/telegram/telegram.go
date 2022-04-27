@@ -1206,6 +1206,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+    core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
 		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
