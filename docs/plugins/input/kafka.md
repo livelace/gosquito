@@ -12,6 +12,7 @@ type Data struct {
     ARRAY0  []string
     ...
     ARRAY15 []string
+
     ARRAYA  []string
     ...
     ARRAYP  []string
@@ -19,6 +20,7 @@ type Data struct {
     TEXT0   string
     ...
     TEXT15  string
+
     TEXTA*  string
     ...
     TEXTP*  string
