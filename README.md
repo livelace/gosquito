@@ -59,3 +59,8 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 | [resty](docs/plugins/output/resty.md)           | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints. |
 | [slack](docs/plugins/output/slack.md)           | Send data to [Slack](https://slack.com) channels/users.                                       |
 | [smtp](docs/plugins/output/smtp.md)             | Send data as email.                                                                           |
+
+### ToDo:
+
+1. Add vault support.
+2. Extend metrics with invalid flows.
