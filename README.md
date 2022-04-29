@@ -64,3 +64,5 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 
 1. Add vault support.
 2. Extend metrics with invalid flows.
+3. Cron mode.
+4. Storage of interests.
