@@ -66,3 +66,4 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 2. Extend metrics with invalid flows.
 3. Cron mode.
 4. Storage of interests.
+5. ignore case in match_signature.
