@@ -62,6 +62,7 @@ type Telegram struct {
 | file_path         | -        | string | -    | +        | <PLUGIN_DIR>  | "/data/files"                                   | Directory where all downloaded files will be saved.
 | file_max_size     | -        | size   | -    | +        | "10m"         | "1g"                                            | Maximum file size for download.                                                                            |
 | **input**         | +        | array  | -    | +        | []            | ["breakingmash"]                                | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
+| log_level         | -        | int    | -    | +        | 0             | 90                                              | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 | match_signature   | -        | array  | -    | +        | "[]"          | ["telegram.messagetext", "telegram.messageurl"] | Match new messages by signature.                                                                           |
 | match_ttl         | -        | string | -    | +        | "1d"          | "24h"                                           | TTL (Time To Live) for matched signatures.                                                                 |
 | original_filename | -        | bool   | -    | +        | true          | false                                           | Use original file names.                                                                                   |
@@ -72,13 +73,11 @@ type Telegram struct {
 | proxy_password    | -        | string | +    | -        | ""            | "a1eXPass"                                      | Proxy password.                                                                                            |
 | proxy_type        | -        | string | -    | +        | "socks"       | "http"                                          | Use original file names with random generated suffix.                                                      |
 | session_ttl       | -        | int    | -    | +        | 366           | 90                                              | Session TTL (days).
-| show_chat         | -        | bool   | -    | +        | false         | true                                            | Show collected chats data in plugin output.                                                                |
-| show_user         | -        | bool   | -    | +        | false         | true                                            | Show collected users data in plugin output.                                                                |
 | status_enable     | -        | bool   | -    | +        | true          | false                                           | Enable/disable session status.                                                                             |
 | status_period     | -        | string | -    | +        | "1h"          | "5m"                                            | Interval for showing session status in plugin output.                                                      |
 | storage_optimize  | -        | bool   | -    | +        | true          | false                                           | Enable/disable storage optimization (clean old data).                                                      |
 | storage_period    | -        | string | -    | +        | "1h"          | "24h"                                           | Storage optimization interval.                                                                             |
-| log_level         | -        | int    | -    | +        | 0             | 90                                              | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
+| user_log          | -        | bool   | -    | +        | true          | false                                           | Enable/disable passive user logging.                                                      |
 
 
 ### Flow sample:

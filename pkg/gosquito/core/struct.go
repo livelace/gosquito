@@ -90,7 +90,7 @@ func (f *Flow) GetInstance() int {
 }
 
 func (f *Flow) GetRunID() int64 {
-  return f.FlowRunID
+	return f.FlowRunID
 }
 
 func (f *Flow) ResetMetric() {
@@ -154,16 +154,16 @@ type FlowUnmarshal struct {
 // ---------------------------------------------------------------------------------------------------------------------
 
 type Data struct {
-	ARRAY0 []string
-	ARRAY1 []string
-	ARRAY2 []string
-	ARRAY3 []string
-	ARRAY4 []string
-	ARRAY5 []string
-	ARRAY6 []string
-	ARRAY7 []string
-	ARRAY8 []string
-	ARRAY9 []string
+	ARRAY0  []string
+	ARRAY1  []string
+	ARRAY2  []string
+	ARRAY3  []string
+	ARRAY4  []string
+	ARRAY5  []string
+	ARRAY6  []string
+	ARRAY7  []string
+	ARRAY8  []string
+	ARRAY9  []string
 	ARRAY10 []string
 	ARRAY11 []string
 	ARRAY12 []string
@@ -171,7 +171,7 @@ type Data struct {
 	ARRAY14 []string
 	ARRAY15 []string
 
-    ARRAYA []string
+	ARRAYA []string
 	ARRAYB []string
 	ARRAYC []string
 	ARRAYD []string
@@ -187,25 +187,25 @@ type Data struct {
 	ARRAYN []string
 	ARRAYO []string
 	ARRAYP []string
-	
-    TEXT0 string
-	TEXT1 string
-	TEXT2 string
-	TEXT3 string
-	TEXT4 string
-	TEXT5 string
-	TEXT6 string
-	TEXT7 string
-	TEXT8 string
-	TEXT9 string
+
+	TEXT0  string
+	TEXT1  string
+	TEXT2  string
+	TEXT3  string
+	TEXT4  string
+	TEXT5  string
+	TEXT6  string
+	TEXT7  string
+	TEXT8  string
+	TEXT9  string
 	TEXT10 string
 	TEXT11 string
 	TEXT12 string
 	TEXT13 string
 	TEXT14 string
 	TEXT15 string
-	
-    TEXTA string
+
+	TEXTA string
 	TEXTB string
 	TEXTC string
 	TEXTD string
@@ -245,9 +245,17 @@ type Rss struct {
 }
 
 type Telegram struct {
-	CHATID    string
-	CHATTITLE string
-	CHATTYPE  string
+	CHATID               string
+	CHATNAME             string
+	CHATTYPE             string
+	CHATTITLE            string
+	CHATCLIENTDATA       string
+	CHATPROTECTEDCONTENT string
+	CHATLASTINBOXID      string
+	CHATLASTOUTBOXID     string
+	CHATMESSAGETTL       string
+	CHATUNREADCOUNT      string
+	CHATTIMESTAMP        string
 
 	MESSAGEID       string
 	MESSAGEMEDIA    []string
@@ -257,12 +265,24 @@ type Telegram struct {
 	MESSAGETYPE     string
 	MESSAGEURL      string
 
-	USERID        string
-	USERNAME      string
-	USERTYPE      string
-	USERFIRSTNAME string
-	USERLASTNAME  string
-	USERPHONE     string
+	USERID            string
+	USERVERSION       string
+	USERNAME          string
+	USERTYPE          string
+	USERLANG          string
+	USERFIRSTNAME     string
+	USERLASTNAME      string
+	USERPHONE         string
+	USERSTATUS        string
+	USERACCESSIBLE    string
+	USERCONTACT       string
+	USERFAKE          string
+	USERMUTUALCONTACT string
+	USERSCAM          string
+	USERSUPPORT       string
+	USERVERIFIED      string
+	USERRESTRICTION   string
+	USERTIMESTAMP     string
 
 	WARNINGS []string
 }

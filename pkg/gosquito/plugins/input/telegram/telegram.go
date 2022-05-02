@@ -1,9 +1,11 @@
 package telegramIn
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +14,7 @@ import (
 	"github.com/livelace/go-tdlib/client"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -22,6 +25,7 @@ const (
 	DEFAULT_ADS_PERIOD        = "5m"
 	DEFAULT_BUFFER_LENGHT     = 1000
 	DEFAULT_CHATS_DATA        = "chats.data"
+	DEFAULT_CHATS_DB          = "chats.sqlite"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
 	DEFAULT_FILES_DIR         = "files"
@@ -40,20 +44,103 @@ const (
 	DEFAULT_STATUS_PERIOD     = "1h"
 	DEFAULT_STORAGE_OPTIMIZE  = true
 	DEFAULT_STORAGE_PERIOD    = "1h"
-	DEFAULT_USERS_DATA        = "users.data"
-	MAX_INSTANCE_PER_APP      = 1
+	DEFAULT_USER_LOG          = true
+	DEFAULT_USERS_DB          = "users.sqlite"
+
+	MAX_INSTANCE_PER_APP = 1
+
+	SQL_FIND_CHAT = `
+      SELECT * FROM chats WHERE name=?
+    `
+	
+    SQL_COUNT_USER = `
+      SELECT count(DISTINCT id) FROM users
+    `
+
+	SQL_FIND_USER = `
+      SELECT * FROM users WHERE id=? ORDER BY version DESC LIMIT 1
+    `
+
+	SQL_UPDATE_CHAT = `
+      INSERT INTO chats (id, name, type, title, 
+        client_data, has_protected_content,
+        last_inbox_id, last_outbox_id, message_ttl,
+        unread_count, timestamp
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name=?, type=?, title=?, 
+        client_data=?, has_protected_content=?,
+        last_inbox_id=?, last_outbox_id=?, message_ttl=?,
+        unread_count=?, timestamp=?
+    `
+
+	SQL_UPDATE_USER = `
+      INSERT INTO users (id, version, username, type, lang, 
+        first_name, last_name, phone_number, status, 
+        is_accessible, is_contact, is_fake, is_mutual_contact, 
+        is_scam, is_support, is_verified, restriction_reason, 
+        timestamp
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+
+	SQL_CHATS_SCHEMA = `
+      CREATE TABLE IF NOT EXISTS chats (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT,
+        client_data TEXT,
+        has_protected_content INTEGER NOT NULL,
+        last_inbox_id INTEGER NOT NULL,
+        last_outbox_id INTEGER NOT NULL,
+        message_ttl INTEGER NOT NULL,
+        unread_count INTEGER NOT NULL,
+        timestamp TEXT NOT NULL,
+        UNIQUE(id, name)
+      )
+    `
+
+	SQL_USERS_SCHEMA = `
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER NOT NULL,
+        version INTEGER NOT NULL,
+        username TEXT,
+        type TEXT NOT NULL,
+        lang TEXT,
+        first_name TEXT,
+        last_name TEXT,
+        phone_number TEXT,
+        status TEXT NOT NULL,
+        is_accessible INTEGER NOT NULL,
+        is_contact INTEGER NOT NULL,
+        is_fake INTEGER NOT NULL,
+        is_mutual_contact INTEGER NOT NULL,
+        is_scam INTEGER NOT NULL,
+        is_support INTEGER NOT NULL,
+        is_verified INTEGER NOT NULL,
+        restriction_reason TEXT,
+        timestamp TEXT NOT NULL
+      )
+    `
 )
 
 var (
-	ERROR_CHAT_COMMON_ERROR  = errors.New("chat error: %s, %s")
-	ERROR_CHAT_GET_ERROR     = errors.New("cannot get chat: %s, %s")
-	ERROR_CHAT_JOIN_ERROR    = errors.New("join to chat error: %s, %s")
-	ERROR_FETCH_ERROR        = errors.New("fetch error: %s")
-	ERROR_FETCH_TIMEOUT      = errors.New("fetch timeout: %s")
-	ERROR_FILE_SIZE_EXCEEDED = errors.New("file size exceeded: %v (%v > %v)")
-	ERROR_LOAD_USERS_ERROR   = errors.New("cannot load users: %s")
-	ERROR_PROXY_TYPE_UNKNOWN = errors.New("proxy type unknown: %s")
-	ERROR_SAVE_CHATS_ERROR   = errors.New("cannot save chats: %s")
+	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %s, %s")
+	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %s, %s")
+	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %s, %s")
+	ERROR_FETCH_ERROR           = errors.New("fetch error: %s")
+	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %s")
+	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %s (%s > %s)")
+	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %s")
+	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %s")
+	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %s")
+	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %s, %s")
+	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %s, %s")
+	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %s, %s")
+	ERROR_STATUS_ERROR          = errors.New("session error: %s, storage error: %s")
+	ERROR_USER_UPDATE_ERROR     = errors.New("cannot save user: %v")
 )
 
 type clientAuthorizer struct {
@@ -111,6 +198,14 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	}
 }
 
+func countUsers(p *Plugin) int {
+    count := 0
+	stmt, _ := p.UsersDbClient.Prepare(SQL_COUNT_USER)
+	defer stmt.Close()
+	stmt.QueryRow().Scan(&count)
+	return count
+}
+
 func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, error) {
 	localFile := ""
 
@@ -157,6 +252,21 @@ stopWaiting:
 	core.LogInputPlugin(p.LogFields, "fetch", fmt.Sprintf("end: %v -> %v", remoteId, localFile))
 
 	return localFile, nil
+}
+
+func getChat(p *Plugin, chatName string) core.Telegram {
+	d := core.Telegram{}
+
+	stmt, _ := p.ChatsDbClient.Prepare(SQL_FIND_CHAT)
+	defer stmt.Close()
+	stmt.QueryRow(chatName).Scan(&d.CHATID, &d.CHATNAME,
+		&d.CHATTYPE, &d.CHATTITLE, &d.CHATCLIENTDATA,
+		&d.CHATPROTECTEDCONTENT, &d.CHATLASTINBOXID,
+		&d.CHATLASTOUTBOXID, &d.CHATMESSAGETTL, &d.CHATUNREADCOUNT,
+		&d.CHATTIMESTAMP,
+	)
+
+	return d
 }
 
 func getClient(p *Plugin) (*client.Client, error) {
@@ -233,11 +343,36 @@ func getPublicChatId(p *Plugin, name string) (int64, error) {
 	}
 }
 
-func joinToChat(p *Plugin, name string, id int64) error {
-	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: id})
+func getUser(p *Plugin, userId int64) core.Telegram {
+	d := core.Telegram{}
 
+	stmt, _ := p.UsersDbClient.Prepare(SQL_FIND_USER)
+	defer stmt.Close()
+	stmt.QueryRow(userId).Scan(&d.USERID, &d.USERVERSION, &d.USERNAME,
+		&d.USERTYPE, &d.USERLANG, &d.USERFIRSTNAME, &d.USERLASTNAME,
+		&d.USERPHONE, &d.USERSTATUS, &d.USERACCESSIBLE, &d.USERCONTACT,
+		&d.USERFAKE, &d.USERMUTUALCONTACT, &d.USERSCAM, &d.USERSUPPORT,
+		&d.USERVERIFIED, &d.USERRESTRICTION, &d.USERTIMESTAMP)
+
+	return d
+}
+
+func initChatsDb(p *Plugin) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB))
+	_, err = db.Exec(SQL_CHATS_SCHEMA)
+	return db, err
+}
+
+func initUsersDb(p *Plugin) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB))
+	_, err = db.Exec(SQL_USERS_SCHEMA)
+	return db, err
+}
+
+func joinToChat(p *Plugin, chatId int64, chatName string) error {
+	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), name, err)
+		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatName, err)
 	}
 	return nil
 }
@@ -253,21 +388,9 @@ func loadChats(p *Plugin) (map[string]int64, error) {
 	return data, nil
 }
 
-func loadUsers(p *Plugin) (map[int64][]string, error) {
-	data := make(map[int64][]string, 0)
-
-	err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), &data)
-	if err != nil {
-		return data, err
-	}
-
-	return data, nil
-}
-
 func receiveAds(p *Plugin) {
 	for {
-		for chatId := range p.ChatsById {
-			chatName := p.ChatsById[chatId]
+		for chatId, chatData := range p.ChatsCache {
 			sponsoredMessage, err :=
 				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
 
@@ -294,7 +417,7 @@ func receiveAds(p *Plugin) {
 						p.DataChannel <- &core.DataItem{
 							FLOW:       p.Flow.FlowName,
 							PLUGIN:     p.PluginName,
-							SOURCE:     chatName,
+							SOURCE:     chatData.CHATNAME,
 							TIME:       messageTime,
 							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 							UUID:       u,
@@ -346,20 +469,10 @@ func receiveMessages(p *Plugin) {
 		case update := <-listener.Updates:
 			switch update.(type) {
 
-			// Log all updated users profiles. Passive data gathering.
-			case *client.UpdateUser:
-				user := update.(*client.UpdateUser).User
-				p.UsersById[user.Id] = []string{
-					user.Username, user.Type.UserTypeType(),
-					user.FirstName, user.LastName, user.PhoneNumber,
-				}
-
 			case *client.UpdateNewMessage:
 				// Map message attributes to vars.
 				message := update.(*client.UpdateNewMessage)
 				messageChatId := message.Message.ChatId
-				messageChatTitle := ""
-				messageChatType := ""
 				messageContent := message.Message.Content
 				messageFileName := ""
 				messageFileSize := int32(0)
@@ -371,13 +484,9 @@ func receiveMessages(p *Plugin) {
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
-				sendMessage := false
+                userData := core.Telegram{}
+				validMessage := false
 				warnings := make([]string, 0)
-
-				if v, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: messageChatId}); err == nil {
-					messageChatTitle = v.Title
-					messageChatType = v.GetType()
-				}
 
 				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChatId, MessageId: messageId}); err == nil {
 					messageURL = v.Link
@@ -385,33 +494,19 @@ func receiveMessages(p *Plugin) {
 
 				switch messageSender := message.Message.SenderId.(type) {
 				case *client.MessageSenderChat:
+					messageSenderId = int64(messageSender.ChatId)
 				case *client.MessageSenderUser:
-					messageSenderId = int64(messageSender.ClientId)
-				}
-
-				// Try to map user attributes from internal database (UpdateUser event).
-				messageUserId := fmt.Sprintf("%v", messageSenderId)
-				messageUserName := ""
-				messageUserType := ""
-				messageUserFirstName := ""
-				messageUserLastName := ""
-				messageUserPhoneNumber := ""
-
-				if v, ok := p.UsersById[messageSenderId]; ok {
-					messageUserName = v[0]
-					messageUserType = v[1]
-					messageUserFirstName = v[2]
-					messageUserLastName = v[3]
-					messageUserPhoneNumber = v[4]
+					messageSenderId = int64(messageSender.UserId)
+				    userData = getUser(p, messageSenderId)
 				}
 
 				// Process only specified chats.
-				if chatName, ok := p.ChatsById[messageChatId]; ok {
+				if chatData, ok := p.ChatsCache[messageChatId]; ok {
 					var u, _ = uuid.NewRandom()
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						sendMessage = true
+						validMessage = true
 						audio := messageContent.(*client.MessageAudio).Audio
 						messageText = messageContent.(*client.MessageAudio).Caption.Text
 
@@ -426,7 +521,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageDocument:
-						sendMessage = true
+						validMessage = true
 						document := messageContent.(*client.MessageDocument).Document
 						messageText = messageContent.(*client.MessageDocument).Caption.Text
 
@@ -441,7 +536,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageText:
-						sendMessage = true
+						validMessage = true
 						formattedText := messageContent.(*client.MessageText).Text
 						messageText = formattedText.Text
 
@@ -453,7 +548,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessagePhoto:
-						sendMessage = true
+						validMessage = true
 						photo := messageContent.(*client.MessagePhoto).Photo
 						photoFile := photo.Sizes[len(photo.Sizes)-1]
 						messageText = messageContent.(*client.MessagePhoto).Caption.Text
@@ -469,7 +564,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVideo:
-						sendMessage = true
+						validMessage = true
 						messageText = messageContent.(*client.MessageVideo).Caption.Text
 						video := messageContent.(*client.MessageVideo).Video
 
@@ -484,7 +579,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVoiceNote:
-						sendMessage = true
+						validMessage = true
 						messageText = messageContent.(*client.MessageVoiceNote).Caption.Text
 						note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
@@ -499,7 +594,7 @@ func receiveMessages(p *Plugin) {
 						}
 
 					case *client.MessageVideoNote:
-						sendMessage = true
+						validMessage = true
 						note := messageContent.(*client.MessageVideoNote).VideoNote
 
 						if int64(note.Video.Size) < p.OptionFileMaxSize {
@@ -523,26 +618,27 @@ func receiveMessages(p *Plugin) {
 					}
 
 					// Send data to channel.
-					if sendMessage && len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+					if validMessage && len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
 						p.DataChannel <- &core.DataItem{
 							FLOW:       p.Flow.FlowName,
 							PLUGIN:     p.PluginName,
-							SOURCE:     chatName,
+							SOURCE:     chatData.CHATNAME,
 							TIME:       messageTime,
 							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 							UUID:       u,
 
 							TELEGRAM: core.Telegram{
-								CHATID:    fmt.Sprintf("%v", messageChatId),
-								CHATTITLE: messageChatTitle,
-								CHATTYPE:  messageChatType,
-
-								USERID:        messageUserId,
-								USERNAME:      messageUserName,
-								USERTYPE:      messageUserType,
-								USERFIRSTNAME: messageUserFirstName,
-								USERLASTNAME:  messageUserLastName,
-								USERPHONE:     messageUserPhoneNumber,
+								CHATID:               chatData.CHATID,
+								CHATNAME:             chatData.CHATNAME,
+								CHATTYPE:             chatData.CHATTYPE,
+								CHATTITLE:            chatData.CHATTITLE,
+								CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+								CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+								CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+								CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+								CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+								CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+								CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
 
 								MESSAGEID:       fmt.Sprintf("%v", messageId),
 								MESSAGEMEDIA:    messageMedia,
@@ -551,6 +647,25 @@ func receiveMessages(p *Plugin) {
 								MESSAGETEXT:     messageText,
 								MESSAGETEXTURL:  messageTextURLs,
 								MESSAGEURL:      messageURL,
+
+								USERID:            userData.USERID,
+								USERVERSION:       userData.USERVERSION,
+								USERNAME:          userData.USERNAME,
+								USERTYPE:          userData.USERTYPE,
+								USERLANG:          userData.USERLANG,
+								USERFIRSTNAME:     userData.USERFIRSTNAME,
+								USERLASTNAME:      userData.USERLASTNAME,
+								USERPHONE:         userData.USERPHONE,
+								USERSTATUS:        userData.USERSTATUS,
+								USERACCESSIBLE:    userData.USERACCESSIBLE,
+								USERCONTACT:       userData.USERCONTACT,
+								USERFAKE:          userData.USERFAKE,
+								USERMUTUALCONTACT: userData.USERMUTUALCONTACT,
+								USERSCAM:          userData.USERSCAM,
+								USERSUPPORT:       userData.USERSUPPORT,
+								USERVERIFIED:      userData.USERVERIFIED,
+								USERRESTRICTION:   userData.USERRESTRICTION,
+								USERTIMESTAMP:     userData.USERTIMESTAMP,
 
 								WARNINGS: warnings,
 							},
@@ -561,9 +676,6 @@ func receiveMessages(p *Plugin) {
 					core.LogInputPlugin(p.LogFields, "",
 						fmt.Sprintf("chat filtered, message excluded: %v", messageChatId))
 				}
-
-				// Save users between updates receiving.
-				_ = saveUsers(p)
 			}
 		}
 	}
@@ -594,12 +706,80 @@ func receiveState(p *Plugin) {
 	}
 }
 
-func saveChats(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DATA), p.ChatsByName)
-}
+func receiveUsers(p *Plugin) {
+	listener := p.TdlibClient.GetListener()
 
-func saveUsers(p *Plugin) error {
-	return core.PluginSaveData(filepath.Join(p.PluginDataDir, DEFAULT_USERS_DATA), p.UsersById)
+	for {
+		select {
+		case update := <-listener.Updates:
+			switch update.(type) {
+			case *client.UpdateUser:
+				user := update.(*client.UpdateUser).User
+
+				// Try to get user data from database.
+				d := getUser(p, user.Id)
+
+				// 1. Create new user record.
+				// 2. Update user record.
+				if d.USERID == "0" {
+					err := updateUser(p, user, 0)
+					if err == nil {
+						core.LogInputPlugin(p.LogFields, "user", fmt.Sprintf("saved: %v, %v", d.USERID, d.USERNAME))
+					} else {
+						core.LogInputPlugin(p.LogFields, "user", fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
+					}
+				} else {
+					userChanged := false
+
+					if user.Username != d.USERNAME || user.Type.UserTypeType() != d.USERTYPE ||
+						user.LanguageCode != d.USERLANG || user.FirstName != d.USERFIRSTNAME ||
+						user.LastName != d.USERLASTNAME || user.PhoneNumber != d.USERPHONE {
+						userChanged = true
+					}
+
+					if b, s := core.IsBool(d.USERACCESSIBLE); s && user.HaveAccess != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERCONTACT); s && user.IsContact != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERFAKE); s && user.IsFake != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERMUTUALCONTACT); s && user.IsMutualContact != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERSCAM); s && user.IsScam != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERSUPPORT); s && user.IsSupport != b {
+						userChanged = true
+					}
+					if b, s := core.IsBool(d.USERVERIFIED); s && user.IsVerified != b {
+						userChanged = true
+					}
+					if user.RestrictionReason != d.USERRESTRICTION {
+						userChanged = true
+					}
+
+					if userChanged {
+						if version, s := core.IsInt(d.USERVERSION); s {
+							err := updateUser(p, user, version+1)
+							if err == nil {
+								core.LogInputPlugin(p.LogFields, "user",
+									fmt.Sprintf("changed: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
+							} else {
+								core.LogInputPlugin(p.LogFields, "user", fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
+							}
+						}
+					} else {
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Sprintf("not changed: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
+					}
+				}
+			}
+		}
+	}
 }
 
 func showStatus(p *Plugin) {
@@ -608,7 +788,7 @@ func showStatus(p *Plugin) {
 		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
 
 		if sessionError != nil || storageError != nil {
-			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf("session error: %v, storage error: %v", sessionError, storageError))
+			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
@@ -616,7 +796,7 @@ func showStatus(p *Plugin) {
 					info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount,
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0), p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
-						p.OptionProxyEnable, len(p.ChatsById), len(p.UsersById))
+						p.OptionProxyEnable, len(p.ChatsCache), countUsers(p))
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
@@ -640,6 +820,72 @@ func storageOptimize(p *Plugin) {
 	}
 }
 
+func updateChat(p *Plugin, chatId int64, chatName string) error {
+	currentTime := time.Now().UTC().Format(time.RFC3339)
+	tx, err := p.ChatsDbClient.Begin()
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatName, err)
+	}
+
+	chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
+	if err != nil {
+		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatName, err)
+	}
+
+	stmt, err := p.ChatsDbClient.Prepare(SQL_UPDATE_CHAT)
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatName, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(chat.Id,
+		chatName, chat.Type.ChatTypeType(),
+		chat.Title, chat.ClientData, chat.HasProtectedContent,
+		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
+		chat.MessageTtl, chat.UnreadCount, currentTime,
+
+		chatName, chat.Type.ChatTypeType(),
+		chat.Title, chat.ClientData, chat.HasProtectedContent,
+		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
+		chat.MessageTtl, chat.UnreadCount, currentTime,
+	)
+
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), chatName, err)
+	}
+
+	return tx.Commit()
+}
+
+func updateUser(p *Plugin, user *client.User, version int) error {
+	currentTime := time.Now().UTC().Format(time.RFC3339)
+	tx, err := p.UsersDbClient.Begin()
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
+	}
+
+	stmt, err := p.UsersDbClient.Prepare(SQL_UPDATE_USER)
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(user.Id, version, user.Username,
+		user.Type.UserTypeType(), user.LanguageCode,
+		user.FirstName, user.LastName, user.PhoneNumber,
+		user.Status.UserStatusType(), user.HaveAccess,
+		user.IsContact, user.IsFake, user.IsMutualContact,
+		user.IsScam, user.IsSupport, user.IsVerified,
+		user.RestrictionReason, currentTime,
+	)
+
+	if err != nil {
+		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
+	}
+
+	return tx.Commit()
+}
+
 type Plugin struct {
 	m sync.Mutex
 
@@ -653,17 +899,18 @@ type Plugin struct {
 	PluginDataDir string
 	PluginTempDir string
 
+	ConnectionState string
+
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
 
-	ChatsById   map[int64]string
-	ChatsByName map[string]int64
-	UsersById   map[int64][]string
+	ChatsCache map[int64]*core.Telegram
+
+	ChatsDbClient *sql.DB
+	UsersDbClient *sql.DB
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
-
-	ConnectionState string
 
 	OptionAdsEnable           bool
 	OptionAdsPeriod           int64
@@ -694,8 +941,6 @@ type Plugin struct {
 	OptionProxyPassword       string
 	OptionProxyType           string
 	OptionSessionTTL          int
-	OptionShowChat            bool
-	OptionShowUser            bool
 	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
 	OptionStorageOptimize     bool
@@ -703,6 +948,7 @@ type Plugin struct {
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
+	OptionUserLog             bool
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -940,8 +1186,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		"ads_enable":        -1,
 		"ads_period":        1,
-		"api_id":            1,
 		"api_hash":          1,
+		"api_id":            1,
 		"app_version":       -1,
 		"device_model":      -1,
 		"fetch_timeout":     -1,
@@ -951,18 +1197,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"log_level":         -1,
 		"match_signature":   -1,
 		"match_ttl":         -1,
+		"original_filename": -1,
 		"proxy_enable":      -1,
 		"proxy_port":        -1,
 		"proxy_server":      -1,
 		"proxy_type":        -1,
 		"session_ttl":       -1,
-		"show_chat":         -1,
-		"show_user":         -1,
 		"status_enable":     -1,
 		"status_period":     -1,
 		"storage_optimize":  -1,
 		"storage_period":    -1,
-		"original_filename": -1,
+		"user_log":          -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1206,7 +1451,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-    core.SliceStringToUpper(&plugin.OptionMatchSignature)
+	core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
 		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
@@ -1302,30 +1547,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSessionTTL((*pluginConfig.PluginParams)["session_ttl"])
 	core.ShowPluginParam(plugin.LogFields, "session_ttl", plugin.OptionSessionTTL)
 
-	// show_chat.
-	setShowChat := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["show_chat"] = 0
-			plugin.OptionShowChat = v
-		}
-	}
-	setShowChat(DEFAULT_SHOW_CHAT)
-	setShowChat(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.show_chat", template)))
-	setShowChat((*pluginConfig.PluginParams)["show_chat"])
-	core.ShowPluginParam(plugin.LogFields, "show_chat", plugin.OptionShowChat)
-
-	// show_user.
-	setShowUser := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["show_user"] = 0
-			plugin.OptionShowUser = v
-		}
-	}
-	setShowUser(DEFAULT_SHOW_USER)
-	setShowUser(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.show_user", template)))
-	setShowUser((*pluginConfig.PluginParams)["show_user"])
-	core.ShowPluginParam(plugin.LogFields, "show_user", plugin.OptionShowUser)
-
 	// status_enable.
 	setStatusEnable := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1411,6 +1632,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
 	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
+	// user_log.
+	setUserLog := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["user_log"] = 0
+			plugin.OptionUserLog = v
+		}
+	}
+	setUserLog(DEFAULT_USER_LOG)
+	setUserLog(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_log", template)))
+	setUserLog((*pluginConfig.PluginParams)["user_log"])
+	core.ShowPluginParam(plugin.LogFields, "user_log", plugin.OptionUserLog)
+
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
 
@@ -1457,109 +1690,54 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Set session TTL.
 	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: int32(plugin.OptionSessionTTL)})
 
-	// Load already known chats ID mappings by their username (not available in API).
-	// interfax_ru = -1001019826615
-	chatsById := make(map[int64]string, 0)
-	chatsByName, err := loadChats(&plugin)
-
+	// Init chats database.
+	plugin.ChatsDbClient, err = initChatsDb(&plugin)
 	if err != nil {
-		return &Plugin{}, err
+		return &plugin, err
 	}
 
-	// 1. Check if we know IDs for all specified chats.
-	// 2. We keep chats/user IDs due Telegram API limits.
-	// 3. We may be banned for 24 hours if limits were reached (~200 requests might be enough).
+	// Update and join to chats.
+	plugin.ChatsCache = make(map[int64]*core.Telegram, len(plugin.OptionInput))
+
 	for _, chatName := range plugin.OptionInput {
 		var chatId int64
 		var err error
 
-		if id, ok := chatsByName[chatName]; !ok {
+		chatData := getChat(&plugin, chatName)
+
+		if chatData.CHATID == "" {
 			if strings.Contains(chatName, "t.me/+") {
 				chatId, err = getPrivateChatId(&plugin, chatName)
 			} else {
 				chatId, err = getPublicChatId(&plugin, chatName)
 			}
 
-			if err == nil {
-				// Add found chat to chat database.
-				chatsByName[chatName] = chatId
-				chatsById[chatId] = chatName
-
-				// Always join to chat.
-				err = joinToChat(&plugin, chatName, chatId)
-				if err != nil {
-					return &Plugin{}, err
-				}
-
-			} else {
-				// Don't accept any joining errors.
-				return &Plugin{}, err
-			}
-
-		} else {
-			// Always join to chat.
-			err = joinToChat(&plugin, chatName, id)
-
-			// Try to rejoin to chat if something wrong.
 			if err != nil {
-				if strings.Contains(chatName, "t.me/+") {
-					chatId, err = getPrivateChatId(&plugin, chatName)
-				} else {
-					chatId, err = getPublicChatId(&plugin, chatName)
-				}
-
-				if err == nil {
-					chatsByName[chatName] = chatId
-					chatsById[chatId] = chatName
-				} else {
-					return &Plugin{}, err
-				}
-
-			} else {
-				chatsById[id] = chatName
+				core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+				continue
 			}
+		} else {
+			chatId, _ = strconv.ParseInt(chatData.CHATID, 10, 64)
 		}
-	}
 
-	// Set plugin data.
-	plugin.ChatsById = chatsById
-	plugin.ChatsByName = chatsByName
+		err = updateChat(&plugin, chatId, chatName)
+		if err != nil {
+			core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+			continue
+		}
 
-	// Save chats.
-	if err := saveChats(&plugin); err != nil {
-		return &Plugin{}, fmt.Errorf(ERROR_SAVE_CHATS_ERROR.Error(), err)
-	}
+		err = joinToChat(&plugin, chatId, chatName)
+		if err != nil {
+			core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+			continue
+		}
 
-	// Load users.
-	// TODO: Users ids are mutable ?
-	if users, err := loadUsers(&plugin); err == nil {
-		plugin.UsersById = users
-	} else {
-		return &Plugin{}, fmt.Errorf(ERROR_LOAD_USERS_ERROR.Error(), err)
+		plugin.ChatsCache[chatId] = &chatData
 	}
 
 	// Get messages and files in background.
 	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
 	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_BUFFER_LENGHT)
-
-	// Show chats.
-	if plugin.OptionShowChat {
-		core.LogInputPlugin(plugin.LogFields, "chats records", len(plugin.ChatsByName))
-		for chatName, chatId := range plugin.ChatsByName {
-			core.LogInputPlugin(plugin.LogFields, "chat",
-				fmt.Sprintf("%v, %v", chatName, chatId))
-		}
-	}
-
-	// Show users.
-	if plugin.OptionShowUser {
-		core.LogInputPlugin(plugin.LogFields, "users records", len(plugin.UsersById))
-		for userId, userData := range plugin.UsersById {
-			core.LogInputPlugin(plugin.LogFields, "user",
-				fmt.Sprintf("%v, %v, %v, %v, %v, %v", userData[0], userId,
-					userData[1], userData[2], userData[3], userData[4]))
-		}
-	}
 
 	// Run main threads.
 	go receiveFiles(&plugin)
@@ -1579,6 +1757,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if plugin.OptionStorageOptimize {
 		go storageOptimize(&plugin)
 	}
+
+	if plugin.OptionUserLog {
+		plugin.UsersDbClient, err = initUsersDb(&plugin)
+		if err != nil {
+			return &plugin, err
+		}
+		go receiveUsers(&plugin)
+	}
+
 	// -------------------------------------------------------------------------
 
 	return &plugin, nil

@@ -475,12 +475,10 @@ func IsBool(i interface{}) (bool, bool) {
 	switch b := i.(type) {
 	case bool:
 		return b, true
-	case string:
-		if v, err := strconv.ParseBool(b); err == nil {
+	default:
+		if v, err := strconv.ParseBool(fmt.Sprintf("%v", b)); err == nil {
 			return v, true
 		}
-		return false, false
-	default:
 		return false, false
 	}
 }
