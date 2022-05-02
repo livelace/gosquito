@@ -128,8 +128,8 @@ const (
 
 var (
 	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %s, %s")
-	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %s, %s")
-	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %s, %s")
+	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %d, %s, %s")
+	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %s, %s")
 	ERROR_FETCH_ERROR           = errors.New("fetch error: %s")
 	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %s")
 	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %s (%s > %s)")
@@ -373,7 +373,7 @@ func initUsersDb(p *Plugin) (*sql.DB, error) {
 func joinToChat(p *Plugin, chatId int64, chatName string) error {
 	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatName, err)
+		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatName, err)
 	}
 	return nil
 }
@@ -791,16 +791,33 @@ func showStatus(p *Plugin) {
 		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
 
 		if sessionError != nil || storageError != nil {
-			core.LogInputPlugin(p.LogFields, "status", fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
+			core.LogInputPlugin(p.LogFields, "status", 
+                fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-					msg := "database size: %v, files amount: %v, files size: %v, geo: %v, ip: %v, last active: %v, last state: %v, login date: %v, proxy: %v, saved chats: %v, saved users: %v"
-					info := fmt.Sprintf(msg, core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+                    m := []string{
+                        "database size: %v,",
+                        "files amount: %v,",
+                        "files size: %v,",
+                        "geo: %v,",
+                        "ip: %v,",
+                        "last active: %v,",
+                        "last state: %v,",
+                        "login date: %v,",
+                        "proxy: %v,",
+                        "saved chats: %v,",
+                        "saved users: %v",
+                    }
+					info := fmt.Sprintf(strings.Join(m, " "),
+                        core.BytesToSize(storage.DatabaseSize), storage.FileCount,
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-						s.Ip, time.Unix(int64(s.LastActiveDate), 0), p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
-						p.OptionProxyEnable, len(p.ChatsCache), countUsers(p))
-					core.LogInputPlugin(p.LogFields, "status", info)
+						s.Ip, time.Unix(int64(s.LastActiveDate), 0), 
+                        p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
+						p.OptionProxyEnable, len(p.ChatsCache), countUsers(p),
+                    )
+					
+                    core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
 		}
@@ -832,7 +849,7 @@ func updateChat(p *Plugin, chatId int64, chatName string) error {
 
 	chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatName, err)
+		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatId, chatName, err)
 	}
 
 	stmt, err := p.ChatsDbClient.Prepare(SQL_UPDATE_CHAT)
