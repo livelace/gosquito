@@ -52,8 +52,8 @@ const (
 	SQL_FIND_CHAT = `
       SELECT * FROM chats WHERE name=?
     `
-	
-    SQL_COUNT_USER = `
+
+	SQL_COUNT_USER = `
       SELECT count(DISTINCT id) FROM users
     `
 
@@ -134,6 +134,7 @@ var (
 	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %s")
 	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %s (%s > %s)")
 	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %s")
+	ERROR_NO_CHATS              = errors.New("no chats!")
 	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %s")
 	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %s")
 	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %s, %s")
@@ -199,7 +200,7 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 }
 
 func countUsers(p *Plugin) int {
-    count := 0
+	count := 0
 	stmt, _ := p.UsersDbClient.Prepare(SQL_COUNT_USER)
 	defer stmt.Close()
 	stmt.QueryRow().Scan(&count)
@@ -484,7 +485,7 @@ func receiveMessages(p *Plugin) {
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
-                userData := core.Telegram{}
+				userData := core.Telegram{}
 				validMessage := false
 				warnings := make([]string, 0)
 
@@ -497,7 +498,7 @@ func receiveMessages(p *Plugin) {
 					messageSenderId = int64(messageSender.ChatId)
 				case *client.MessageSenderUser:
 					messageSenderId = int64(messageSender.UserId)
-				    userData = getUser(p, messageSenderId)
+					userData = getUser(p, messageSenderId)
 				}
 
 				// Process only specified chats.
@@ -721,12 +722,14 @@ func receiveUsers(p *Plugin) {
 
 				// 1. Create new user record.
 				// 2. Update user record.
-				if d.USERID == "0" {
+				if d.USERID == "" {
 					err := updateUser(p, user, 0)
 					if err == nil {
-						core.LogInputPlugin(p.LogFields, "user", fmt.Sprintf("saved: %v, %v", d.USERID, d.USERNAME))
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Sprintf("new: id: %v, version: %v, username: %v", user.Id, 0, user.Username))
 					} else {
-						core.LogInputPlugin(p.LogFields, "user", fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 					}
 				} else {
 					userChanged := false
@@ -774,7 +777,7 @@ func receiveUsers(p *Plugin) {
 						}
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("not changed: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
+							fmt.Sprintf("old: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
 					}
 				}
 			}
@@ -1713,7 +1716,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			}
 
 			if err != nil {
-				core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
 		} else {
@@ -1722,17 +1725,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		err = updateChat(&plugin, chatId, chatName)
 		if err != nil {
-			core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+			core.LogInputPlugin(plugin.LogFields, "chat", err)
 			continue
 		}
 
 		err = joinToChat(&plugin, chatId, chatName)
 		if err != nil {
-			core.LogInputPlugin(plugin.LogFields, "chat", err.Error())
+			core.LogInputPlugin(plugin.LogFields, "chat", err)
 			continue
 		}
 
 		plugin.ChatsCache[chatId] = &chatData
+	}
+
+    // Quit if there are no chats for join.
+	if len(plugin.ChatsCache) == 0 {
+		return &plugin, ERROR_NO_CHATS
 	}
 
 	// Get messages and files in background.
