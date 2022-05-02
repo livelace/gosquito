@@ -8,26 +8,46 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 
 ```go
 type Telegram struct {
-    CHATID    string
-    CHATTITLE string
-    CHATTYPE  string
-    
-    MESSAGEID        string
-    MESSAGEMEDIA     []string
-    MESSAGESENDERID* string
-    MESSAGETEXT*     string
-    MESSAGETEXTURL   []string
-    MESSAGETYPE      string
-    MESSAGEURL*      string
-    
-    USERID        string
-    USERNAME      string
-    USERTYPE      string
-    USERFIRSTNAME string
-    USERLASTNAME  string
-    USERPHONE     string
-	
-    WARNINGS []string
+	CHATID               string
+	CHATNAME             string
+	CHATTYPE             string
+	CHATTITLE            string
+	CHATCLIENTDATA       string
+	CHATPROTECTEDCONTENT string
+	CHATLASTINBOXID      string
+	CHATLASTOUTBOXID     string
+	CHATMESSAGETTL       string
+	CHATUNREADCOUNT      string
+	CHATTIMESTAMP        string
+
+	MESSAGEID        string
+	MESSAGEMEDIA     []string
+	MESSAGESENDERID* string
+	MESSAGETEXT*     string
+	MESSAGETEXTURL   []string
+	MESSAGETYPE      string
+	MESSAGEURL*      string
+
+	USERID            string
+	USERVERSION       string
+	USERNAME          string
+	USERTYPE          string
+	USERLANG          string
+	USERFIRSTNAME     string
+	USERLASTNAME      string
+	USERPHONE         string
+	USERSTATUS        string
+	USERACCESSIBLE    string
+	USERCONTACT       string
+	USERFAKE          string
+	USERMUTUALCONTACT string
+	USERSCAM          string
+	USERSUPPORT       string
+	USERVERIFIED      string
+	USERRESTRICTION   string
+	USERTIMESTAMP     string
+
+	WARNINGS []string
 }
 ```
 
