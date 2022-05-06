@@ -18,8 +18,6 @@ graph TD;
     P1-->O4(slack);
     P1-->O5(smtp);
 ```
-<img align="right" src="assets/gosquito.png">
-
 <br>
 
 ### Main features:
