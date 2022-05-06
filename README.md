@@ -5,6 +5,12 @@
 gathering, data processing and data transmitting to various destinations. 
 Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See [docs](docs/README.md) for additional info.
 
+
+```mermaid
+graph TD;
+    A-->B;
+    A-->C;
+```
 <img align="right" src="assets/gosquito.png">
 
 <br>
