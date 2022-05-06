@@ -78,3 +78,4 @@ graph TD;
 3. core: cron mode.
 4. regexp/ml: storage of interests.
 5. input: match_ignore_case option for match_signature.
+6. docs: add complex examples, docker compose environments.
