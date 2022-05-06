@@ -8,12 +8,15 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 
 ```mermaid
 graph TD;
-    A[kafka]-->P1[process 1];
-    B[resty]-->P1[process 1];
-    C[telegram]-->P1[process 1];
-    D[twitter]-->P1[process 1];
-    P1-->P2[process 2];
-    P2-->P3[process 3];
+    I1[kafka]-->P1[process];
+    I2[resty]-->P1[process];
+    I3[telegram]-->P1[process];
+    I4[twitter]-->P1[process];
+    P1-->O1[kafka];
+    P1-->O2[mattermost];
+    P1-->O3[resty];
+    P1-->O4[slack];
+    P1-->O5[smtp];
 ```
 <img align="right" src="assets/gosquito.png">
 
