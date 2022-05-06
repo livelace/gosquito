@@ -77,4 +77,4 @@ graph TD;
 2. prometheus: extend metrics with invalid flows.
 3. core: cron mode.
 4. regexp/ml: storage of interests.
-5. input: ignore_case option for match_signature.
+5. input: match_ignore_case option for match_signature.
