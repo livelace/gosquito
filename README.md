@@ -8,8 +8,10 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 
 ```mermaid
 graph TD;
-    A-->B;
-    A-->C;
+    A[kafka]-->P;
+    B[resty]-->P;
+    C[telegram]-->P;
+    D[twitter]-->P;
 ```
 <img align="right" src="assets/gosquito.png">
 
