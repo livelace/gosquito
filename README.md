@@ -73,9 +73,9 @@ graph TD;
 
 ### ToDo:
 
-1. Add vault support.
-2. Extend metrics with invalid flows.
-3. Cron mode.
-4. Storage of interests.
-5. Ignore case option in match_signature.
+1. credentials: add vault support.
+2. prometheus: extend metrics with invalid flows.
+3. core: cron mode.
+4. regexp/ml: storage of interests.
+5. input: ignore case option for match_signature.
 6. Inform about terminated telegram session.
