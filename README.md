@@ -3,20 +3,20 @@
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data
 gathering, data processing and data transmitting to various destinations. 
-Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See [docs](docs/README.md) for additional info.
+Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See (docs)(docs/README.md) for additional info.
 
 
 ```mermaid
 graph TD;
-    I1[kafka]-->P1[process];
-    I2[resty]-->P1[process];
-    I3[telegram]-->P1[process];
-    I4[twitter]-->P1[process];
-    P1-->O1[kafka];
-    P1-->O2[mattermost];
-    P1-->O3[resty];
-    P1-->O4[slack];
-    P1-->O5[smtp];
+    I1(kafka)-->P1(process);
+    I2(resty)-->P1(process);
+    I3(telegram)-->P1(process);
+    I4(twitter)-->P1(process);
+    P1-->O1(kafka);
+    P1-->O2(mattermost);
+    P1-->O3(resty);
+    P1-->O4(slack);
+    P1-->O5(smtp);
 ```
 <img align="right" src="assets/gosquito.png">
 
