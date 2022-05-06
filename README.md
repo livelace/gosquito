@@ -78,4 +78,3 @@ graph TD;
 3. core: cron mode.
 4. regexp/ml: storage of interests.
 5. input: ignore case option for match_signature.
-6. Inform about terminated telegram session.
