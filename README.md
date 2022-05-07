@@ -12,7 +12,7 @@ graph TD;
     I2(resty)-->P1;
     I3(telegram)-->P1;
     I4(twitter)-->P1;
-    P1-->P2(...);
+    P1-->P2(process plugin ...);
     P2-->P3(process plugin N);
     P3-->O1(kafka);
     P3-->O2(mattermost);
