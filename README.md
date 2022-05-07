@@ -12,13 +12,12 @@ graph TD;
     I2(resty)-->P1;
     I3(telegram)-->P1;
     I4(twitter)-->P1;
-    P1-->P2(process ...);
-    P2-->P3(process N);
-    P3-->O1(kafka);
-    P3-->O2(mattermost);
-    P3-->O3(resty);
-    P3-->O4(slack);
-    P3-->O5(smtp);
+    P1-->P2(process N);
+    P2-->O1(kafka);
+    P2-->O2(mattermost);
+    P2-->O3(resty);
+    P2-->O4(slack);
+    P2-->O5(smtp);
 ```
 <br>
 
