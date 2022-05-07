@@ -81,3 +81,4 @@ graph TD;
 6. docs: add complex examples, docker compose environments.
 7. telegram: add careful (api limits) support for download/sending unread files/messages.
 8. telegram: message_type option for message filtering.
+9. plugins: new (echo plugin more suitable?) file plugin for saving text to files.
