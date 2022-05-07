@@ -80,3 +80,4 @@ graph TD;
 5. input: match_ignore_case option for match_signature.
 6. docs: add complex examples, docker compose environments.
 7. telegram: add careful (api limits) support for download/sending unread files/messages.
+8. telegram: message_type option for message filtering.
