@@ -20,15 +20,16 @@ import (
 const (
 	PLUGIN_NAME = "telegram"
 
-	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_ENABLE        = true
+	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_PERIOD        = "5m"
-	DEFAULT_BUFFER_LENGHT     = 1000
+	DEFAULT_CHANNEL_LENGHT    = 1000
 	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_CHATS_DB          = "chats.sqlite"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
 	DEFAULT_FILES_DIR         = "files"
+	DEFAULT_FILES_CHANNEL     = 1000000
 	DEFAULT_FILE_MAX_SIZE     = "10m"
 	DEFAULT_LOG_LEVEL         = 0
 	DEFAULT_MATCH_TTL         = "1d"
@@ -44,8 +45,8 @@ const (
 	DEFAULT_STATUS_PERIOD     = "1h"
 	DEFAULT_STORAGE_OPTIMIZE  = true
 	DEFAULT_STORAGE_PERIOD    = "1h"
-	DEFAULT_USER_LOG          = true
 	DEFAULT_USERS_DB          = "users.sqlite"
+	DEFAULT_USER_LOG          = true
 
 	MAX_INSTANCE_PER_APP = 1
 
@@ -444,7 +445,7 @@ func receiveAds(p *Plugin) {
 }
 
 func receiveFiles(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_FILES_CHANNEL)
 
 	for {
 		select {
@@ -461,7 +462,7 @@ func receiveFiles(p *Plugin) {
 }
 
 func receiveMessages(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
 
 	for {
 		select {
@@ -681,7 +682,7 @@ func receiveMessages(p *Plugin) {
 }
 
 func receiveState(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
 
 	for {
 		select {
@@ -706,7 +707,7 @@ func receiveState(p *Plugin) {
 }
 
 func receiveUsers(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
 
 	for {
 		select {
@@ -1759,8 +1760,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Get messages and files in background.
-	plugin.FileChannel = make(chan int32, DEFAULT_BUFFER_LENGHT)
-	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_BUFFER_LENGHT)
+	plugin.FileChannel = make(chan int32, DEFAULT_CHANNEL_LENGHT)
+	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_CHANNEL_LENGHT)
 
 	// Run main threads.
 	go receiveFiles(&plugin)

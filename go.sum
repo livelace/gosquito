@@ -965,6 +965,8 @@ github.com/linkedin/goavro/v2 v2.9.8 h1:jN50elxBsGBDGVDEKqUlDuU1cFwJ11K/yrJCBMe/
 github.com/linkedin/goavro/v2 v2.9.8/go.mod h1:UgQUb2N/pmueQYH9bfqFioWxzYCZXSfF8Jw03O5sjqA=
 github.com/livelace/go-tdlib v0.6.1-0.20220422154044-d5f09ef7cc20 h1:VbwAkDmhyEJ6a42c5d6SrMKNe9KDjrMk5arvfs5ZCMA=
 github.com/livelace/go-tdlib v0.6.1-0.20220422154044-d5f09ef7cc20/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
+github.com/livelace/go-tdlib v0.6.1-0.20220509220015-92a5c6e1f36e h1:9h/2aN5njstucQuLRo42GlfFhrxXFvLKaLDbX1318W8=
+github.com/livelace/go-tdlib v0.6.1-0.20220509220015-92a5c6e1f36e/go.mod h1:IEzewz3XncLx/1AfO9Wy45bQHSfCFx9gOmiBV3+0xVE=
 github.com/livelace/logrus v1.6.1 h1:mdaba7YSyZaywEV2Wo88Gnbv15e8TDQKpo6qH4zllSg=
 github.com/livelace/logrus v1.6.1/go.mod h1:OEe+iWSGmgDZ8hTnPzfb9RuwVNvifXCsdg/jAacLKsw=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=

@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/go-getter v1.5.9
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
-	github.com/livelace/go-tdlib v0.6.1-0.20220422154044-d5f09ef7cc20
+	github.com/livelace/go-tdlib v0.6.1-0.20220509220015-92a5c6e1f36e
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost-server/v6 v6.6.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
