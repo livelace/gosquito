@@ -83,3 +83,4 @@ graph TD;
 7. telegram: add careful (api limits) support for download/sending unread files/messages.
 8. telegram: message_type option for message filtering.
 9. plugins: new (echo plugin more suitable?) file plugin for saving text to files.
+10. core/ml: auto learning interval.
