@@ -414,28 +414,26 @@ func receiveAds(p *Plugin) {
 					}
 
 					// Send data to channel.
-					if len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow.FlowName,
-							PLUGIN:     p.PluginName,
-							SOURCE:     chatData.CHATNAME,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-							UUID:       u,
+					p.DataChannel <- &core.DataItem{
+						FLOW:       p.Flow.FlowName,
+						PLUGIN:     p.PluginName,
+						SOURCE:     chatData.CHATNAME,
+						TIME:       messageTime,
+						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						UUID:       u,
 
-							TELEGRAM: core.Telegram{
-								USERID:   DEFAULT_ADS_ID,
-								USERNAME: DEFAULT_ADS_ID,
-								USERTYPE: DEFAULT_ADS_ID,
+						TELEGRAM: core.Telegram{
+							USERID:   DEFAULT_ADS_ID,
+							USERNAME: DEFAULT_ADS_ID,
+							USERTYPE: DEFAULT_ADS_ID,
 
-								USERFIRSTNAME: DEFAULT_ADS_ID,
-								USERLASTNAME:  DEFAULT_ADS_ID,
-								USERPHONE:     DEFAULT_ADS_ID,
+							USERFIRSTNAME: DEFAULT_ADS_ID,
+							USERLASTNAME:  DEFAULT_ADS_ID,
+							USERPHONE:     DEFAULT_ADS_ID,
 
-								MESSAGETEXT:    formattedText.Text,
-								MESSAGETEXTURL: textURLs,
-							},
-						}
+							MESSAGETEXT:    formattedText.Text,
+							MESSAGETEXTURL: textURLs,
+						},
 					}
 				}
 			}
@@ -619,7 +617,7 @@ func receiveMessages(p *Plugin) {
 					}
 
 					// Send data to channel.
-					if validMessage && len(p.DataChannel) < DEFAULT_BUFFER_LENGHT {
+					if validMessage {
 						p.DataChannel <- &core.DataItem{
 							FLOW:       p.Flow.FlowName,
 							PLUGIN:     p.PluginName,
@@ -791,33 +789,33 @@ func showStatus(p *Plugin) {
 		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
 
 		if sessionError != nil || storageError != nil {
-			core.LogInputPlugin(p.LogFields, "status", 
-                fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
+			core.LogInputPlugin(p.LogFields, "status",
+				fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
 		} else {
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-                    m := []string{
-                        "database size: %v,",
-                        "files amount: %v,",
-                        "files size: %v,",
-                        "geo: %v,",
-                        "ip: %v,",
-                        "last active: %v,",
-                        "last state: %v,",
-                        "login date: %v,",
-                        "proxy: %v,",
-                        "saved chats: %v,",
-                        "saved users: %v",
-                    }
+					m := []string{
+						"database size: %v,",
+						"files amount: %v,",
+						"files size: %v,",
+						"geo: %v,",
+						"ip: %v,",
+						"last active: %v,",
+						"last state: %v,",
+						"login date: %v,",
+						"proxy: %v,",
+						"saved chats: %v,",
+						"saved users: %v",
+					}
 					info := fmt.Sprintf(strings.Join(m, " "),
-                        core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+						core.BytesToSize(storage.DatabaseSize), storage.FileCount,
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-						s.Ip, time.Unix(int64(s.LastActiveDate), 0), 
-                        p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
+						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
 						p.OptionProxyEnable, len(p.ChatsCache), countUsers(p),
-                    )
-					
-                    core.LogInputPlugin(p.LogFields, "status", info)
+					)
+
+					core.LogInputPlugin(p.LogFields, "status", info)
 				}
 			}
 		}
@@ -1755,7 +1753,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		plugin.ChatsCache[chatId] = &chatData
 	}
 
-    // Quit if there are no chats for join.
+	// Quit if there are no chats for join.
 	if len(plugin.ChatsCache) == 0 {
 		return &plugin, ERROR_NO_CHATS
 	}
