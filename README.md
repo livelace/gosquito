@@ -84,3 +84,4 @@ graph TD;
 8. telegram: message_type option for message filtering.
 9. plugins: new (echo plugin more suitable?) file plugin for saving text to files.
 10. core/ml: auto learning interval.
+11. process: ocr plugin.
