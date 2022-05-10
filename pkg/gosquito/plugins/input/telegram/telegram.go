@@ -448,26 +448,30 @@ func receiveAds(p *Plugin) {
 
 func receiveFiles(p *Plugin) {
 	for {
-		select {
-		case update := <-p.FileListener.Updates:
-			switch update.(type) {
+		if len(p.FileListener.Updates) > 0 {
+			update := <-p.FileListener.Updates
+			
+            switch update.(type) {
 			case *client.UpdateFile:
 				newFile := update.(*client.UpdateFile).File
 				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
 					p.FileChannel <- newFile.Id
 				}
 			}
-		}
+		} else {
+            time.Sleep(100 * time.Millisecond)
+        }
 	}
 }
 
 func receiveUpdates(p *Plugin) {
 	for {
 		if len(p.UpdateListener.Updates) > 0 {
-		    update := <-p.UpdateListener.Updates
-			
-            switch update.(type) {
-            // Connection state.
+			update := <-p.UpdateListener.Updates
+
+			switch update.(type) {
+            
+			// Connection state.
 			case *client.UpdateConnectionState:
 				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
 				case "connectionStateConnecting":
@@ -482,7 +486,7 @@ func receiveUpdates(p *Plugin) {
 					p.ConnectionState = "waiting for network"
 				}
 
-            // Messages.
+				// Messages.
 			case *client.UpdateNewMessage:
 				// Map message attributes to vars.
 				message := update.(*client.UpdateNewMessage)
@@ -688,10 +692,10 @@ func receiveUpdates(p *Plugin) {
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
-						fmt.Sprintf("chat filtered, message excluded: %v", messageChatId))
+						fmt.Sprintf("filtered: %v", messageChatId))
 				}
 
-            // Users.
+				// Users.
 			case *client.UpdateUser:
 				user := update.(*client.UpdateUser).User
 
@@ -760,8 +764,8 @@ func receiveUpdates(p *Plugin) {
 				}
 			}
 		} else {
-            time.Sleep(10 * time.Millisecond)
-        }
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
@@ -795,8 +799,8 @@ func showStatus(p *Plugin) {
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
 						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
-						len(p.UpdateListener.Updates), p.OptionProxyEnable, 
-                        len(p.ChatsCache), countUsers(p), 
+						len(p.UpdateListener.Updates), p.OptionProxyEnable,
+						len(p.ChatsCache), countUsers(p),
 					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
