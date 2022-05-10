@@ -23,17 +23,17 @@ const (
 	DEFAULT_ADS_ENABLE        = true
 	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_PERIOD        = "5m"
-	DEFAULT_CHANNEL_LENGHT    = 1000
+	DEFAULT_CHANNEL_SIZE      = 10000
 	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_CHATS_DB          = "chats.sqlite"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
 	DEFAULT_FILES_DIR         = "files"
-	DEFAULT_FILES_CHANNEL     = 3000000
 	DEFAULT_FILE_MAX_SIZE     = "10m"
 	DEFAULT_LOG_LEVEL         = 0
 	DEFAULT_MATCH_TTL         = "1d"
 	DEFAULT_ORIGINAL_FILENAME = true
+	DEFAULT_POOL_SIZE         = 100000
 	DEFAULT_PROXY_ENABLE      = false
 	DEFAULT_PROXY_PORT        = 9050
 	DEFAULT_PROXY_SERVER      = "127.0.0.1"
@@ -128,20 +128,20 @@ const (
 )
 
 var (
-	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %s, %s")
-	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %d, %s, %s")
-	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %s, %s")
-	ERROR_FETCH_ERROR           = errors.New("fetch error: %s")
-	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %s")
-	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %s (%s > %s)")
-	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %s")
+	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %v, %v")
+	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %v, %v, %v")
+	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %v, %v")
+	ERROR_FETCH_ERROR           = errors.New("fetch error: %v")
+	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %v")
+	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %v (%v > %v)")
+	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %v")
 	ERROR_NO_CHATS              = errors.New("no chats!")
-	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %s")
-	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %s")
-	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %s, %s")
-	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %s, %s")
-	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %s, %s")
-	ERROR_STATUS_ERROR          = errors.New("session error: %s, storage error: %s")
+	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %v")
+	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %v")
+	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %v, %v")
+	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %v, %v")
+	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %v, %v")
+	ERROR_STATUS_ERROR          = errors.New("session error: %v, storage error: %v")
 	ERROR_USER_UPDATE_ERROR     = errors.New("cannot save user: %v")
 )
 
@@ -232,13 +232,15 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 		// 1. Read files IDs from file channel.
 		// 2. Return error if timeout is happened.
 		for i := 0; i < p.OptionFetchTimeout; i++ {
-			for id := range p.FileChannel {
-				if id == downloadFile.Id {
-					if f, err := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id}); err == nil {
-						localFile = f.Local.Path
-						goto stopWaiting
-					} else {
-						return "", fmt.Errorf(ERROR_FETCH_ERROR.Error(), err)
+			if len(p.FileChannel) > 0 {
+				for id := range p.FileChannel {
+					if id == downloadFile.Id {
+						if f, err := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id}); err == nil {
+							localFile = f.Local.Path
+							goto stopWaiting
+						} else {
+							return "", fmt.Errorf(ERROR_FETCH_ERROR.Error(), err)
+						}
 					}
 				}
 			}
@@ -445,11 +447,9 @@ func receiveAds(p *Plugin) {
 }
 
 func receiveFiles(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_FILES_CHANNEL)
-
 	for {
 		select {
-		case update := <-listener.Updates:
+		case update := <-p.FileListener.Updates:
 			switch update.(type) {
 			case *client.UpdateFile:
 				newFile := update.(*client.UpdateFile).File
@@ -461,14 +461,28 @@ func receiveFiles(p *Plugin) {
 	}
 }
 
-func receiveMessages(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
-
+func receiveUpdates(p *Plugin) {
 	for {
-		select {
-		case update := <-listener.Updates:
-			switch update.(type) {
+		if len(p.UpdateListener.Updates) > 0 {
+		    update := <-p.UpdateListener.Updates
+			
+            switch update.(type) {
+            // Connection state.
+			case *client.UpdateConnectionState:
+				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
+				case "connectionStateConnecting":
+					p.ConnectionState = "connecting"
+				case "connectionStateConnectingToProxy":
+					p.ConnectionState = "connecting to proxy"
+				case "connectionStateReady":
+					p.ConnectionState = "ready"
+				case "connectionStateUpdating":
+					p.ConnectionState = "updating"
+				case "connectionStateWaitingForNetwork":
+					p.ConnectionState = "waiting for network"
+				}
 
+            // Messages.
 			case *client.UpdateNewMessage:
 				// Map message attributes to vars.
 				message := update.(*client.UpdateNewMessage)
@@ -673,46 +687,11 @@ func receiveMessages(p *Plugin) {
 					}
 
 				} else {
-					core.LogInputPlugin(p.LogFields, "",
+					core.LogInputPlugin(p.LogFields, "chat",
 						fmt.Sprintf("chat filtered, message excluded: %v", messageChatId))
 				}
-			}
-		}
-	}
-}
 
-func receiveState(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
-
-	for {
-		select {
-		case update := <-listener.Updates:
-			switch update.(type) {
-			case *client.UpdateConnectionState:
-				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
-				case "connectionStateConnecting":
-					p.ConnectionState = "connecting"
-				case "connectionStateConnectingToProxy":
-					p.ConnectionState = "connecting to proxy"
-				case "connectionStateReady":
-					p.ConnectionState = "ready"
-				case "connectionStateUpdating":
-					p.ConnectionState = "updating"
-				case "connectionStateWaitingForNetwork":
-					p.ConnectionState = "waiting for network"
-				}
-			}
-		}
-	}
-}
-
-func receiveUsers(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_LENGHT)
-
-	for {
-		select {
-		case update := <-listener.Updates:
-			switch update.(type) {
+            // Users.
 			case *client.UpdateUser:
 				user := update.(*client.UpdateUser).User
 
@@ -780,7 +759,9 @@ func receiveUsers(p *Plugin) {
 					}
 				}
 			}
-		}
+		} else {
+            time.Sleep(10 * time.Millisecond)
+        }
 	}
 }
 
@@ -804,6 +785,7 @@ func showStatus(p *Plugin) {
 						"last active: %v,",
 						"last state: %v,",
 						"login date: %v,",
+						"pool size: %v,",
 						"proxy: %v,",
 						"saved chats: %v,",
 						"saved users: %v",
@@ -813,7 +795,8 @@ func showStatus(p *Plugin) {
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
 						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
-						p.OptionProxyEnable, len(p.ChatsCache), countUsers(p),
+						len(p.UpdateListener.Updates), p.OptionProxyEnable, 
+                        len(p.ChatsCache), countUsers(p), 
 					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -920,6 +903,9 @@ type Plugin struct {
 
 	ConnectionState string
 
+	FileListener   *client.Listener
+	UpdateListener *client.Listener
+
 	FileChannel chan int32
 	DataChannel chan *core.DataItem
 
@@ -959,6 +945,7 @@ type Plugin struct {
 	OptionProxyUsername       string
 	OptionProxyPassword       string
 	OptionProxyType           string
+	OptionPoolSize            int
 	OptionSessionTTL          int
 	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
@@ -1141,7 +1128,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
 					core.LogInputPlugin(p.LogFields, source, fmt.Sprintf(
-						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						"expire_action: command: %v, arguments: %v, output: %v, error: %v",
 						cmd, args, output, err))
 				}
 			}
@@ -1506,6 +1493,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		plugin.OptionIgnoreFileName = true
 	}
 
+	// pool_size.
+	setPoolSize := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["pool_size"] = 0
+			plugin.OptionPoolSize = v
+		}
+	}
+	setPoolSize(DEFAULT_POOL_SIZE)
+	setPoolSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.pool_size", template)))
+	setPoolSize((*pluginConfig.PluginParams)["pool_size"])
+	core.ShowPluginParam(plugin.LogFields, "pool_size", plugin.OptionPoolSize)
+
 	// proxy_enable.
 	setProxyEnable := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1760,15 +1759,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Get messages and files in background.
-	plugin.FileChannel = make(chan int32, DEFAULT_CHANNEL_LENGHT)
-	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_CHANNEL_LENGHT)
+	plugin.FileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
+	plugin.DataChannel = make(chan *core.DataItem, DEFAULT_CHANNEL_SIZE)
+
+	// Init message listeners.
+	plugin.FileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+	plugin.UpdateListener = plugin.TdlibClient.GetListener(int64(plugin.OptionPoolSize))
 
 	// Run main threads.
 	go receiveFiles(&plugin)
 
-	go receiveMessages(&plugin)
-
-	go receiveState(&plugin)
+	go receiveUpdates(&plugin)
 
 	if plugin.OptionAdsEnable {
 		go receiveAds(&plugin)
@@ -1787,7 +1788,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		if err != nil {
 			return &plugin, err
 		}
-		go receiveUsers(&plugin)
 	}
 
 	// -------------------------------------------------------------------------

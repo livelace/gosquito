@@ -86,6 +86,7 @@ type Telegram struct {
 | match_signature   | -        | array  | -    | +        | "[]"          | ["telegram.messagetext", "telegram.messageurl"] | Match new messages by signature.                                                                           |
 | match_ttl         | -        | string | -    | +        | "1d"          | "24h"                                           | TTL (Time To Live) for matched signatures.                                                                 |
 | original_filename | -        | bool   | -    | +        | true          | false                                           | Use original file names.                                                                                   |
+| pool_size         | -        | int    | -    | +        | 100000        | 10000                                           | Put arriving messages in pool (memory consuming) during file downloading.
 | proxy_enable      | -        | bool   | -    | +        | false         | true                                            | Enable/disable proxy.
 | proxy_port        | -        | int    | -    | +        | 9050          | true                                            | Proxy port number.
 | proxy_server      | -        | string | -    | +        | "127.0.0.1"   | true                                            | Proxy server address.
@@ -97,7 +98,7 @@ type Telegram struct {
 | status_period     | -        | string | -    | +        | "1h"          | "5m"                                            | Interval for showing session status in plugin output.                                                      |
 | storage_optimize  | -        | bool   | -    | +        | true          | false                                           | Enable/disable storage optimization (clean old data).                                                      |
 | storage_period    | -        | string | -    | +        | "1h"          | "24h"                                           | Storage optimization interval.                                                                             |
-| user_log          | -        | bool   | -    | +        | true          | false                                           | Enable/disable passive user logging.                                                      |
+| user_log          | -        | bool   | -    | +        | true          | false                                           | Enable/disable passive user logging.                                                                       |
 
 
 ### Flow sample:
