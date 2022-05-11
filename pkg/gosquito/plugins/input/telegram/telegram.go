@@ -129,7 +129,7 @@ const (
 
 var (
 	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %v, %v")
-	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %v, %v, %v")
+	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %v, %v")
 	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %v, %v")
 	ERROR_FETCH_ERROR           = errors.New("fetch error: %v")
 	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %v")
@@ -835,7 +835,7 @@ func updateChat(p *Plugin, chatId int64, chatName string) error {
 
 	chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatId, chatName, err)
+		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatName, err)
 	}
 
 	stmt, err := p.ChatsDbClient.Prepare(SQL_UPDATE_CHAT)
@@ -1754,7 +1754,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			continue
 		}
 
-		plugin.ChatsCache[chatId] = &chatData
+        // Get updated chat again.
+		chatData = getChat(&plugin, chatName)
+		
+        plugin.ChatsCache[chatId] = &chatData
 	}
 
 	// Quit if there are no chats for join.
