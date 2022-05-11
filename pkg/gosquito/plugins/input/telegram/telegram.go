@@ -858,37 +858,43 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 			isChanged = true
 		}
 
-		if isChanged {
-			oldVersion, _ := strconv.ParseInt(oldUser.USERVERSION, 10, 32)
+		oldVersion, _ := strconv.ParseInt(oldUser.USERVERSION, 10, 32)
+        if isChanged {
 			userVersion = int(oldVersion) + 1
+		} else {
+            userVersion = int(oldVersion)
+        }
+	}
+
+	if isNew || isChanged {
+		tx, err := p.UsersDbClient.Begin()
+		if err != nil {
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
 		}
+
+		stmt, err := p.UsersDbClient.Prepare(SQL_UPDATE_USER)
+		if err != nil {
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
+		}
+		defer stmt.Close()
+
+		_, err = stmt.Exec(user.Id, userVersion, user.Username,
+			user.Type.UserTypeType(), user.LanguageCode,
+			user.FirstName, user.LastName, user.PhoneNumber,
+			user.Status.UserStatusType(), user.HaveAccess,
+			user.IsContact, user.IsFake, user.IsMutualContact,
+			user.IsScam, user.IsSupport, user.IsVerified,
+			user.RestrictionReason, currentTime,
+		)
+
+		if err != nil {
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
+		}
+
+		return isNew, isChanged, userVersion, tx.Commit()
 	}
-
-	tx, err := p.UsersDbClient.Begin()
-	if err != nil {
-		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
-	}
-
-	stmt, err := p.UsersDbClient.Prepare(SQL_UPDATE_USER)
-	if err != nil {
-		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(user.Id, userVersion, user.Username,
-		user.Type.UserTypeType(), user.LanguageCode,
-		user.FirstName, user.LastName, user.PhoneNumber,
-		user.Status.UserStatusType(), user.HaveAccess,
-		user.IsContact, user.IsFake, user.IsMutualContact,
-		user.IsScam, user.IsSupport, user.IsVerified,
-		user.RestrictionReason, currentTime,
-	)
-
-	if err != nil {
-		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
-	}
-
-	return isNew, isChanged, userVersion, tx.Commit()
+	
+    return isNew, isChanged, userVersion, nil
 }
 
 type Plugin struct {
