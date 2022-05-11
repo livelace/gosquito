@@ -140,6 +140,7 @@ var (
 	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %v")
 	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %v, %v")
 	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %v, %v")
+	ERROR_SQL_INIT_DB           = errors.New("cannot init database: %v, %v")
 	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %v, %v")
 	ERROR_STATUS_ERROR          = errors.New("session error: %v, storage error: %v")
 	ERROR_USER_UPDATE_ERROR     = errors.New("cannot save user: %v")
@@ -364,12 +365,19 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 func initChatsDb(p *Plugin) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p.OptionChatDatabase)
 	_, err = db.Exec(SQL_CHATS_SCHEMA)
+    if err != nil {
+        return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionChatDatabase, err)
+    }
 	return db, err
 }
 
 func initUsersDb(p *Plugin) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p.OptionUserDatabase)
 	_, err = db.Exec(SQL_USERS_SCHEMA)
+
+    if err != nil {
+        return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionUserDatabase, err)
+    }
 	return db, err
 }
 
