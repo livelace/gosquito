@@ -139,6 +139,7 @@ var (
 	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %v")
 	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %v")
 	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %v, %v")
+	ERROR_SQL_DB_OPTION         = errors.New("chat or user database not set: %v, %v")
 	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %v, %v")
 	ERROR_SQL_INIT_DB           = errors.New("cannot init database: %v, %v")
 	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %v, %v")
@@ -365,9 +366,9 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 func initChatsDb(p *Plugin) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p.OptionChatDatabase)
 	_, err = db.Exec(SQL_CHATS_SCHEMA)
-    if err != nil {
-        return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionChatDatabase, err)
-    }
+	if err != nil {
+		return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionChatDatabase, err)
+	}
 	return db, err
 }
 
@@ -375,9 +376,9 @@ func initUsersDb(p *Plugin) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p.OptionUserDatabase)
 	_, err = db.Exec(SQL_USERS_SCHEMA)
 
-    if err != nil {
-        return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionUserDatabase, err)
-    }
+	if err != nil {
+		return db, fmt.Errorf(ERROR_SQL_INIT_DB.Error(), p.OptionUserDatabase, err)
+	}
 	return db, err
 }
 
@@ -1316,7 +1317,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionChatDatabase = v
 		}
 	}
-	setChatDatabase(pluginConfig.AppConfig.GetString(filepath.Join(plugin.PluginDataDir, DEFAULT_CHATS_DB)))
+	setChatDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_CHATS_DB))
 	setChatDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_database", template)))
 	setChatDatabase((*pluginConfig.PluginParams)["chat_database"])
 	core.ShowPluginParam(plugin.LogFields, "chat_database", plugin.OptionChatDatabase)
@@ -1674,7 +1675,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionUserDatabase = v
 		}
 	}
-	setUserDatabase(pluginConfig.AppConfig.GetString(filepath.Join(plugin.PluginDataDir, DEFAULT_USERS_DB)))
+	setUserDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_USERS_DB))
 	setUserDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_database", template)))
 	setUserDatabase((*pluginConfig.PluginParams)["user_database"])
 	core.ShowPluginParam(plugin.LogFields, "user_database", plugin.OptionUserDatabase)
@@ -1701,8 +1702,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
+	if plugin.OptionChatDatabase == "" && plugin.OptionUserDatabase == "" {
+		return &Plugin{}, fmt.Errorf(ERROR_SQL_DB_OPTION.Error(),
+			plugin.OptionChatDatabase, plugin.OptionUserDatabase)
+	}
+
 	if plugin.OptionProxyType != "socks" && plugin.OptionProxyType != "http" {
-		return &Plugin{}, fmt.Errorf(ERROR_PROXY_TYPE_UNKNOWN.Error(), plugin.OptionProxyType)
+		return &Plugin{}, fmt.Errorf(ERROR_PROXY_TYPE_UNKNOWN.Error(),
+			plugin.OptionProxyType)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
