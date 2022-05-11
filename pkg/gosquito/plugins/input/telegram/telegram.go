@@ -24,7 +24,6 @@ const (
 	DEFAULT_ADS_ID            = "ads"
 	DEFAULT_ADS_PERIOD        = "5m"
 	DEFAULT_CHANNEL_SIZE      = 10000
-	DEFAULT_CHATS_DATA        = "chats.data"
 	DEFAULT_CHATS_DB          = "chats.sqlite"
 	DEFAULT_DATABASE_DIR      = "database"
 	DEFAULT_FETCH_TIMEOUT     = "1h"
@@ -122,7 +121,8 @@ const (
         is_support INTEGER NOT NULL,
         is_verified INTEGER NOT NULL,
         restriction_reason TEXT,
-        timestamp TEXT NOT NULL
+        timestamp TEXT NOT NULL,
+        UNIQUE(id, version)
       )
     `
 )
@@ -362,13 +362,13 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 }
 
 func initChatsDb(p *Plugin) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DB))
+	db, err := sql.Open("sqlite3", p.OptionChatDatabase)
 	_, err = db.Exec(SQL_CHATS_SCHEMA)
 	return db, err
 }
 
 func initUsersDb(p *Plugin) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", filepath.Join(p.PluginDataDir, DEFAULT_USERS_DB))
+	db, err := sql.Open("sqlite3", p.OptionUserDatabase)
 	_, err = db.Exec(SQL_USERS_SCHEMA)
 	return db, err
 }
@@ -379,17 +379,6 @@ func joinToChat(p *Plugin, chatId int64, chatName string) error {
 		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatName, err)
 	}
 	return nil
-}
-
-func loadChats(p *Plugin) (map[string]int64, error) {
-	data := make(map[string]int64, 0)
-
-	err := core.PluginLoadData(filepath.Join(p.PluginDataDir, DEFAULT_CHATS_DATA), &data)
-	if err != nil {
-		return data, err
-	}
-
-	return data, nil
 }
 
 func receiveAds(p *Plugin) {
@@ -450,8 +439,8 @@ func receiveFiles(p *Plugin) {
 	for {
 		if len(p.FileListener.Updates) > 0 {
 			update := <-p.FileListener.Updates
-			
-            switch update.(type) {
+
+			switch update.(type) {
 			case *client.UpdateFile:
 				newFile := update.(*client.UpdateFile).File
 				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
@@ -459,8 +448,8 @@ func receiveFiles(p *Plugin) {
 				}
 			}
 		} else {
-            time.Sleep(100 * time.Millisecond)
-        }
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
@@ -470,7 +459,7 @@ func receiveUpdates(p *Plugin) {
 			update := <-p.UpdateListener.Updates
 
 			switch update.(type) {
-            
+
 			// Connection state.
 			case *client.UpdateConnectionState:
 				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
@@ -695,72 +684,27 @@ func receiveUpdates(p *Plugin) {
 						fmt.Sprintf("filtered: %v", messageChatId))
 				}
 
-				// Users.
+			// Users.
 			case *client.UpdateUser:
 				user := update.(*client.UpdateUser).User
+				isNew, isChanged, version, err := updateUser(p, user)
 
-				// Try to get user data from database.
-				d := getUser(p, user.Id)
-
-				// 1. Create new user record.
-				// 2. Update user record.
-				if d.USERID == "" {
-					err := updateUser(p, user, 0)
-					if err == nil {
+				if err == nil {
+					if isNew {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("new: id: %v, version: %v, username: %v", user.Id, 0, user.Username))
+							fmt.Sprintf("new: %v, version: %v, username: %v", user.Id, version, user.Username))
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
+							fmt.Sprintf("old: %v, version: %v, username: %v", user.Id, version, user.Username))
+					}
+
+					if isChanged {
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Sprintf("changed: %v, version: %v, username: %v", user.Id, version, user.Username))
 					}
 				} else {
-					userChanged := false
-
-					if user.Username != d.USERNAME || user.Type.UserTypeType() != d.USERTYPE ||
-						user.LanguageCode != d.USERLANG || user.FirstName != d.USERFIRSTNAME ||
-						user.LastName != d.USERLASTNAME || user.PhoneNumber != d.USERPHONE {
-						userChanged = true
-					}
-
-					if b, s := core.IsBool(d.USERACCESSIBLE); s && user.HaveAccess != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERCONTACT); s && user.IsContact != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERFAKE); s && user.IsFake != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERMUTUALCONTACT); s && user.IsMutualContact != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERSCAM); s && user.IsScam != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERSUPPORT); s && user.IsSupport != b {
-						userChanged = true
-					}
-					if b, s := core.IsBool(d.USERVERIFIED); s && user.IsVerified != b {
-						userChanged = true
-					}
-					if user.RestrictionReason != d.USERRESTRICTION {
-						userChanged = true
-					}
-
-					if userChanged {
-						if version, s := core.IsInt(d.USERVERSION); s {
-							err := updateUser(p, user, version+1)
-							if err == nil {
-								core.LogInputPlugin(p.LogFields, "user",
-									fmt.Sprintf("changed: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
-							} else {
-								core.LogInputPlugin(p.LogFields, "user", fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
-							}
-						}
-					} else {
-						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("old: id: %v, version: %v, username: %v", d.USERID, d.USERVERSION, d.USERNAME))
-					}
+					core.LogInputPlugin(p.LogFields, "user",
+						fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 				}
 			}
 		} else {
@@ -863,20 +807,66 @@ func updateChat(p *Plugin, chatId int64, chatName string) error {
 	return tx.Commit()
 }
 
-func updateUser(p *Plugin, user *client.User, version int) error {
+func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
+	oldUser := getUser(p, user.Id)
+	userVersion := 0
+
+	isNew := false
+	isChanged := false
+
+	if oldUser.USERID == "" {
+		isNew = true
+	} else {
+		if user.Username != oldUser.USERNAME || user.Type.UserTypeType() != oldUser.USERTYPE ||
+			user.LanguageCode != oldUser.USERLANG || user.FirstName != oldUser.USERFIRSTNAME ||
+			user.LastName != oldUser.USERLASTNAME || user.PhoneNumber != oldUser.USERPHONE {
+			isChanged = true
+		}
+
+		if b, s := core.IsBool(oldUser.USERACCESSIBLE); s && user.HaveAccess != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERCONTACT); s && user.IsContact != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERFAKE); s && user.IsFake != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERMUTUALCONTACT); s && user.IsMutualContact != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERSCAM); s && user.IsScam != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERSUPPORT); s && user.IsSupport != b {
+			isChanged = true
+		}
+		if b, s := core.IsBool(oldUser.USERVERIFIED); s && user.IsVerified != b {
+			isChanged = true
+		}
+		if user.RestrictionReason != oldUser.USERRESTRICTION {
+			isChanged = true
+		}
+
+		if isChanged {
+			oldVersion, _ := strconv.ParseInt(oldUser.USERVERSION, 10, 32)
+			userVersion = int(oldVersion) + 1
+		}
+	}
+
 	tx, err := p.UsersDbClient.Begin()
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
+		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
 	}
 
 	stmt, err := p.UsersDbClient.Prepare(SQL_UPDATE_USER)
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
+		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(user.Id, version, user.Username,
+	_, err = stmt.Exec(user.Id, userVersion, user.Username,
 		user.Type.UserTypeType(), user.LanguageCode,
 		user.FirstName, user.LastName, user.PhoneNumber,
 		user.Status.UserStatusType(), user.HaveAccess,
@@ -886,10 +876,10 @@ func updateUser(p *Plugin, user *client.User, version int) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
+		return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
 	}
 
-	return tx.Commit()
+	return isNew, isChanged, userVersion, tx.Commit()
 }
 
 type Plugin struct {
@@ -926,6 +916,7 @@ type Plugin struct {
 	OptionApiHash             string
 	OptionApiId               int
 	OptionAppVersion          string
+	OptionChatDatabase        string
 	OptionDeviceModel         string
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
@@ -958,6 +949,7 @@ type Plugin struct {
 	OptionTimeFormat          string
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
+	OptionUserDatabase        string
 	OptionUserLog             bool
 }
 
@@ -1208,6 +1200,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"match_signature":   -1,
 		"match_ttl":         -1,
 		"original_filename": -1,
+		"pool_size":         -1,
 		"proxy_enable":      -1,
 		"proxy_port":        -1,
 		"proxy_server":      -1,
@@ -1307,6 +1300,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setAppVersion(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.app_version", template)))
 	setAppVersion((*pluginConfig.PluginParams)["app_version"])
 	core.ShowPluginParam(plugin.LogFields, "app_version", plugin.OptionAppVersion)
+
+	// chat_database.
+	setChatDatabase := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["chat_database"] = 0
+			plugin.OptionChatDatabase = v
+		}
+	}
+	setChatDatabase(pluginConfig.AppConfig.GetString(filepath.Join(plugin.PluginDataDir, DEFAULT_CHATS_DB)))
+	setChatDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_database", template)))
+	setChatDatabase((*pluginConfig.PluginParams)["chat_database"])
+	core.ShowPluginParam(plugin.LogFields, "chat_database", plugin.OptionChatDatabase)
 
 	// device_model.
 	setDeviceModel := func(p interface{}) {
@@ -1654,6 +1659,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
 	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
+	// user_database.
+	setUserDatabase := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["user_database"] = 0
+			plugin.OptionUserDatabase = v
+		}
+	}
+	setUserDatabase(pluginConfig.AppConfig.GetString(filepath.Join(plugin.PluginDataDir, DEFAULT_USERS_DB)))
+	setUserDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_database", template)))
+	setUserDatabase((*pluginConfig.PluginParams)["user_database"])
+	core.ShowPluginParam(plugin.LogFields, "user_database", plugin.OptionUserDatabase)
+
 	// user_log.
 	setUserLog := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1754,10 +1771,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			continue
 		}
 
-        // Get updated chat again.
+		// Get updated chat again.
 		chatData = getChat(&plugin, chatName)
-		
-        plugin.ChatsCache[chatId] = &chatData
+
+		plugin.ChatsCache[chatId] = &chatData
 	}
 
 	// Quit if there are no chats for join.
