@@ -87,3 +87,4 @@ graph TD;
 11. process: ocr plugin.
 12. process: lang detect plugin.
 13. telegram: metadata sidecar file + content template.
+14. process: exec plugin.
