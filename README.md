@@ -86,3 +86,4 @@ graph TD;
 10. core/ml: auto learning interval.
 11. process: ocr plugin.
 12. process: lang detect plugin.
+13. telegram: metadata sidecar file + content template.
