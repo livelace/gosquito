@@ -695,25 +695,27 @@ func receiveUpdates(p *Plugin) {
 
 			// Users.
 			case *client.UpdateUser:
-				user := update.(*client.UpdateUser).User
-				isNew, isChanged, version, err := updateUser(p, user)
+				if p.OptionUserLog {
+					user := update.(*client.UpdateUser).User
+					isNew, isChanged, version, err := updateUser(p, user)
 
-				if err == nil {
-					if isNew {
-						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("new: %v, version: %v, username: %v", user.Id, version, user.Username))
+					if err == nil {
+						if isNew {
+							core.LogInputPlugin(p.LogFields, "user",
+								fmt.Sprintf("new: %v, version: %v, username: %v", user.Id, version, user.Username))
+						} else {
+							core.LogInputPlugin(p.LogFields, "user",
+								fmt.Sprintf("old: %v, version: %v, username: %v", user.Id, version, user.Username))
+						}
+
+						if isChanged {
+							core.LogInputPlugin(p.LogFields, "user",
+								fmt.Sprintf("changed: %v, version: %v, username: %v", user.Id, version, user.Username))
+						}
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("old: %v, version: %v, username: %v", user.Id, version, user.Username))
+							fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 					}
-
-					if isChanged {
-						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("changed: %v, version: %v, username: %v", user.Id, version, user.Username))
-					}
-				} else {
-					core.LogInputPlugin(p.LogFields, "user",
-						fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 				}
 			}
 		} else {
@@ -859,11 +861,11 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 		}
 
 		oldVersion, _ := strconv.ParseInt(oldUser.USERVERSION, 10, 32)
-        if isChanged {
+		if isChanged {
 			userVersion = int(oldVersion) + 1
 		} else {
-            userVersion = int(oldVersion)
-        }
+			userVersion = int(oldVersion)
+		}
 	}
 
 	if isNew || isChanged {
@@ -893,8 +895,8 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 
 		return isNew, isChanged, userVersion, tx.Commit()
 	}
-	
-    return isNew, isChanged, userVersion, nil
+
+	return isNew, isChanged, userVersion, nil
 }
 
 type Plugin struct {
