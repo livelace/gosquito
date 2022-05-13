@@ -229,6 +229,7 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 
 	// 1. File downloading might be in progress. Just wait for it.
 	// 2. File might be already downloaded.
+    // TODO: Cancel downloading if timeout.
 	if downloadFile.Local.Path == "" {
 
 		// 1. Read files IDs from file channel.
