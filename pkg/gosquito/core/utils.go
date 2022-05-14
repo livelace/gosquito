@@ -1118,7 +1118,7 @@ func UniqueSliceValues(s *[]string) []string {
 func WriteStringToFile(path string, file string, s string) error {
 	fp := filepath.Join(path, file)
 
-	f, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 
 	if err != nil {
 		return err

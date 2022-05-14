@@ -2,6 +2,7 @@ package telegramIn
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -20,32 +21,36 @@ import (
 const (
 	PLUGIN_NAME = "telegram"
 
-	DEFAULT_ADS_ENABLE        = true
-	DEFAULT_ADS_ID            = "ads"
-	DEFAULT_ADS_PERIOD        = "5m"
-	DEFAULT_CHANNEL_SIZE      = 10000
-	DEFAULT_CHATS_DB          = "chats.sqlite"
-	DEFAULT_DATABASE_DIR      = "database"
-	DEFAULT_FETCH_TIMEOUT     = "1h"
-	DEFAULT_FILES_DIR         = "files"
-	DEFAULT_FILE_MAX_SIZE     = "10m"
-	DEFAULT_LOG_LEVEL         = 0
-	DEFAULT_MATCH_TTL         = "1d"
-	DEFAULT_ORIGINAL_FILENAME = true
-	DEFAULT_POOL_SIZE         = 100000
-	DEFAULT_PROXY_ENABLE      = false
-	DEFAULT_PROXY_PORT        = 9050
-	DEFAULT_PROXY_SERVER      = "127.0.0.1"
-	DEFAULT_PROXY_TYPE        = "socks"
-	DEFAULT_SESSION_TTL       = 366
-	DEFAULT_SHOW_CHAT         = false
-	DEFAULT_SHOW_USER         = false
-	DEFAULT_STATUS_ENABLE     = true
-	DEFAULT_STATUS_PERIOD     = "1h"
-	DEFAULT_STORAGE_OPTIMIZE  = true
-	DEFAULT_STORAGE_PERIOD    = "1h"
-	DEFAULT_USERS_DB          = "users.sqlite"
-	DEFAULT_USER_LOG          = true
+	DEFAULT_ADS_ENABLE       = true
+	DEFAULT_ADS_ID           = "ads"
+	DEFAULT_ADS_PERIOD       = "5m"
+	DEFAULT_CHANNEL_SIZE     = 10000
+	DEFAULT_CHATS_DB         = "chats.sqlite"
+	DEFAULT_DATABASE_DIR     = "database"
+	DEFAULT_FETCH_TIMEOUT    = "1h"
+	DEFAULT_FILES_DIR        = "files"
+	DEFAULT_FILE_CAPTION     = false
+	DEFAULT_FILE_MAX_SIZE    = "10m"
+	DEFAULT_FILE_METADATA        = false
+	DEFAULT_FILE_ORIG_NAME   = true
+	DEFAULT_INCLUDE_ALL      = true
+	DEFAULT_INCLUDE_OTHER    = false
+	DEFAULT_LOG_LEVEL        = 0
+	DEFAULT_MATCH_TTL        = "1d"
+	DEFAULT_POOL_SIZE        = 100000
+	DEFAULT_PROXY_ENABLE     = false
+	DEFAULT_PROXY_PORT       = 9050
+	DEFAULT_PROXY_SERVER     = "127.0.0.1"
+	DEFAULT_PROXY_TYPE       = "socks"
+	DEFAULT_SESSION_TTL      = 366
+	DEFAULT_SHOW_CHAT        = false
+	DEFAULT_SHOW_USER        = false
+	DEFAULT_STATUS_ENABLE    = true
+	DEFAULT_STATUS_PERIOD    = "1h"
+	DEFAULT_STORAGE_OPTIMIZE = true
+	DEFAULT_STORAGE_PERIOD   = "1h"
+	DEFAULT_USERS_DB         = "users.sqlite"
+	DEFAULT_USER_LOG         = true
 
 	MAX_INSTANCE_PER_APP = 1
 
@@ -229,7 +234,6 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 
 	// 1. File downloading might be in progress. Just wait for it.
 	// 2. File might be already downloaded.
-    // TODO: Cancel downloading if timeout.
 	if downloadFile.Local.Path == "" {
 
 		// 1. Read files IDs from file channel.
@@ -249,6 +253,8 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 			}
 			time.Sleep(1 * time.Second)
 		}
+		p.TdlibClient.CancelDownloadFile(&client.CancelDownloadFileRequest{FileId: remoteFile.Id})
+
 		return "", fmt.Errorf(ERROR_FETCH_TIMEOUT.Error(), remoteId)
 
 	} else {
@@ -487,28 +493,33 @@ func receiveUpdates(p *Plugin) {
 
 				// Messages.
 			case *client.UpdateNewMessage:
-				// Map message attributes to vars.
+				dataItem := core.DataItem{}
+
 				message := update.(*client.UpdateNewMessage)
 				messageChatId := message.Message.ChatId
 				messageContent := message.Message.Content
 				messageFileName := ""
 				messageFileSize := int32(0)
 				messageId := message.Message.Id
-				messageMedia := make([]string, 0)
 				messageSenderId := int64(-1)
-				messageText := ""
+				messageTimestamp := message.Message.Date
 				messageTextURLs := make([]string, 0)
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
+
 				userData := core.Telegram{}
+
 				validMessage := false
+
 				warnings := make([]string, 0)
 
+				// Get message url.
 				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChatId, MessageId: messageId}); err == nil {
 					messageURL = v.Link
 				}
 
+				// Get sender id, saved user.
 				switch messageSender := message.Message.SenderId.(type) {
 				case *client.MessageSenderChat:
 					messageSenderId = int64(messageSender.ChatId)
@@ -521,107 +532,173 @@ func receiveUpdates(p *Plugin) {
 				if chatData, ok := p.ChatsCache[messageChatId]; ok {
 					var u, _ = uuid.NewRandom()
 
+					dataItem = core.DataItem{
+						FLOW:       p.Flow.FlowName,
+						PLUGIN:     p.PluginName,
+						SOURCE:     chatData.CHATNAME,
+						TIME:       messageTime,
+						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						UUID:       u,
+
+						TELEGRAM: core.Telegram{
+							CHATID:               chatData.CHATID,
+							CHATNAME:             chatData.CHATNAME,
+							CHATTYPE:             chatData.CHATTYPE,
+							CHATTITLE:            chatData.CHATTITLE,
+							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
+
+							MESSAGEID:        fmt.Sprintf("%v", messageId),
+							MESSAGEMEDIA:     make([]string, 0),
+							MESSAGESENDERID:  fmt.Sprintf("%v", messageSenderId),
+							MESSAGETYPE:      messageType,
+							MESSAGETEXT:      "",
+							MESSAGETEXTURL:   messageTextURLs,
+							MESSAGETIMESTAMP: fmt.Sprintf("%v", messageTimestamp),
+							MESSAGEURL:       messageURL,
+
+							USERID:            userData.USERID,
+							USERVERSION:       userData.USERVERSION,
+							USERNAME:          userData.USERNAME,
+							USERTYPE:          userData.USERTYPE,
+							USERLANG:          userData.USERLANG,
+							USERFIRSTNAME:     userData.USERFIRSTNAME,
+							USERLASTNAME:      userData.USERLASTNAME,
+							USERPHONE:         userData.USERPHONE,
+							USERSTATUS:        userData.USERSTATUS,
+							USERACCESSIBLE:    userData.USERACCESSIBLE,
+							USERCONTACT:       userData.USERCONTACT,
+							USERFAKE:          userData.USERFAKE,
+							USERMUTUALCONTACT: userData.USERMUTUALCONTACT,
+							USERSCAM:          userData.USERSCAM,
+							USERSUPPORT:       userData.USERSUPPORT,
+							USERVERIFIED:      userData.USERVERIFIED,
+							USERRESTRICTION:   userData.USERRESTRICTION,
+							USERTIMESTAMP:     userData.USERTIMESTAMP,
+						},
+					}
+
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						validMessage = true
-						audio := messageContent.(*client.MessageAudio).Audio
-						messageText = messageContent.(*client.MessageAudio).Caption.Text
+						if p.OptionIncludeAll || p.OptionIncludeAudio {
+							audio := messageContent.(*client.MessageAudio).Audio
+							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
-						if int64(audio.Audio.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
+							if int64(audio.Audio.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = audio.FileName
+								messageFileSize = audio.Audio.Size
 							}
-						} else {
-							messageFileName = audio.FileName
-							messageFileSize = audio.Audio.Size
+
+							validMessage = true
 						}
 
 					case *client.MessageDocument:
-						validMessage = true
-						document := messageContent.(*client.MessageDocument).Document
-						messageText = messageContent.(*client.MessageDocument).Caption.Text
+						if p.OptionIncludeAll || p.OptionIncludeDocument {
+							document := messageContent.(*client.MessageDocument).Document
+							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
 
-						if int64(document.Document.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
+							if int64(document.Document.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = document.FileName
+								messageFileSize = document.Document.Size
 							}
-						} else {
-							messageFileName = document.FileName
-							messageFileSize = document.Document.Size
-						}
 
-					case *client.MessageText:
-						validMessage = true
-						formattedText := messageContent.(*client.MessageText).Text
-						messageText = formattedText.Text
-
-						for _, entity := range formattedText.Entities {
-							switch entity.Type.(type) {
-							case *client.TextEntityTypeTextUrl:
-								messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-							}
+							validMessage = true
 						}
 
 					case *client.MessagePhoto:
-						validMessage = true
-						photo := messageContent.(*client.MessagePhoto).Photo
-						photoFile := photo.Sizes[len(photo.Sizes)-1]
-						messageText = messageContent.(*client.MessagePhoto).Caption.Text
+						if p.OptionIncludeAll || p.OptionIncludePhoto {
+							photo := messageContent.(*client.MessagePhoto).Photo
+							photoFile := photo.Sizes[len(photo.Sizes)-1]
+							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
-						if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
+							if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, ""); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = "phone"
+								messageFileSize = photoFile.Photo.Size
 							}
-						} else {
-							messageFileName = "phone"
-							messageFileSize = photoFile.Photo.Size
+
+							validMessage = true
+						}
+
+					case *client.MessageText:
+						if p.OptionIncludeAll || p.OptionIncludeText {
+							formattedText := messageContent.(*client.MessageText).Text
+							dataItem.TELEGRAM.MESSAGETEXT = formattedText.Text
+
+							for _, entity := range formattedText.Entities {
+								switch entity.Type.(type) {
+								case *client.TextEntityTypeTextUrl:
+									messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+								}
+							}
+
+							validMessage = true
 						}
 
 					case *client.MessageVideo:
-						validMessage = true
-						messageText = messageContent.(*client.MessageVideo).Caption.Text
-						video := messageContent.(*client.MessageVideo).Video
+						if p.OptionIncludeAll || p.OptionIncludeVideo {
+							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
+							video := messageContent.(*client.MessageVideo).Video
 
-						if int64(video.Video.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
+							if int64(video.Video.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = video.FileName
+								messageFileSize = video.Video.Size
 							}
-						} else {
-							messageFileName = video.FileName
-							messageFileSize = video.Video.Size
-						}
 
-					case *client.MessageVoiceNote:
-						validMessage = true
-						messageText = messageContent.(*client.MessageVoiceNote).Caption.Text
-						note := messageContent.(*client.MessageVoiceNote).VoiceNote
-
-						if int64(note.Voice.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
-							}
-						} else {
-							messageFileName = "voice note"
-							messageFileSize = note.Voice.Size
+							validMessage = true
 						}
 
 					case *client.MessageVideoNote:
-						validMessage = true
-						note := messageContent.(*client.MessageVideoNote).VideoNote
+						if p.OptionIncludeAll || p.OptionIncludeVideoNote {
+							note := messageContent.(*client.MessageVideoNote).VideoNote
 
-						if int64(note.Video.Size) < p.OptionFileMaxSize {
-							localFile, err := downloadFile(p, note.Video.Remote.Id, "")
-							if err == nil {
-								messageMedia = append(messageMedia, localFile)
+							if int64(note.Video.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, note.Video.Remote.Id, ""); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = "video_note"
+								messageFileSize = note.Video.Size
 							}
-						} else {
-							messageFileName = "video note"
-							messageFileSize = note.Video.Size
+
+							validMessage = true
+						}
+
+					case *client.MessageVoiceNote:
+						if p.OptionIncludeAll || p.OptionIncludeVoiceNote {
+							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
+							note := messageContent.(*client.MessageVoiceNote).VoiceNote
+
+							if int64(note.Voice.Size) < p.OptionFileMaxSize {
+								if localFile, err := downloadFile(p, note.Voice.Remote.Id, ""); err == nil {
+									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								}
+							} else {
+								messageFileName = "voice_note"
+								messageFileSize = note.Voice.Size
+							}
+
+							validMessage = true
 						}
 					}
 
@@ -636,57 +713,8 @@ func receiveUpdates(p *Plugin) {
 
 					// Send data to channel.
 					if validMessage {
-						p.DataChannel <- &core.DataItem{
-							FLOW:       p.Flow.FlowName,
-							PLUGIN:     p.PluginName,
-							SOURCE:     chatData.CHATNAME,
-							TIME:       messageTime,
-							TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-							UUID:       u,
-
-							TELEGRAM: core.Telegram{
-								CHATID:               chatData.CHATID,
-								CHATNAME:             chatData.CHATNAME,
-								CHATTYPE:             chatData.CHATTYPE,
-								CHATTITLE:            chatData.CHATTITLE,
-								CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
-								CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
-								CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
-								CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
-								CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
-								CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-								CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
-
-								MESSAGEID:       fmt.Sprintf("%v", messageId),
-								MESSAGEMEDIA:    messageMedia,
-								MESSAGESENDERID: fmt.Sprintf("%v", messageSenderId),
-								MESSAGETYPE:     messageType,
-								MESSAGETEXT:     messageText,
-								MESSAGETEXTURL:  messageTextURLs,
-								MESSAGEURL:      messageURL,
-
-								USERID:            userData.USERID,
-								USERVERSION:       userData.USERVERSION,
-								USERNAME:          userData.USERNAME,
-								USERTYPE:          userData.USERTYPE,
-								USERLANG:          userData.USERLANG,
-								USERFIRSTNAME:     userData.USERFIRSTNAME,
-								USERLASTNAME:      userData.USERLASTNAME,
-								USERPHONE:         userData.USERPHONE,
-								USERSTATUS:        userData.USERSTATUS,
-								USERACCESSIBLE:    userData.USERACCESSIBLE,
-								USERCONTACT:       userData.USERCONTACT,
-								USERFAKE:          userData.USERFAKE,
-								USERMUTUALCONTACT: userData.USERMUTUALCONTACT,
-								USERSCAM:          userData.USERSCAM,
-								USERSUPPORT:       userData.USERSUPPORT,
-								USERVERIFIED:      userData.USERVERIFIED,
-								USERRESTRICTION:   userData.USERRESTRICTION,
-								USERTIMESTAMP:     userData.USERTIMESTAMP,
-
-								WARNINGS: warnings,
-							},
-						}
+						dataItem.WARNINGS = warnings
+						p.DataChannel <- &dataItem
 					}
 
 				} else {
@@ -900,6 +928,23 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	return isNew, isChanged, userVersion, nil
 }
 
+func writeMetadata(p *Plugin, localFile string, data *core.Telegram) error {
+	err := core.CreateDirIfNotExist(p.PluginTempDir)
+	if err != nil {
+		return err
+	}
+
+    metaFile := filepath.Join(p.PluginTempDir, fmt.Sprintf("%s.meta.json", filepath.Base(localFile)))
+	data.MESSAGEMEDIA = append(data.MESSAGEMEDIA, localFile, metaFile)
+
+	j, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return core.WriteStringToFile("", metaFile, string(j))
+}
+
 type Plugin struct {
 	m sync.Mutex
 
@@ -942,23 +987,34 @@ type Plugin struct {
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
 	OptionFetchTimeout        int
+	OptionFileCaption         bool
 	OptionFileMaxSize         int64
+	OptionFileMetadata        bool
+	OptionFileOrigName        bool
 	OptionFilePath            string
 	OptionForce               bool
 	OptionForceCount          int
 	OptionIgnoreFileName      bool
+	OptionIncludeAll          bool
+	OptionIncludeAudio        bool
+	OptionIncludeDocument     bool
+	OptionIncludePhoto        bool
+	OptionIncludeText         bool
+	OptionIncludeVideo        bool
+	OptionIncludeVideoNote    bool
+	OptionIncludeVoiceNote    bool
 	OptionInput               []string
 	OptionLogLevel            int
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
-	OptionOriginalFileName    bool
+	OptionMessageType         []string
+	OptionPoolSize            int
 	OptionProxyEnable         bool
+	OptionProxyPassword       string
 	OptionProxyPort           int
 	OptionProxyServer         string
-	OptionProxyUsername       string
-	OptionProxyPassword       string
 	OptionProxyType           string
-	OptionPoolSize            int
+	OptionProxyUsername       string
 	OptionSessionTTL          int
 	OptionStatusEnable        bool
 	OptionStatusPeriod        int64
@@ -1177,12 +1233,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			"plugin": PLUGIN_NAME,
 			"type":   pluginConfig.PluginType,
 		},
-		PluginName:       PLUGIN_NAME,
-		PluginType:       pluginConfig.PluginType,
-		PluginDataDir:    filepath.Join(pluginConfig.Flow.FlowDataDir, pluginConfig.PluginType, PLUGIN_NAME),
-		PluginTempDir:    filepath.Join(pluginConfig.Flow.FlowTempDir, pluginConfig.PluginType, PLUGIN_NAME),
-		ConnectionState:  "unknown",
-		OptionExpireLast: 0,
+		PluginName:             PLUGIN_NAME,
+		PluginType:             pluginConfig.PluginType,
+		PluginDataDir:          filepath.Join(pluginConfig.Flow.FlowDataDir, pluginConfig.PluginType, PLUGIN_NAME),
+		PluginTempDir:          filepath.Join(pluginConfig.Flow.FlowTempDir, pluginConfig.PluginType, PLUGIN_NAME),
+		ConnectionState:        "unknown",
+		OptionExpireLast:       0,
+		OptionIncludeAll:       DEFAULT_INCLUDE_ALL,
+		OptionIncludeAudio:     DEFAULT_INCLUDE_OTHER,
+		OptionIncludeDocument:  DEFAULT_INCLUDE_OTHER,
+		OptionIncludePhoto:     DEFAULT_INCLUDE_OTHER,
+		OptionIncludeText:      DEFAULT_INCLUDE_OTHER,
+		OptionIncludeVideo:     DEFAULT_INCLUDE_OTHER,
+		OptionIncludeVoiceNote: DEFAULT_INCLUDE_OTHER,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1204,31 +1267,34 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
-		"ads_enable":        -1,
-		"ads_period":        1,
-		"api_hash":          1,
-		"api_id":            1,
-		"app_version":       -1,
-		"device_model":      -1,
-		"fetch_timeout":     -1,
-		"file_max_size":     -1,
-		"file_path":         -1,
-		"input":             1,
-		"log_level":         -1,
-		"match_signature":   -1,
-		"match_ttl":         -1,
-		"original_filename": -1,
-		"pool_size":         -1,
-		"proxy_enable":      -1,
-		"proxy_port":        -1,
-		"proxy_server":      -1,
-		"proxy_type":        -1,
-		"session_ttl":       -1,
-		"status_enable":     -1,
-		"status_period":     -1,
-		"storage_optimize":  -1,
-		"storage_period":    -1,
-		"user_log":          -1,
+		"ads_enable":       -1,
+		"ads_period":       1,
+		"api_hash":         1,
+		"api_id":           1,
+		"app_version":      -1,
+		"device_model":     -1,
+		"fetch_timeout":    -1,
+		"file_caption":     -1,
+		"file_max_size":    -1,
+		"file_metadata":    -1,
+		"file_orig_name":   -1,
+		"file_path":        -1,
+		"input":            1,
+		"log_level":        -1,
+		"match_signature":  -1,
+		"match_ttl":        -1,
+		"message_type":     -1,
+		"pool_size":        -1,
+		"proxy_enable":     -1,
+		"proxy_port":       -1,
+		"proxy_server":     -1,
+		"proxy_type":       -1,
+		"session_ttl":      -1,
+		"status_enable":    -1,
+		"status_period":    -1,
+		"storage_optimize": -1,
+		"storage_period":   -1,
+		"user_log":         -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1403,6 +1469,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFetchTimeout((*pluginConfig.PluginParams)["fetch_timeout"])
 	core.ShowPluginParam(plugin.LogFields, "fetch_timeout", plugin.OptionFetchTimeout)
 
+	// file_caption.
+	setFileCaption := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["file_caption"] = 0
+			plugin.OptionFileCaption = v
+		}
+	}
+	setFileCaption(DEFAULT_FILE_CAPTION)
+	setFileCaption(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_caption", template)))
+	setFileCaption((*pluginConfig.PluginParams)["file_caption"])
+	core.ShowPluginParam(plugin.LogFields, "file_caption", plugin.OptionFileCaption)
+
 	// file_max_size.
 	setFileMaxSize := func(p interface{}) {
 		if v, b := core.IsSize(p); b {
@@ -1414,6 +1492,36 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFileMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_max_size", template)))
 	setFileMaxSize((*pluginConfig.PluginParams)["file_max_size"])
 	core.ShowPluginParam(plugin.LogFields, "file_max_size", plugin.OptionFileMaxSize)
+
+	// file_metadata.
+	setFileMetadata := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["file_metadata"] = 0
+			plugin.OptionFileMetadata = v
+		}
+	}
+	setFileMetadata(DEFAULT_FILE_METADATA)
+	setFileMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_metadata", template)))
+	setFileMetadata((*pluginConfig.PluginParams)["file_metadata"])
+	core.ShowPluginParam(plugin.LogFields, "file_metadata", plugin.OptionFileMetadata)
+
+	// file_orig_name.
+	setFileOrigName := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["file_orig_name"] = 0
+			plugin.OptionFileOrigName = v
+		}
+	}
+	setFileOrigName(DEFAULT_FILE_ORIG_NAME)
+	setFileOrigName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_orig_name", template)))
+	setFileOrigName((*pluginConfig.PluginParams)["file_orig_name"])
+	core.ShowPluginParam(plugin.LogFields, "file_orig_name", plugin.OptionFileOrigName)
+
+	if plugin.OptionFileOrigName {
+		plugin.OptionIgnoreFileName = false
+	} else {
+		plugin.OptionIgnoreFileName = true
+	}
 
 	// file_path.
 	setFilePath := func(p interface{}) {
@@ -1502,22 +1610,38 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
-	// original_filename.
-	setOriginalFileName := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["original_filename"] = 0
-			plugin.OptionOriginalFileName = v
+	// message_type.
+	setMessageType := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["message_type"] = 0
+			plugin.OptionMessageType = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setOriginalFileName(DEFAULT_ORIGINAL_FILENAME)
-	setOriginalFileName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.original_filename", template)))
-	setOriginalFileName((*pluginConfig.PluginParams)["original_filename"])
-	core.ShowPluginParam(plugin.LogFields, "original_filename", plugin.OptionOriginalFileName)
+	setMessageType(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type", template)))
+	setMessageType((*pluginConfig.PluginParams)["message_type"])
+	core.ShowPluginParam(plugin.LogFields, "message_type", plugin.OptionMessageType)
+	core.SliceStringToUpper(&plugin.OptionMessageType)
 
-	if plugin.OptionOriginalFileName {
-		plugin.OptionIgnoreFileName = false
-	} else {
-		plugin.OptionIgnoreFileName = true
+	if len(plugin.OptionMessageType) > 0 {
+		plugin.OptionIncludeAll = false
+		for _, v := range plugin.OptionMessageType {
+			switch v {
+			case "AUDIO":
+				plugin.OptionIncludeAudio = true
+			case "DOCUMENT":
+				plugin.OptionIncludeDocument = true
+			case "PHOTO":
+				plugin.OptionIncludePhoto = true
+			case "TEXT":
+				plugin.OptionIncludeText = true
+			case "VIDEO":
+				plugin.OptionIncludeVideo = true
+			case "VIDEO_NOTE":
+				plugin.OptionIncludeVideoNote = true
+			case "VOICE_NOTE":
+				plugin.OptionIncludeVoiceNote = true
+			}
+		}
 	}
 
 	// pool_size.

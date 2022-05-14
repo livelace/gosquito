@@ -257,13 +257,14 @@ type Telegram struct {
 	CHATUNREADCOUNT      string
 	CHATTIMESTAMP        string
 
-	MESSAGEID       string
-	MESSAGEMEDIA    []string
-	MESSAGESENDERID string
-	MESSAGETEXT     string
-	MESSAGETEXTURL  []string
-	MESSAGETYPE     string
-	MESSAGEURL      string
+	MESSAGEID           string
+	MESSAGEMEDIA        []string
+	MESSAGESENDERID     string
+	MESSAGETEXT         string
+	MESSAGETEXTURL      []string
+	MESSAGETIMESTAMP    string
+	MESSAGETYPE         string
+	MESSAGEURL          string
 
 	USERID            string
 	USERVERSION       string
@@ -283,8 +284,6 @@ type Telegram struct {
 	USERVERIFIED      string
 	USERRESTRICTION   string
 	USERTIMESTAMP     string
-
-	WARNINGS []string
 }
 
 type Twitter struct {
@@ -311,6 +310,8 @@ type DataItem struct {
 	RSS      Rss
 	TELEGRAM Telegram
 	TWITTER  Twitter
+	
+    WARNINGS []string
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
