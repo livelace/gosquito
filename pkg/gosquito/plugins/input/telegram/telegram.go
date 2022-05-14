@@ -31,7 +31,7 @@ const (
 	DEFAULT_FILES_DIR        = "files"
 	DEFAULT_FILE_CAPTION     = false
 	DEFAULT_FILE_MAX_SIZE    = "10m"
-	DEFAULT_FILE_METADATA        = false
+	DEFAULT_FILE_METADATA    = false
 	DEFAULT_FILE_ORIG_NAME   = true
 	DEFAULT_INCLUDE_ALL      = true
 	DEFAULT_INCLUDE_OTHER    = false
@@ -590,8 +590,12 @@ func receiveUpdates(p *Plugin) {
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
 							if int64(audio.Audio.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName); err == nil {
+								localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = audio.FileName
@@ -607,8 +611,12 @@ func receiveUpdates(p *Plugin) {
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
 
 							if int64(document.Document.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName); err == nil {
+								localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = document.FileName
@@ -625,8 +633,12 @@ func receiveUpdates(p *Plugin) {
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
 							if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, ""); err == nil {
+								localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = "phone"
@@ -657,8 +669,12 @@ func receiveUpdates(p *Plugin) {
 							video := messageContent.(*client.MessageVideo).Video
 
 							if int64(video.Video.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName); err == nil {
+								localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = video.FileName
@@ -673,8 +689,12 @@ func receiveUpdates(p *Plugin) {
 							note := messageContent.(*client.MessageVideoNote).VideoNote
 
 							if int64(note.Video.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, note.Video.Remote.Id, ""); err == nil {
+								localFile, err := downloadFile(p, note.Video.Remote.Id, "")
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = "video_note"
@@ -690,8 +710,12 @@ func receiveUpdates(p *Plugin) {
 							note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
 							if int64(note.Voice.Size) < p.OptionFileMaxSize {
-								if localFile, err := downloadFile(p, note.Voice.Remote.Id, ""); err == nil {
+								localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
+
+								if err == nil && p.OptionFileMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
+								} else if err == nil {
+									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
 							} else {
 								messageFileName = "voice_note"
@@ -934,7 +958,7 @@ func writeMetadata(p *Plugin, localFile string, data *core.Telegram) error {
 		return err
 	}
 
-    metaFile := filepath.Join(p.PluginTempDir, fmt.Sprintf("%s.meta.json", filepath.Base(localFile)))
+	metaFile := filepath.Join(p.PluginTempDir, fmt.Sprintf("%s.meta.json", filepath.Base(localFile)))
 	data.MESSAGEMEDIA = append(data.MESSAGEMEDIA, localFile, metaFile)
 
 	j, err := json.MarshalIndent(data, "", "  ")
