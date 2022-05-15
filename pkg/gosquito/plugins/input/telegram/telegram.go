@@ -971,7 +971,7 @@ func writeMetadata(p *Plugin, localFile string, data *core.Telegram) error {
 		return err
 	}
 
-	metaFile := filepath.Join(p.PluginTempDir, fmt.Sprintf("%s.meta.json", filepath.Base(localFile)))
+	metaFile := fmt.Sprintf("%s.meta.json", localFile)
 	data.MESSAGEMEDIA = append(data.MESSAGEMEDIA, localFile, metaFile)
 
 	j, err := json.MarshalIndent(data, "", "  ")
