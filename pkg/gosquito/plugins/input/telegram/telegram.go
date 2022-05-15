@@ -966,11 +966,6 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 }
 
 func writeMetadata(p *Plugin, localFile string, data *core.Telegram) error {
-	err := core.CreateDirIfNotExist(p.PluginTempDir)
-	if err != nil {
-		return err
-	}
-
 	metaFile := fmt.Sprintf("%s.meta.json", localFile)
 	data.MESSAGEMEDIA = append(data.MESSAGEMEDIA, localFile, metaFile)
 
