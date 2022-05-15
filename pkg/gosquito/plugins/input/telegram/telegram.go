@@ -27,11 +27,12 @@ const (
 	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHATS_DB         = "chats.sqlite"
 	DEFAULT_DATABASE_DIR     = "database"
+	DEFAULT_FETCH_ALL        = true
+	DEFAULT_FETCH_MAX_SIZE   = "10m"
+	DEFAULT_FETCH_METADATA   = false
+	DEFAULT_FETCH_OTHER      = false
 	DEFAULT_FETCH_TIMEOUT    = "1h"
-	DEFAULT_FILES_DIR        = "files"
-	DEFAULT_FILE_CAPTION     = false
-	DEFAULT_FILE_MAX_SIZE    = "10m"
-	DEFAULT_FILE_METADATA    = false
+	DEFAULT_FILE_DIR         = "files"
 	DEFAULT_FILE_ORIG_NAME   = true
 	DEFAULT_INCLUDE_ALL      = true
 	DEFAULT_INCLUDE_OTHER    = false
@@ -585,19 +586,21 @@ func receiveUpdates(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						if p.OptionIncludeAll || p.OptionIncludeAudio {
+						if p.OptionProcessAll || p.OptionProcessAudio {
 							audio := messageContent.(*client.MessageAudio).Audio
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
-							if int64(audio.Audio.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) > p.OptionFetchMaxSize {
 								messageFileName = audio.FileName
 								messageFileSize = audio.Audio.Size
 							}
@@ -606,19 +609,21 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessageDocument:
-						if p.OptionIncludeAll || p.OptionIncludeDocument {
+						if p.OptionProcessAll || p.OptionProcessDocument {
 							document := messageContent.(*client.MessageDocument).Document
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
 
-							if int64(document.Document.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) > p.OptionFetchMaxSize {
 								messageFileName = document.FileName
 								messageFileSize = document.Document.Size
 							}
@@ -627,21 +632,23 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessagePhoto:
-						if p.OptionIncludeAll || p.OptionIncludePhoto {
+						if p.OptionProcessAll || p.OptionProcessPhoto {
 							photo := messageContent.(*client.MessagePhoto).Photo
 							photoFile := photo.Sizes[len(photo.Sizes)-1]
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
-							if int64(photoFile.Photo.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
-								messageFileName = "phone"
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) > p.OptionFetchMaxSize {
+								messageFileName = "photo"
 								messageFileSize = photoFile.Photo.Size
 							}
 
@@ -649,7 +656,7 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessageText:
-						if p.OptionIncludeAll || p.OptionIncludeText {
+						if p.OptionProcessAll || p.OptionProcessText {
 							formattedText := messageContent.(*client.MessageText).Text
 							dataItem.TELEGRAM.MESSAGETEXT = formattedText.Text
 
@@ -664,19 +671,21 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessageVideo:
-						if p.OptionIncludeAll || p.OptionIncludeVideo {
+						if p.OptionProcessAll || p.OptionProcessVideo {
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 							video := messageContent.(*client.MessageVideo).Video
 
-							if int64(video.Video.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) > p.OptionFetchMaxSize {
 								messageFileName = video.FileName
 								messageFileSize = video.Video.Size
 							}
@@ -685,18 +694,20 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessageVideoNote:
-						if p.OptionIncludeAll || p.OptionIncludeVideoNote {
+						if p.OptionProcessAll || p.OptionProcessVideoNote {
 							note := messageContent.(*client.MessageVideoNote).VideoNote
 
-							if int64(note.Video.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, note.Video.Remote.Id, "")
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) > p.OptionFetchMaxSize {
 								messageFileName = "video_note"
 								messageFileSize = note.Video.Size
 							}
@@ -705,19 +716,21 @@ func receiveUpdates(p *Plugin) {
 						}
 
 					case *client.MessageVoiceNote:
-						if p.OptionIncludeAll || p.OptionIncludeVoiceNote {
+						if p.OptionProcessAll || p.OptionProcessVoiceNote {
 							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
 							note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
-							if int64(note.Voice.Size) < p.OptionFileMaxSize {
+							if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) < p.OptionFetchMaxSize {
 								localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
 
-								if err == nil && p.OptionFileMetadata {
+								if err == nil && p.OptionFetchMetadata {
 									writeMetadata(p, localFile, &dataItem.TELEGRAM)
 								} else if err == nil {
 									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
 								}
-							} else {
+							}
+
+							if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) > p.OptionFetchMaxSize {
 								messageFileName = "voice_note"
 								messageFileSize = note.Voice.Size
 							}
@@ -729,10 +742,10 @@ func receiveUpdates(p *Plugin) {
 					// Warnings.
 					if messageFileSize > 0 {
 						warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFileMaxSize)))
+							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
 
 						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFileMaxSize)))
+							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
 					}
 
 					// Send data to channel.
@@ -1010,29 +1023,36 @@ type Plugin struct {
 	OptionExpireActionTimeout int
 	OptionExpireInterval      int64
 	OptionExpireLast          int64
+	OptionFetchAll            bool
+	OptionFetchAudio          bool
+	OptionFetchDocument       bool
+	OptionFetchMaxSize        int64
+	OptionFetchMetadata       bool
+	OptionFetchOrigName       bool
+	OptionFetchPhoto          bool
 	OptionFetchTimeout        int
-	OptionFileCaption         bool
-	OptionFileMaxSize         int64
-	OptionFileMetadata        bool
-	OptionFileOrigName        bool
+	OptionFetchVideo          bool
+	OptionFetchVideoNote      bool
+	OptionFetchVoiceNote      bool
 	OptionFilePath            string
 	OptionForce               bool
 	OptionForceCount          int
 	OptionIgnoreFileName      bool
-	OptionIncludeAll          bool
-	OptionIncludeAudio        bool
-	OptionIncludeDocument     bool
-	OptionIncludePhoto        bool
-	OptionIncludeText         bool
-	OptionIncludeVideo        bool
-	OptionIncludeVideoNote    bool
-	OptionIncludeVoiceNote    bool
 	OptionInput               []string
 	OptionLogLevel            int
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
-	OptionMessageType         []string
+	OptionMessageTypeFetch    []string
+	OptionMessageTypeProcess  []string
 	OptionPoolSize            int
+	OptionProcessAll          bool
+	OptionProcessAudio        bool
+	OptionProcessDocument     bool
+	OptionProcessPhoto        bool
+	OptionProcessText         bool
+	OptionProcessVideo        bool
+	OptionProcessVideoNote    bool
+	OptionProcessVoiceNote    bool
 	OptionProxyEnable         bool
 	OptionProxyPassword       string
 	OptionProxyPort           int
@@ -1263,13 +1283,21 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginTempDir:          filepath.Join(pluginConfig.Flow.FlowTempDir, pluginConfig.PluginType, PLUGIN_NAME),
 		ConnectionState:        "unknown",
 		OptionExpireLast:       0,
-		OptionIncludeAll:       DEFAULT_INCLUDE_ALL,
-		OptionIncludeAudio:     DEFAULT_INCLUDE_OTHER,
-		OptionIncludeDocument:  DEFAULT_INCLUDE_OTHER,
-		OptionIncludePhoto:     DEFAULT_INCLUDE_OTHER,
-		OptionIncludeText:      DEFAULT_INCLUDE_OTHER,
-		OptionIncludeVideo:     DEFAULT_INCLUDE_OTHER,
-		OptionIncludeVoiceNote: DEFAULT_INCLUDE_OTHER,
+		OptionFetchAll:         DEFAULT_FETCH_ALL,
+		OptionFetchAudio:       DEFAULT_FETCH_OTHER,
+		OptionFetchDocument:    DEFAULT_FETCH_OTHER,
+		OptionFetchPhoto:       DEFAULT_FETCH_OTHER,
+		OptionFetchVideo:       DEFAULT_FETCH_OTHER,
+		OptionFetchVideoNote:   DEFAULT_FETCH_OTHER,
+		OptionFetchVoiceNote:   DEFAULT_FETCH_OTHER,
+		OptionProcessAll:       DEFAULT_INCLUDE_ALL,
+		OptionProcessAudio:     DEFAULT_INCLUDE_OTHER,
+		OptionProcessDocument:  DEFAULT_INCLUDE_OTHER,
+		OptionProcessPhoto:     DEFAULT_INCLUDE_OTHER,
+		OptionProcessText:      DEFAULT_INCLUDE_OTHER,
+		OptionProcessVideo:     DEFAULT_INCLUDE_OTHER,
+		OptionProcessVideoNote: DEFAULT_INCLUDE_OTHER,
+		OptionProcessVoiceNote: DEFAULT_INCLUDE_OTHER,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1291,34 +1319,34 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_format":           -1,
 		"time_zone":             -1,
 
-		"ads_enable":       -1,
-		"ads_period":       1,
-		"api_hash":         1,
-		"api_id":           1,
-		"app_version":      -1,
-		"device_model":     -1,
-		"fetch_timeout":    -1,
-		"file_caption":     -1,
-		"file_max_size":    -1,
-		"file_metadata":    -1,
-		"file_orig_name":   -1,
-		"file_path":        -1,
-		"input":            1,
-		"log_level":        -1,
-		"match_signature":  -1,
-		"match_ttl":        -1,
-		"message_type":     -1,
-		"pool_size":        -1,
-		"proxy_enable":     -1,
-		"proxy_port":       -1,
-		"proxy_server":     -1,
-		"proxy_type":       -1,
-		"session_ttl":      -1,
-		"status_enable":    -1,
-		"status_period":    -1,
-		"storage_optimize": -1,
-		"storage_period":   -1,
-		"user_log":         -1,
+		"ads_enable":           -1,
+		"ads_period":           1,
+		"api_hash":             1,
+		"api_id":               1,
+		"app_version":          -1,
+		"device_model":         -1,
+		"fetch_max_size":       -1,
+		"fetch_metadata":       -1,
+		"fetch_orig_name":      -1,
+		"fetch_timeout":        -1,
+		"file_path":            -1,
+		"input":                1,
+		"log_level":            -1,
+		"match_signature":      -1,
+		"match_ttl":            -1,
+		"message_type_fetch":   -1,
+		"message_type_process": -1,
+		"pool_size":            -1,
+		"proxy_enable":         -1,
+		"proxy_port":           -1,
+		"proxy_server":         -1,
+		"proxy_type":           -1,
+		"session_ttl":          -1,
+		"status_enable":        -1,
+		"status_period":        -1,
+		"storage_optimize":     -1,
+		"storage_period":       -1,
+		"user_log":             -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1481,6 +1509,48 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
 	core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
 
+	// fetch_max_size.
+	setFetchMaxSize := func(p interface{}) {
+		if v, b := core.IsSize(p); b {
+			availableParams["fetch_max_size"] = 0
+			plugin.OptionFetchMaxSize = v
+		}
+	}
+	setFetchMaxSize(DEFAULT_FETCH_MAX_SIZE)
+	setFetchMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_max_size", template)))
+	setFetchMaxSize((*pluginConfig.PluginParams)["fetch_max_size"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_max_size", plugin.OptionFetchMaxSize)
+
+	// fetch_metadata.
+	setFetchMetadata := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["fetch_metadata"] = 0
+			plugin.OptionFetchMetadata = v
+		}
+	}
+	setFetchMetadata(DEFAULT_FETCH_METADATA)
+	setFetchMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_metadata", template)))
+	setFetchMetadata((*pluginConfig.PluginParams)["fetch_metadata"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_metadata", plugin.OptionFetchMetadata)
+
+	// fetch_orig_name.
+	setFetchOrigName := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["fetch_orig_name"] = 0
+			plugin.OptionFetchOrigName = v
+		}
+	}
+	setFetchOrigName(DEFAULT_FILE_ORIG_NAME)
+	setFetchOrigName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_orig_name", template)))
+	setFetchOrigName((*pluginConfig.PluginParams)["fetch_orig_name"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_orig_name", plugin.OptionFetchOrigName)
+
+	if plugin.OptionFetchOrigName {
+		plugin.OptionIgnoreFileName = false
+	} else {
+		plugin.OptionIgnoreFileName = true
+	}
+
 	// fetch_timeout.
 	setFetchTimeout := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
@@ -1493,60 +1563,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFetchTimeout((*pluginConfig.PluginParams)["fetch_timeout"])
 	core.ShowPluginParam(plugin.LogFields, "fetch_timeout", plugin.OptionFetchTimeout)
 
-	// file_caption.
-	setFileCaption := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["file_caption"] = 0
-			plugin.OptionFileCaption = v
-		}
-	}
-	setFileCaption(DEFAULT_FILE_CAPTION)
-	setFileCaption(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_caption", template)))
-	setFileCaption((*pluginConfig.PluginParams)["file_caption"])
-	core.ShowPluginParam(plugin.LogFields, "file_caption", plugin.OptionFileCaption)
-
-	// file_max_size.
-	setFileMaxSize := func(p interface{}) {
-		if v, b := core.IsSize(p); b {
-			availableParams["file_max_size"] = 0
-			plugin.OptionFileMaxSize = v
-		}
-	}
-	setFileMaxSize(DEFAULT_FILE_MAX_SIZE)
-	setFileMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_max_size", template)))
-	setFileMaxSize((*pluginConfig.PluginParams)["file_max_size"])
-	core.ShowPluginParam(plugin.LogFields, "file_max_size", plugin.OptionFileMaxSize)
-
-	// file_metadata.
-	setFileMetadata := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["file_metadata"] = 0
-			plugin.OptionFileMetadata = v
-		}
-	}
-	setFileMetadata(DEFAULT_FILE_METADATA)
-	setFileMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_metadata", template)))
-	setFileMetadata((*pluginConfig.PluginParams)["file_metadata"])
-	core.ShowPluginParam(plugin.LogFields, "file_metadata", plugin.OptionFileMetadata)
-
-	// file_orig_name.
-	setFileOrigName := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["file_orig_name"] = 0
-			plugin.OptionFileOrigName = v
-		}
-	}
-	setFileOrigName(DEFAULT_FILE_ORIG_NAME)
-	setFileOrigName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_orig_name", template)))
-	setFileOrigName((*pluginConfig.PluginParams)["file_orig_name"])
-	core.ShowPluginParam(plugin.LogFields, "file_orig_name", plugin.OptionFileOrigName)
-
-	if plugin.OptionFileOrigName {
-		plugin.OptionIgnoreFileName = false
-	} else {
-		plugin.OptionIgnoreFileName = true
-	}
-
 	// file_path.
 	setFilePath := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -1554,7 +1570,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionFilePath = v
 		}
 	}
-	setFilePath(filepath.Join(plugin.PluginDataDir, DEFAULT_FILES_DIR))
+	setFilePath(filepath.Join(plugin.PluginDataDir, DEFAULT_FILE_DIR))
 	setFilePath(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_path", template)))
 	setFilePath((*pluginConfig.PluginParams)["file_path"])
 	core.ShowPluginParam(plugin.LogFields, "file_path", plugin.OptionFilePath)
@@ -1634,36 +1650,68 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
-	// message_type.
-	setMessageType := func(p interface{}) {
+	// message_type_fetch.
+	setMessageTypeFetch := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			availableParams["message_type"] = 0
-			plugin.OptionMessageType = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			availableParams["message_type_fetch"] = 0
+			plugin.OptionMessageTypeFetch = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
 		}
 	}
-	setMessageType(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type", template)))
-	setMessageType((*pluginConfig.PluginParams)["message_type"])
-	core.ShowPluginParam(plugin.LogFields, "message_type", plugin.OptionMessageType)
-	core.SliceStringToUpper(&plugin.OptionMessageType)
+	setMessageTypeFetch(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_fetch", template)))
+	setMessageTypeFetch((*pluginConfig.PluginParams)["message_type_fetch"])
+	core.ShowPluginParam(plugin.LogFields, "message_type_fetch", plugin.OptionMessageTypeFetch)
+	core.SliceStringToUpper(&plugin.OptionMessageTypeFetch)
 
-	if len(plugin.OptionMessageType) > 0 {
-		plugin.OptionIncludeAll = false
-		for _, v := range plugin.OptionMessageType {
+	if len(plugin.OptionMessageTypeFetch) > 0 {
+		plugin.OptionFetchAll = false
+		for _, v := range plugin.OptionMessageTypeFetch {
 			switch v {
 			case "AUDIO":
-				plugin.OptionIncludeAudio = true
+				plugin.OptionFetchAudio = true
 			case "DOCUMENT":
-				plugin.OptionIncludeDocument = true
+				plugin.OptionFetchDocument = true
 			case "PHOTO":
-				plugin.OptionIncludePhoto = true
-			case "TEXT":
-				plugin.OptionIncludeText = true
+				plugin.OptionFetchPhoto = true
 			case "VIDEO":
-				plugin.OptionIncludeVideo = true
+				plugin.OptionFetchVideo = true
 			case "VIDEO_NOTE":
-				plugin.OptionIncludeVideoNote = true
+				plugin.OptionFetchVideoNote = true
 			case "VOICE_NOTE":
-				plugin.OptionIncludeVoiceNote = true
+				plugin.OptionFetchVoiceNote = true
+			}
+		}
+	}
+
+	// message_type_process.
+	setMessageTypeProcess := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["message_type_process"] = 0
+			plugin.OptionMessageTypeProcess = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setMessageTypeProcess(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_process", template)))
+	setMessageTypeProcess((*pluginConfig.PluginParams)["message_type_process"])
+	core.ShowPluginParam(plugin.LogFields, "message_type_process", plugin.OptionMessageTypeProcess)
+	core.SliceStringToUpper(&plugin.OptionMessageTypeProcess)
+
+	if len(plugin.OptionMessageTypeProcess) > 0 {
+		plugin.OptionProcessAll = false
+		for _, v := range plugin.OptionMessageTypeProcess {
+			switch v {
+			case "AUDIO":
+				plugin.OptionProcessAudio = true
+			case "DOCUMENT":
+				plugin.OptionProcessDocument = true
+			case "PHOTO":
+				plugin.OptionProcessPhoto = true
+			case "TEXT":
+				plugin.OptionProcessText = true
+			case "VIDEO":
+				plugin.OptionProcessVideo = true
+			case "VIDEO_NOTE":
+				plugin.OptionProcessVideoNote = true
+			case "VOICE_NOTE":
+				plugin.OptionProcessVoiceNote = true
 			}
 		}
 	}
