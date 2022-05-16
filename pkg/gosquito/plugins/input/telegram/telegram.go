@@ -498,7 +498,7 @@ func receiveUpdates(p *Plugin) {
 				dataItem := core.DataItem{}
 
 				message := update.(*client.UpdateNewMessage)
-                messageChat, _ := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.Message.ChatId})
+				messageChat, _ := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.Message.ChatId})
 				messageContent := message.Message.Content
 				messageFileName := ""
 				messageFileSize := int32(0)
@@ -758,6 +758,11 @@ func receiveUpdates(p *Plugin) {
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
 						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+
+                    // Just try to update chat. Chat can be already there with different name.
+                    // It's helpful for one-link-join chats.
+                    // Silenty ignore errors.
+					updateChat(p, messageChat.Id, messageChat.Title)
 				}
 
 			// Users.
@@ -1961,11 +1966,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		chatData := getChat(&plugin, chatName)
 
 		if chatData.CHATID == "" {
-            chatIdRegexp := regexp.MustCompile(`^-[0-9]+$`)
+			chatIdRegexp := regexp.MustCompile(`^-[0-9]+$`)
 
-            if chatIdRegexp.Match([]byte(chatName)) {
-                chatId, err = strconv.ParseInt(chatName, 10, 64)
-            } else if strings.Contains(chatName, "t.me/+") {
+			if chatIdRegexp.Match([]byte(chatName)) {
+				chatId, err = strconv.ParseInt(chatName, 10, 64)
+			} else if strings.Contains(chatName, "t.me/+") {
 				chatId, err = getPrivateChatId(&plugin, chatName)
 			} else {
 				chatId, err = getPublicChatId(&plugin, chatName)
