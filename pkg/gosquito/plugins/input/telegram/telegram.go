@@ -27,6 +27,7 @@ const (
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHATS_DB         = "chats.sqlite"
+	DEFAULT_CHAT_LOG         = false
 	DEFAULT_DATABASE_DIR     = "database"
 	DEFAULT_FETCH_ALL        = true
 	DEFAULT_FETCH_MAX_SIZE   = "10m"
@@ -530,6 +531,17 @@ func receiveUpdates(p *Plugin) {
 					userData = getUser(p, messageSenderId)
 				}
 
+                // Save message chat.
+				if p.OptionChatLog {
+					// Just try to update chat. Chat can be already there with different name (unique error).
+					err := updateChat(p, messageChat.Id, messageChat.Title)
+					if err != nil {
+						core.LogInputPlugin(p.LogFields, "chat",
+							fmt.Sprintf("cannnot log chat: %v, %v, %v, %v",
+								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, err))
+					}
+				}
+
 				// Process only specified chats.
 				if chatData, ok := p.ChatsCache[messageChat.Id]; ok {
 					var u, _ = uuid.NewRandom()
@@ -759,10 +771,6 @@ func receiveUpdates(p *Plugin) {
 					core.LogInputPlugin(p.LogFields, "chat",
 						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 
-                    // Just try to update chat. Chat can be already there with different name.
-                    // It's helpful for one-link-join chats.
-                    // Silenty ignore errors.
-					updateChat(p, messageChat.Id, messageChat.Title)
 				}
 
 			// Users.
@@ -1018,6 +1026,7 @@ type Plugin struct {
 	OptionApiId               int
 	OptionAppVersion          string
 	OptionChatDatabase        string
+	OptionChatLog             bool
 	OptionDeviceModel         string
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
@@ -1325,6 +1334,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"api_hash":             1,
 		"api_id":               1,
 		"app_version":          -1,
+		"chat_database":        -1,
+		"chat_log":             -1,
 		"device_model":         -1,
 		"fetch_max_size":       -1,
 		"fetch_metadata":       -1,
@@ -1347,6 +1358,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"status_period":        -1,
 		"storage_optimize":     -1,
 		"storage_period":       -1,
+		"user_database":        -1,
 		"user_log":             -1,
 	}
 
@@ -1449,6 +1461,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setChatDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_database", template)))
 	setChatDatabase((*pluginConfig.PluginParams)["chat_database"])
 	core.ShowPluginParam(plugin.LogFields, "chat_database", plugin.OptionChatDatabase)
+
+	// chat_log.
+	setChatLog := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["chat_log"] = 0
+			plugin.OptionChatLog = v
+		}
+	}
+	setChatLog(DEFAULT_CHAT_LOG)
+	setChatLog(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_log", template)))
+	setChatLog((*pluginConfig.PluginParams)["chat_log"])
+	core.ShowPluginParam(plugin.LogFields, "chat_log", plugin.OptionChatLog)
 
 	// device_model.
 	setDeviceModel := func(p interface{}) {
