@@ -757,7 +757,7 @@ func receiveUpdates(p *Plugin) {
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
-						fmt.Sprintf("filtered: %v, %v", messageChat.Id, messageChat.Title))
+						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 				}
 
 			// Users.
