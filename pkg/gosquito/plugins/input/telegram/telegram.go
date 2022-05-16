@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -497,7 +498,7 @@ func receiveUpdates(p *Plugin) {
 				dataItem := core.DataItem{}
 
 				message := update.(*client.UpdateNewMessage)
-				messageChatId := message.Message.ChatId
+                messageChat, _ := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.Message.ChatId})
 				messageContent := message.Message.Content
 				messageFileName := ""
 				messageFileSize := int32(0)
@@ -516,7 +517,7 @@ func receiveUpdates(p *Plugin) {
 				warnings := make([]string, 0)
 
 				// Get message url.
-				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChatId, MessageId: messageId}); err == nil {
+				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChat.Id, MessageId: messageId}); err == nil {
 					messageURL = v.Link
 				}
 
@@ -530,7 +531,7 @@ func receiveUpdates(p *Plugin) {
 				}
 
 				// Process only specified chats.
-				if chatData, ok := p.ChatsCache[messageChatId]; ok {
+				if chatData, ok := p.ChatsCache[messageChat.Id]; ok {
 					var u, _ = uuid.NewRandom()
 
 					dataItem = core.DataItem{
@@ -756,7 +757,7 @@ func receiveUpdates(p *Plugin) {
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
-						fmt.Sprintf("filtered: %v", messageChatId))
+						fmt.Sprintf("filtered: %v, %v", messageChat.Id, messageChat.Title))
 				}
 
 			// Users.
@@ -1960,7 +1961,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		chatData := getChat(&plugin, chatName)
 
 		if chatData.CHATID == "" {
-			if strings.Contains(chatName, "t.me/+") {
+            chatIdRegexp := regexp.MustCompile(`^-[0-9]+$`)
+
+            if chatIdRegexp.Match([]byte(chatName)) {
+                chatId, err = strconv.ParseInt(chatName, 10, 64)
+            } else if strings.Contains(chatName, "t.me/+") {
 				chatId, err = getPrivateChatId(&plugin, chatName)
 			} else {
 				chatId, err = getPublicChatId(&plugin, chatName)
