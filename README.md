@@ -81,10 +81,8 @@ graph TD;
 5. input: match_ignore_case option for match_signature.
 6. docs: add complex examples, docker compose environments.
 7. telegram: add careful (api limits) support for download/sending unread files/messages.
-8. telegram: message_type option for message filtering.
 9. plugins: new (echo plugin more suitable?) file plugin for saving text to files.
 10. core/ml: auto learning interval.
 11. process: ocr plugin.
 12. process: lang detect plugin.
-13. telegram: metadata sidecar file + content template.
 14. process: exec plugin.
