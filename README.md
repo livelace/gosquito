@@ -85,4 +85,5 @@ graph TD;
 10. core/ml: auto learning interval.
 11. process: ocr plugin.
 12. process: lang detect plugin.
+13. core: file deduplication cache.
 14. process: exec plugin.
