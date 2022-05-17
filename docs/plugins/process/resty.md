@@ -28,7 +28,7 @@
 | redirect     | -        | bool   | -    | +        | -             | true              | false                        | Follow redirects.                                      |
 | ssl_verify   | -        | bool   | -    | +        | -             | true              | false                        | Verify server certificate.                             |
 | **target**   | +        | string | -    | +        | -             | ""                | "http://172.17.0.2:8080/api" | REST endpoint.                                         |
-| user_agent   | -        | string | -    | +        | -             | "gosquito v3.9.0" | "webchela 1.0"               | Custom User-Agent for feed access.                     |
+| user_agent   | -        | string | -    | +        | -             | "gosquito v3.9.1" | "webchela 1.0"               | Custom User-Agent for feed access.                     |
 | username     | -        | string | +    | -        | -             | ""                | ""                           | Basic auth username.                                   |
 
 
