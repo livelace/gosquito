@@ -595,6 +595,8 @@ func receiveUpdates(p *Plugin) {
 							USERRESTRICTION:   userData.USERRESTRICTION,
 							USERTIMESTAMP:     userData.USERTIMESTAMP,
 						},
+
+                        WARNINGS: make([]string, 0),
 					}
 
 					switch messageContent.(type) {
@@ -754,7 +756,7 @@ func receiveUpdates(p *Plugin) {
 
 					// Warnings.
 					if messageFileSize > 0 {
-						warnings = append(warnings, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+						dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
 							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
 
 						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
@@ -763,7 +765,6 @@ func receiveUpdates(p *Plugin) {
 
 					// Send data to channel.
 					if validMessage {
-						dataItem.WARNINGS = warnings
 						p.DataChannel <- &dataItem
 					}
 
