@@ -293,6 +293,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 						TEXT:  strings.TrimSpace(item.FullText),
 						URLS:  core.UniqueSliceValues(&urls),
 					},
+                    
+                    WARNINGS: make([]string, 0),
 				})
 
 				sourceNewStat[source] += 1

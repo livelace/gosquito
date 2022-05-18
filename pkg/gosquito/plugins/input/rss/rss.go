@@ -282,6 +282,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 						LINK:        item.Link,
 						TITLE:       item.Title,
 					},
+
+                    WARNINGS: make([]string, 0),
 				})
 
 				sourceNewStat[source] += 1

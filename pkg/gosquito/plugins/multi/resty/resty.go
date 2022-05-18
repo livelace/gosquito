@@ -376,6 +376,8 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 						STATUS:     fmt.Sprintf("%s", resp.Status()),
 						STATUSCODE: fmt.Sprintf("%v", resp.StatusCode()),
 					},
+                    
+                    WARNINGS: make([]string, 0),
 				})
 			}
 
