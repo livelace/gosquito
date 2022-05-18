@@ -515,8 +515,6 @@ func receiveUpdates(p *Plugin) {
 
 				validMessage := false
 
-				warnings := make([]string, 0)
-
 				// Get message url.
 				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChat.Id, MessageId: messageId}); err == nil {
 					messageURL = v.Link
