@@ -23,7 +23,7 @@ const (
 	PLUGIN_NAME = "telegram"
 
 	DEFAULT_ADS_ENABLE       = true
-	DEFAULT_ADS_ID           = "gosquito-ads"
+	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHATS_DB         = "chats.sqlite"
