@@ -23,7 +23,7 @@ const (
 	PLUGIN_NAME = "telegram"
 
 	DEFAULT_ADS_ENABLE       = true
-	DEFAULT_ADS_ID           = "ads"
+	DEFAULT_ADS_ID           = "gosquito-ads"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHATS_DB         = "chats.sqlite"
@@ -407,20 +407,18 @@ func receiveAds(p *Plugin) {
 				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
 
 			if err == nil {
-				var u, _ = uuid.NewRandom()
-				messageTime := time.Now().UTC()
-				messageContent := sponsoredMessage.Content
-
 				switch sponsoredMessage.Content.(type) {
 				case *client.MessageText:
-					textURLs := make([]string, 0)
-					formattedText := messageContent.(*client.MessageText).Text
+					var u, _ = uuid.NewRandom()
 
-					// Search for text MESSAGETEXTURL.
-					for _, entity := range formattedText.Entities {
+					messageText := sponsoredMessage.Content.(*client.MessageText)
+					messageTextURLs := make([]string, 0)
+					messageTime := time.Now().UTC()
+
+					for _, entity := range messageText.Text.Entities {
 						switch entity.Type.(type) {
 						case *client.TextEntityTypeTextUrl:
-							textURLs = append(textURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+							messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
 						}
 					}
 
@@ -434,17 +432,48 @@ func receiveAds(p *Plugin) {
 						UUID:       u,
 
 						TELEGRAM: core.Telegram{
-							USERID:   DEFAULT_ADS_ID,
-							USERNAME: DEFAULT_ADS_ID,
-							USERTYPE: DEFAULT_ADS_ID,
+							CHATID:               chatData.CHATID,
+							CHATNAME:             chatData.CHATNAME,
+							CHATTYPE:             chatData.CHATTYPE,
+							CHATTITLE:            chatData.CHATTITLE,
+							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
 
-							USERFIRSTNAME: DEFAULT_ADS_ID,
-							USERLASTNAME:  DEFAULT_ADS_ID,
-							USERPHONE:     DEFAULT_ADS_ID,
+							MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
+							MESSAGEMEDIA:     make([]string, 0),
+							MESSAGESENDERID:  "",
+							MESSAGETYPE:      messageText.GetType(),
+							MESSAGETEXT:      messageText.Text.Text,
+							MESSAGETEXTURL:   messageTextURLs,
+							MESSAGETIMESTAMP: "",
+							MESSAGEURL:       "",
 
-							MESSAGETEXT:    formattedText.Text,
-							MESSAGETEXTURL: textURLs,
+							USERID:            "",
+							USERVERSION:       "",
+							USERNAME:          DEFAULT_ADS_ID,
+							USERTYPE:          "",
+							USERLANG:          "",
+							USERFIRSTNAME:     "",
+							USERLASTNAME:      "",
+							USERPHONE:         "",
+							USERSTATUS:        "",
+							USERACCESSIBLE:    "",
+							USERCONTACT:       "",
+							USERFAKE:          "",
+							USERMUTUALCONTACT: "",
+							USERSCAM:          "",
+							USERSUPPORT:       "",
+							USERVERIFIED:      "",
+							USERRESTRICTION:   "",
+							USERTIMESTAMP:     "",
 						},
+
+						WARNINGS: make([]string, 0),
 					}
 				}
 			}
@@ -501,12 +530,9 @@ func receiveUpdates(p *Plugin) {
 				message := update.(*client.UpdateNewMessage)
 				messageChat, _ := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.Message.ChatId})
 				messageContent := message.Message.Content
-				messageFileName := ""
-				messageFileSize := int32(0)
 				messageId := message.Message.Id
 				messageSenderId := int64(-1)
 				messageTimestamp := message.Message.Date
-				messageTextURLs := make([]string, 0)
 				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
 				messageType := messageContent.MessageContentType()
 				messageURL := ""
@@ -514,6 +540,9 @@ func receiveUpdates(p *Plugin) {
 				userData := core.Telegram{}
 
 				validMessage := false
+
+				warningExceedSizeFileName := ""
+				warningExceedFileSize := int32(0)
 
 				// Get message url.
 				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChat.Id, MessageId: messageId}); err == nil {
@@ -529,7 +558,7 @@ func receiveUpdates(p *Plugin) {
 					userData = getUser(p, messageSenderId)
 				}
 
-                // Save message chat.
+				// Save message chat.
 				if p.OptionChatLog {
 					// Just try to update chat. Chat can be already there with different name (unique error).
 					err := updateChat(p, messageChat.Id, messageChat.Title)
@@ -570,7 +599,7 @@ func receiveUpdates(p *Plugin) {
 							MESSAGESENDERID:  fmt.Sprintf("%v", messageSenderId),
 							MESSAGETYPE:      messageType,
 							MESSAGETEXT:      "",
-							MESSAGETEXTURL:   messageTextURLs,
+							MESSAGETEXTURL:   make([]string, 0),
 							MESSAGETIMESTAMP: fmt.Sprintf("%v", messageTimestamp),
 							MESSAGEURL:       messageURL,
 
@@ -594,7 +623,7 @@ func receiveUpdates(p *Plugin) {
 							USERTIMESTAMP:     userData.USERTIMESTAMP,
 						},
 
-                        WARNINGS: make([]string, 0),
+						WARNINGS: make([]string, 0),
 					}
 
 					switch messageContent.(type) {
@@ -614,8 +643,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) > p.OptionFetchMaxSize {
-								messageFileName = audio.FileName
-								messageFileSize = audio.Audio.Size
+								warningExceedSizeFileName = audio.FileName
+								warningExceedFileSize = audio.Audio.Size
 							}
 
 							validMessage = true
@@ -637,8 +666,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) > p.OptionFetchMaxSize {
-								messageFileName = document.FileName
-								messageFileSize = document.Document.Size
+								warningExceedSizeFileName = document.FileName
+								warningExceedFileSize = document.Document.Size
 							}
 
 							validMessage = true
@@ -661,8 +690,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) > p.OptionFetchMaxSize {
-								messageFileName = "photo"
-								messageFileSize = photoFile.Photo.Size
+								warningExceedSizeFileName = "photo"
+								warningExceedFileSize = photoFile.Photo.Size
 							}
 
 							validMessage = true
@@ -676,7 +705,8 @@ func receiveUpdates(p *Plugin) {
 							for _, entity := range formattedText.Entities {
 								switch entity.Type.(type) {
 								case *client.TextEntityTypeTextUrl:
-									messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+									dataItem.TELEGRAM.MESSAGETEXTURL =
+										append(dataItem.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
 								}
 							}
 
@@ -699,8 +729,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) > p.OptionFetchMaxSize {
-								messageFileName = video.FileName
-								messageFileSize = video.Video.Size
+								warningExceedSizeFileName = video.FileName
+								warningExceedFileSize = video.Video.Size
 							}
 
 							validMessage = true
@@ -721,8 +751,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) > p.OptionFetchMaxSize {
-								messageFileName = "video_note"
-								messageFileSize = note.Video.Size
+								warningExceedSizeFileName = "video_note"
+								warningExceedFileSize = note.Video.Size
 							}
 
 							validMessage = true
@@ -744,8 +774,8 @@ func receiveUpdates(p *Plugin) {
 							}
 
 							if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) > p.OptionFetchMaxSize {
-								messageFileName = "voice_note"
-								messageFileSize = note.Voice.Size
+								warningExceedSizeFileName = "voice_note"
+								warningExceedFileSize = note.Voice.Size
 							}
 
 							validMessage = true
@@ -753,12 +783,12 @@ func receiveUpdates(p *Plugin) {
 					}
 
 					// Warnings.
-					if messageFileSize > 0 {
+					if warningExceedFileSize > 0 {
 						dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
+							warningExceedSizeFileName, core.BytesToSize(int64(warningExceedFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
 
 						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							messageFileName, core.BytesToSize(int64(messageFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
+							warningExceedSizeFileName, core.BytesToSize(int64(warningExceedFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
 					}
 
 					// Send data to channel.
