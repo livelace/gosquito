@@ -139,7 +139,7 @@ flow:
       params:
         include: true
         input:  ["telegram.username"]
-        regexp: ["ads"]
+        regexp: ["sponsoredMessage"]
         match_not: true
 
     - id: 1
