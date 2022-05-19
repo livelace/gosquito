@@ -26,8 +26,8 @@ const (
 	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_CHANNEL_SIZE     = 10000
-	DEFAULT_CHATS_DB         = "chats.sqlite"
-	DEFAULT_CHAT_LOG         = false
+	DEFAULT_CHAT_DB          = "chats.sqlite"
+	DEFAULT_CHAT_SAVE        = false
 	DEFAULT_DATABASE_DIR     = "database"
 	DEFAULT_FETCH_ALL        = true
 	DEFAULT_FETCH_MAX_SIZE   = "10m"
@@ -46,19 +46,21 @@ const (
 	DEFAULT_PROXY_SERVER     = "127.0.0.1"
 	DEFAULT_PROXY_TYPE       = "socks"
 	DEFAULT_SESSION_TTL      = 366
-	DEFAULT_SHOW_CHAT        = false
-	DEFAULT_SHOW_USER        = false
 	DEFAULT_STATUS_ENABLE    = true
 	DEFAULT_STATUS_PERIOD    = "1h"
 	DEFAULT_STORAGE_OPTIMIZE = true
 	DEFAULT_STORAGE_PERIOD   = "1h"
-	DEFAULT_USERS_DB         = "users.sqlite"
-	DEFAULT_USER_LOG         = true
+	DEFAULT_USER_DB          = "users.sqlite"
+	DEFAULT_USER_SAVE        = true
 
 	MAX_INSTANCE_PER_APP = 1
 
 	SQL_FIND_CHAT = `
       SELECT * FROM chats WHERE name=?
+    `
+	
+    SQL_COUNT_CHAT = `
+      SELECT count(*) FROM chats
     `
 
 	SQL_COUNT_USER = `
@@ -139,6 +141,7 @@ var (
 	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %v, %v")
 	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %v, %v")
 	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %v, %v")
+	ERROR_CHAT_UPDATE_ERROR     = errors.New("cannnot update chat: %v, %v, %v, %v")
 	ERROR_FETCH_ERROR           = errors.New("fetch error: %v")
 	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %v")
 	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %v (%v > %v)")
@@ -151,7 +154,7 @@ var (
 	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %v, %v")
 	ERROR_SQL_INIT_DB           = errors.New("cannot init database: %v, %v")
 	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %v, %v")
-	ERROR_STATUS_ERROR          = errors.New("session error: %v, storage error: %v")
+	ERROR_STATUS_ERROR          = errors.New("network error: %v, session error: %v, storage error: %v")
 	ERROR_USER_UPDATE_ERROR     = errors.New("cannot save user: %v")
 )
 
@@ -208,6 +211,14 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 			}
 		}
 	}
+}
+
+func countChats(p *Plugin) int {
+	count := 0
+	stmt, _ := p.ChatsDbClient.Prepare(SQL_COUNT_CHAT)
+	defer stmt.Close()
+	stmt.QueryRow().Scan(&count)
+	return count
 }
 
 func countUsers(p *Plugin) int {
@@ -400,6 +411,153 @@ func joinToChat(p *Plugin, chatId int64, chatName string) error {
 	return nil
 }
 
+func parseMessageAudio(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessAudio {
+		audio := messageContent.(*client.MessageAudio).Audio
+		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
+
+		if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				audio.FileName, core.BytesToSize(int64(audio.Audio.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
+func parseMessagePhoto(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessPhoto {
+		photo := messageContent.(*client.MessagePhoto).Photo
+		photoFile := photo.Sizes[len(photo.Sizes)-1]
+		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
+
+		if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				"photo", core.BytesToSize(int64(photoFile.Photo.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
+func parseMessageDocument(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessDocument {
+		document := messageContent.(*client.MessageDocument).Document
+		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
+
+		if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				document.FileName, core.BytesToSize(int64(document.Document.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
+func parseMessageText(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessText {
+		formattedText := messageContent.(*client.MessageText).Text
+		dataItem.TELEGRAM.MESSAGETEXT = formattedText.Text
+
+		for _, entity := range formattedText.Entities {
+			switch entity.Type.(type) {
+			case *client.TextEntityTypeTextUrl:
+				dataItem.TELEGRAM.MESSAGETEXTURL =
+					append(dataItem.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+			}
+		}
+	}
+}
+
+func parseMessageVideo(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessVideo {
+		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
+		video := messageContent.(*client.MessageVideo).Video
+
+		if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				video.FileName, core.BytesToSize(int64(video.Video.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
+func parseMessageVideoNote(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessVideoNote {
+		note := messageContent.(*client.MessageVideoNote).VideoNote
+
+		if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, note.Video.Remote.Id, "")
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				"video_note", core.BytesToSize(int64(note.Video.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
+func parseMessageVoiceNote(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
+	if p.OptionProcessAll || p.OptionProcessVoiceNote {
+		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
+		note := messageContent.(*client.MessageVoiceNote).VoiceNote
+
+		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) < p.OptionFetchMaxSize {
+			localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
+
+			if err == nil && p.OptionFetchMetadata {
+				writeMetadata(p, localFile, &dataItem.TELEGRAM)
+			} else if err == nil {
+				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			}
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) > p.OptionFetchMaxSize {
+			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+				"voice_note", core.BytesToSize(int64(note.Voice.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
+		}
+	}
+}
+
 func receiveAds(p *Plugin) {
 	for {
 		for chatId, chatData := range p.ChatsCache {
@@ -523,34 +681,73 @@ func receiveUpdates(p *Plugin) {
 					p.ConnectionState = "waiting for network"
 				}
 
-				// Messages.
-			case *client.UpdateNewMessage:
-				dataItem := core.DataItem{}
+            // Chat online members.
+            case *client.UpdateChatOnlineMemberCount:
+                memberData := update.(*client.UpdateChatOnlineMemberCount)
+                p.ChatsCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
 
-				message := update.(*client.UpdateNewMessage)
-				messageChat, _ := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.Message.ChatId})
-				messageContent := message.Message.Content
-				messageId := message.Message.Id
-				messageSenderId := int64(-1)
-				messageTimestamp := message.Message.Date
-				messageTime := time.Unix(int64(message.Message.Date), 0).UTC()
-				messageType := messageContent.MessageContentType()
-				messageURL := ""
+			// Chats.
+			case *client.UpdateNewChat:
+				if p.OptionChatSave {
+					chat := update.(*client.UpdateNewChat).Chat
+					err := updateChat(p, chat.Id, chat.Title)
+					if err != nil {
+						core.LogInputPlugin(p.LogFields, "chat",
+							fmt.Sprintf(ERROR_CHAT_UPDATE_ERROR.Error(), chat.Id, chat.Type.ChatTypeType(), chat.Title, err))
+					}
+				}
 
-				userData := core.Telegram{}
+			// Messages.
+			case *client.UpdateNewMessage, *client.UpdateMessageContent:
+				var dataItem = core.DataItem{}
+				var message *client.Message
+				var messageChat *client.Chat
+				var messageContent client.MessageContent
+				var messageId int64
+				var messageTime time.Time
+				var messageTimestamp int32
+				var messageType string
+				var messageSenderId = int64(-1)
+				var messageURL = ""
+				var userData = core.Telegram{}
+				var validMessage = false
 
-				validMessage := false
+				var err error
 
-				warningExceedSizeFileName := ""
-				warningExceedFileSize := int32(0)
+				switch v := update.(type) {
+				case *client.UpdateNewMessage:
+					message = v.Message
+					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.ChatId})
+					if err != nil {
+						continue
+					}
+					messageContent = message.Content
+					messageId = message.Id
+				case *client.UpdateMessageContent:
+					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
+					if err != nil {
+						continue
+					}
+					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: v.ChatId})
+					if err != nil {
+						continue
+					}
+					messageContent = v.NewContent
+					messageId = message.Id
+				}
+
+				messageTime = time.Unix(int64(message.Date), 0).UTC()
+				messageTimestamp = message.Date
+				messageType = messageContent.MessageContentType()
 
 				// Get message url.
-				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{ChatId: messageChat.Id, MessageId: messageId}); err == nil {
+				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{
+					ChatId: messageChat.Id, MessageId: messageId}); err == nil {
 					messageURL = v.Link
 				}
 
 				// Get sender id, saved user.
-				switch messageSender := message.Message.SenderId.(type) {
+				switch messageSender := message.SenderId.(type) {
 				case *client.MessageSenderChat:
 					messageSenderId = int64(messageSender.ChatId)
 				case *client.MessageSenderUser:
@@ -558,13 +755,13 @@ func receiveUpdates(p *Plugin) {
 					userData = getUser(p, messageSenderId)
 				}
 
-				// Save message chat.
-				if p.OptionChatLog {
+				// Save chat.
+				if p.OptionChatSave {
 					// Just try to update chat. Chat can be already there with different name (unique error).
 					err := updateChat(p, messageChat.Id, messageChat.Title)
 					if err != nil {
 						core.LogInputPlugin(p.LogFields, "chat",
-							fmt.Sprintf("cannnot log chat: %v, %v, %v, %v",
+							fmt.Sprintf(ERROR_CHAT_UPDATE_ERROR.Error(),
 								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, err))
 					}
 				}
@@ -628,167 +825,32 @@ func receiveUpdates(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						if p.OptionProcessAll || p.OptionProcessAudio {
-							audio := messageContent.(*client.MessageAudio).Audio
-							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
-
-							if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = audio.FileName
-								warningExceedFileSize = audio.Audio.Size
-							}
-
-							validMessage = true
-						}
+						parseMessageAudio(p, &dataItem, messageContent)
+						validMessage = true
 
 					case *client.MessageDocument:
-						if p.OptionProcessAll || p.OptionProcessDocument {
-							document := messageContent.(*client.MessageDocument).Document
-							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-
-							if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = document.FileName
-								warningExceedFileSize = document.Document.Size
-							}
-
-							validMessage = true
-						}
-
+						parseMessageDocument(p, &dataItem, messageContent)
+						validMessage = true
+					
 					case *client.MessagePhoto:
-						if p.OptionProcessAll || p.OptionProcessPhoto {
-							photo := messageContent.(*client.MessagePhoto).Photo
-							photoFile := photo.Sizes[len(photo.Sizes)-1]
-							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
-
-							if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = "photo"
-								warningExceedFileSize = photoFile.Photo.Size
-							}
-
-							validMessage = true
-						}
+						parseMessagePhoto(p, &dataItem, messageContent)
+						validMessage = true
 
 					case *client.MessageText:
-						if p.OptionProcessAll || p.OptionProcessText {
-							formattedText := messageContent.(*client.MessageText).Text
-							dataItem.TELEGRAM.MESSAGETEXT = formattedText.Text
-
-							for _, entity := range formattedText.Entities {
-								switch entity.Type.(type) {
-								case *client.TextEntityTypeTextUrl:
-									dataItem.TELEGRAM.MESSAGETEXTURL =
-										append(dataItem.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-								}
-							}
-
-							validMessage = true
-						}
+						parseMessageText(p, &dataItem, messageContent)
+						validMessage = true
 
 					case *client.MessageVideo:
-						if p.OptionProcessAll || p.OptionProcessVideo {
-							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
-							video := messageContent.(*client.MessageVideo).Video
-
-							if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = video.FileName
-								warningExceedFileSize = video.Video.Size
-							}
-
-							validMessage = true
-						}
+						parseMessageVideo(p, &dataItem, messageContent)
+						validMessage = true
 
 					case *client.MessageVideoNote:
-						if p.OptionProcessAll || p.OptionProcessVideoNote {
-							note := messageContent.(*client.MessageVideoNote).VideoNote
-
-							if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, note.Video.Remote.Id, "")
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = "video_note"
-								warningExceedFileSize = note.Video.Size
-							}
-
-							validMessage = true
-						}
+						parseMessageVideoNote(p, &dataItem, messageContent)
+						validMessage = true
 
 					case *client.MessageVoiceNote:
-						if p.OptionProcessAll || p.OptionProcessVoiceNote {
-							dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
-							note := messageContent.(*client.MessageVoiceNote).VoiceNote
-
-							if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) < p.OptionFetchMaxSize {
-								localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
-
-								if err == nil && p.OptionFetchMetadata {
-									writeMetadata(p, localFile, &dataItem.TELEGRAM)
-								} else if err == nil {
-									dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-								}
-							}
-
-							if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) > p.OptionFetchMaxSize {
-								warningExceedSizeFileName = "voice_note"
-								warningExceedFileSize = note.Voice.Size
-							}
-
-							validMessage = true
-						}
-					}
-
-					// Warnings.
-					if warningExceedFileSize > 0 {
-						dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							warningExceedSizeFileName, core.BytesToSize(int64(warningExceedFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
-
-						core.LogInputPlugin(p.LogFields, "", fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-							warningExceedSizeFileName, core.BytesToSize(int64(warningExceedFileSize)), core.BytesToSize(p.OptionFetchMaxSize)))
+						parseMessageVoiceNote(p, &dataItem, messageContent)
+						validMessage = true
 					}
 
 					// Send data to channel.
@@ -799,12 +861,11 @@ func receiveUpdates(p *Plugin) {
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
 						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
-
 				}
 
 			// Users.
 			case *client.UpdateUser:
-				if p.OptionUserLog {
+				if p.OptionUserSave {
 					user := update.(*client.UpdateUser).User
 					isNew, isChanged, version, err := updateUser(p, user)
 
@@ -835,13 +896,25 @@ func receiveUpdates(p *Plugin) {
 
 func showStatus(p *Plugin) {
 	for {
+		network, networkError := p.TdlibClient.GetNetworkStatistics(&client.GetNetworkStatisticsRequest{OnlyCurrent: true})
 		session, sessionError := p.TdlibClient.GetActiveSessions()
 		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
 
-		if sessionError != nil || storageError != nil {
+		if networkError != nil || sessionError != nil || storageError != nil {
 			core.LogInputPlugin(p.LogFields, "status",
-				fmt.Errorf(ERROR_STATUS_ERROR.Error(), sessionError, storageError))
+				fmt.Errorf(ERROR_STATUS_ERROR.Error(), networkError, sessionError, storageError))
 		} else {
+            networkSent := ""
+            networkReceived := ""
+
+			for _, entry := range network.Entries {
+                switch v := entry.(type) {
+				case *client.NetworkStatisticsEntryFile:
+                    networkReceived = core.BytesToSize(v.ReceivedBytes)
+                    networkSent = core.BytesToSize(v.SentBytes)
+				}
+			}
+
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
 					m := []string{
@@ -853,6 +926,8 @@ func showStatus(p *Plugin) {
 						"last active: %v,",
 						"last state: %v,",
 						"login date: %v,",
+						"network received: %v,",
+						"network sent: %v,",
 						"pool size: %v,",
 						"proxy: %v,",
 						"saved chats: %v,",
@@ -863,8 +938,9 @@ func showStatus(p *Plugin) {
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
 						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
+                        networkReceived, networkSent,
 						len(p.UpdateListener.Updates), p.OptionProxyEnable,
-						len(p.ChatsCache), countUsers(p),
+						countChats(p), countUsers(p),
 					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -1055,7 +1131,7 @@ type Plugin struct {
 	OptionApiId               int
 	OptionAppVersion          string
 	OptionChatDatabase        string
-	OptionChatLog             bool
+	OptionChatSave            bool
 	OptionDeviceModel         string
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
@@ -1107,7 +1183,7 @@ type Plugin struct {
 	OptionTimeZone            *time.Location
 	OptionTimeout             int
 	OptionUserDatabase        string
-	OptionUserLog             bool
+	OptionUserSave            bool
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -1364,7 +1440,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"api_id":               1,
 		"app_version":          -1,
 		"chat_database":        -1,
-		"chat_log":             -1,
+		"chat_save":            -1,
 		"device_model":         -1,
 		"fetch_max_size":       -1,
 		"fetch_metadata":       -1,
@@ -1388,7 +1464,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"storage_optimize":     -1,
 		"storage_period":       -1,
 		"user_database":        -1,
-		"user_log":             -1,
+		"user_save":            -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1486,22 +1562,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionChatDatabase = v
 		}
 	}
-	setChatDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_CHATS_DB))
+	setChatDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_CHAT_DB))
 	setChatDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_database", template)))
 	setChatDatabase((*pluginConfig.PluginParams)["chat_database"])
 	core.ShowPluginParam(plugin.LogFields, "chat_database", plugin.OptionChatDatabase)
 
-	// chat_log.
-	setChatLog := func(p interface{}) {
+	// chat_save.
+	setChatSave := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
-			availableParams["chat_log"] = 0
-			plugin.OptionChatLog = v
+			availableParams["chat_save"] = 0
+			plugin.OptionChatSave = v
 		}
 	}
-	setChatLog(DEFAULT_CHAT_LOG)
-	setChatLog(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_log", template)))
-	setChatLog((*pluginConfig.PluginParams)["chat_log"])
-	core.ShowPluginParam(plugin.LogFields, "chat_log", plugin.OptionChatLog)
+	setChatSave(DEFAULT_CHAT_SAVE)
+	setChatSave(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.chat_save", template)))
+	setChatSave((*pluginConfig.PluginParams)["chat_save"])
+	core.ShowPluginParam(plugin.LogFields, "chat_save", plugin.OptionChatSave)
 
 	// device_model.
 	setDeviceModel := func(p interface{}) {
@@ -1934,22 +2010,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			plugin.OptionUserDatabase = v
 		}
 	}
-	setUserDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_USERS_DB))
+	setUserDatabase(filepath.Join(plugin.PluginDataDir, DEFAULT_USER_DB))
 	setUserDatabase(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_database", template)))
 	setUserDatabase((*pluginConfig.PluginParams)["user_database"])
 	core.ShowPluginParam(plugin.LogFields, "user_database", plugin.OptionUserDatabase)
 
-	// user_log.
-	setUserLog := func(p interface{}) {
+	// user_save.
+	setUserSave := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
-			availableParams["user_log"] = 0
-			plugin.OptionUserLog = v
+			availableParams["user_save"] = 0
+			plugin.OptionUserSave = v
 		}
 	}
-	setUserLog(DEFAULT_USER_LOG)
-	setUserLog(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_log", template)))
-	setUserLog((*pluginConfig.PluginParams)["user_log"])
-	core.ShowPluginParam(plugin.LogFields, "user_log", plugin.OptionUserLog)
+	setUserSave(DEFAULT_USER_SAVE)
+	setUserSave(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.user_save", template)))
+	setUserSave((*pluginConfig.PluginParams)["user_save"])
+	core.ShowPluginParam(plugin.LogFields, "user_save", plugin.OptionUserSave)
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Check required and unknown parameters.
@@ -2019,7 +2095,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		chatData := getChat(&plugin, chatName)
 
 		if chatData.CHATID == "" {
-			chatIdRegexp := regexp.MustCompile(`^-[0-9]+$`)
+			chatIdRegexp := regexp.MustCompile(`^[0-9]+$`)
 
 			if chatIdRegexp.Match([]byte(chatName)) {
 				chatId, err = strconv.ParseInt(chatName, 10, 64)
@@ -2085,7 +2161,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		go storageOptimize(&plugin)
 	}
 
-	if plugin.OptionUserLog {
+	if plugin.OptionUserSave {
 		plugin.UsersDbClient, err = initUsersDb(&plugin)
 		if err != nil {
 			return &plugin, err

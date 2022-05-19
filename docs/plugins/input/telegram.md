@@ -80,7 +80,7 @@ type Telegram struct {
 | app_version          | -        | string | +    | -        | v3.9.2-b3c452             | "0.0.1"                                         | Custom application version.                                                                                      |
 | device_model         | -        | string | +    | -        | gosquito                  | "Redmi Note 42"                                 | Custom device model.                                                                                             |
 | chat_database        | -        | string | -    | +        | <PLUGIN_DIR>/chats.sqlite | "/path/to/chats.db"                             | Path to internal chats database.                                                                                 |
-| chat_log             | -        | bool   | -    | +        | false                     | true                                            | Try to save all seen chats in internal database.                                                                 |
+| chat_save            | -        | bool   | -    | +        | false                     | true                                            | Try to save all seen chats in internal database.                                                                 |
 | fetch_max_size       | -        | size   | -    | +        | "10m"                     | "1g"                                            | Maximum file size for fetching.                                                                                  |
 | fetch_metadata       | -        | bool   | -    | +        | false                     | true                                            | Generate JSON metadata for fetched file.                                                                         |
 | fetch_orig_name      | -        | bool   | -    | +        | true                      | false                                           | Use original file name.                                                                                          |
@@ -105,7 +105,7 @@ type Telegram struct {
 | storage_optimize     | -        | bool   | -    | +        | true                      | false                                           | Enable/disable storage optimization (clean old data).                                                            |
 | storage_period       | -        | string | -    | +        | "1h"                      | "24h"                                           | Storage optimization interval.                                                                                   |
 | user_database        | -        | string | -    | +        | <PLUGIN_DIR>/users.sqlite | "/path/to/users.db"                             | Path to internal users database.                                                                                 |
-| user_log             | -        | bool   | -    | +        | true                      | false                                           | Enable/disable passive user logging.                                                                             |
+| user_save            | -        | bool   | -    | +        | true                      | false                                           | Enable/disable passive user logging.                                                                             |
 
 
 ### Flow sample:

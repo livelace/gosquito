@@ -253,18 +253,19 @@ type Telegram struct {
 	CHATPROTECTEDCONTENT string
 	CHATLASTINBOXID      string
 	CHATLASTOUTBOXID     string
+	CHATMEMBERONLINE     string
 	CHATMESSAGETTL       string
 	CHATUNREADCOUNT      string
 	CHATTIMESTAMP        string
 
-	MESSAGEID           string
-	MESSAGEMEDIA        []string
-	MESSAGESENDERID     string
-	MESSAGETEXT         string
-	MESSAGETEXTURL      []string
-	MESSAGETIMESTAMP    string
-	MESSAGETYPE         string
-	MESSAGEURL          string
+	MESSAGEID        string
+	MESSAGEMEDIA     []string
+	MESSAGESENDERID  string
+	MESSAGETEXT      string
+	MESSAGETEXTURL   []string
+	MESSAGETIMESTAMP string
+	MESSAGETYPE      string
+	MESSAGEURL       string
 
 	USERID            string
 	USERVERSION       string
@@ -310,8 +311,8 @@ type DataItem struct {
 	RSS      Rss
 	TELEGRAM Telegram
 	TWITTER  Twitter
-	
-    WARNINGS []string
+
+	WARNINGS []string
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
