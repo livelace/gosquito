@@ -684,6 +684,7 @@ func receiveUpdates(p *Plugin) {
             // Chat online members.
             case *client.UpdateChatOnlineMemberCount:
                 memberData := update.(*client.UpdateChatOnlineMemberCount)
+                // ToDo: Atomic ? 
                 p.ChatsCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
 
 			// Chats.
