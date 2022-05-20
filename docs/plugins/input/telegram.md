@@ -49,8 +49,6 @@ type Telegram struct {
 	USERVERIFIED      string
 	USERRESTRICTION   string
 	USERTIMESTAMP     string
-
-	WARNINGS []string
 }
 ```
 
