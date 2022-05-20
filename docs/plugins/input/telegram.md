@@ -13,9 +13,11 @@ type Telegram struct {
 	CHATTYPE             string
 	CHATTITLE            string
 	CHATCLIENTDATA       string
+	CHATMEMBERONLINE     string
 	CHATPROTECTEDCONTENT string
 	CHATLASTINBOXID      string
 	CHATLASTOUTBOXID     string
+	CHATMEMBERONLINE     string
 	CHATMESSAGETTL       string
 	CHATUNREADCOUNT      string
 	CHATTIMESTAMP        string

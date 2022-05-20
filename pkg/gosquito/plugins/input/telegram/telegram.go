@@ -787,6 +787,7 @@ func receiveUpdates(p *Plugin) {
 							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
 							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
 							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+                            CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
 							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
 							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
 							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
