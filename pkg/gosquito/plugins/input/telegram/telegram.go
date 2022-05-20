@@ -32,6 +32,7 @@ const (
 	DEFAULT_FETCH_ALL        = true
 	DEFAULT_FETCH_MAX_SIZE   = "10m"
 	DEFAULT_FETCH_METADATA   = false
+	DEFAULT_FETCH_MIME_NOT   = false
 	DEFAULT_FETCH_OTHER      = false
 	DEFAULT_FETCH_TIMEOUT    = "1h"
 	DEFAULT_FILE_DIR         = "files"
@@ -412,31 +413,56 @@ func joinToChat(p *Plugin, chatId int64, chatName string) error {
 	return nil
 }
 
+func checkFileSize(p *Plugin, dataItem *core.DataItem, needFetch bool, fileName string, fileSize int32) bool {
+	if (p.OptionFetchAll || needFetch) && int64(fileSize) > p.OptionFetchMaxSize {
+		warning := fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+			fileName, core.BytesToSize(int64(fileSize)), core.BytesToSize(p.OptionFetchMaxSize))
+
+		core.LogInputPlugin(p.LogFields, "fetch", warning)
+		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+
+		return false
+	}
+	return true
+}
+
+func checkMimeType(p *Plugin, dataItem *core.DataItem, fileName string, mimeType string) bool {
+	if (len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[mimeType] && !p.OptionFetchMimeNot) ||
+		(len(p.OptionFetchMimeMap) > 0 && p.OptionFetchMimeMap[mimeType] && p.OptionFetchMimeNot) {
+		warning := fmt.Sprintf(ERROR_FETCH_MIME.Error(), fileName, mimeType)
+
+		core.LogInputPlugin(p.LogFields, "fetch", warning)
+		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+
+		return false
+	}
+	return true
+}
+
+func downloadFileAndWriteMeta(p *Plugin, dataItem *core.DataItem, fileId string, fileName string) {
+	localFile, err := downloadFile(p, fileId, fileName)
+
+	if err == nil && p.OptionFetchMetadata {
+		writeMetadata(p, localFile, &dataItem.TELEGRAM)
+	} else if err == nil {
+		dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+	}
+}
+
 func parseMessageAudio(p *Plugin, dataItem *core.DataItem, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessAudio {
 		audio := messageContent.(*client.MessageAudio).Audio
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
-		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[audio.MimeType] {
-			core.LogInputPlugin(p.LogFields, "fetch",
-				fmt.Sprintf(ERROR_FETCH_MIME.Error(), audio.FileName, audio.MimeType))
+		if !checkMimeType(p, dataItem, audio.FileName, audio.MimeType) {
 			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchAudio, audio.FileName, audio.Audio.Size) {
+			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				audio.FileName, core.BytesToSize(int64(audio.Audio.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+        downloadFileAndWriteMeta(p, dataItem, audio.Audio.Remote.Id, audio.FileName)
 	}
 }
 
@@ -446,20 +472,11 @@ func parseMessagePhoto(p *Plugin, dataItem *core.DataItem, messageContent client
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
-		if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, photoFile.Photo.Remote.Id, "")
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchPhoto, "photo", photoFile.Photo.Size) {
+			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchPhoto) && int64(photoFile.Photo.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				"photo", core.BytesToSize(int64(photoFile.Photo.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+        downloadFileAndWriteMeta(p, dataItem, photoFile.Photo.Remote.Id, "")
 	}
 }
 
@@ -467,27 +484,16 @@ func parseMessageDocument(p *Plugin, dataItem *core.DataItem, messageContent cli
 	if p.OptionProcessAll || p.OptionProcessDocument {
 		document := messageContent.(*client.MessageDocument).Document
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-
-		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[document.MimeType] {
-			core.LogInputPlugin(p.LogFields, "fetch",
-				fmt.Sprintf(ERROR_FETCH_MIME.Error(), document.FileName, document.MimeType))
+		
+        if !checkMimeType(p, dataItem, document.FileName, document.MimeType) {
 			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchDocument, document.FileName, document.Document.Size) {
+			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				document.FileName, core.BytesToSize(int64(document.Document.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+        downloadFileAndWriteMeta(p, dataItem, document.Document.Remote.Id, document.FileName)
 	}
 }
 
@@ -511,26 +517,15 @@ func parseMessageVideo(p *Plugin, dataItem *core.DataItem, messageContent client
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 		video := messageContent.(*client.MessageVideo).Video
 
-		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[video.MimeType] {
-			core.LogInputPlugin(p.LogFields, "fetch",
-				fmt.Sprintf(ERROR_FETCH_MIME.Error(), video.FileName, video.MimeType))
+        if !checkMimeType(p, dataItem, video.FileName, video.MimeType) {
 			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchVideo, video.FileName, video.Video.Size) {
+			return
 		}
-
-		if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				video.FileName, core.BytesToSize(int64(video.Video.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+		
+        downloadFileAndWriteMeta(p, dataItem, video.Video.Remote.Id, video.FileName)
 	}
 }
 
@@ -538,20 +533,11 @@ func parseMessageVideoNote(p *Plugin, dataItem *core.DataItem, messageContent cl
 	if p.OptionProcessAll || p.OptionProcessVideoNote {
 		note := messageContent.(*client.MessageVideoNote).VideoNote
 
-		if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, note.Video.Remote.Id, "")
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchVideoNote, "video_note", note.Video.Size) {
+			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchVideoNote) && int64(note.Video.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				"video_note", core.BytesToSize(int64(note.Video.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+        downloadFileAndWriteMeta(p, dataItem, note.Video.Remote.Id, "")
 	}
 }
 
@@ -560,20 +546,11 @@ func parseMessageVoiceNote(p *Plugin, dataItem *core.DataItem, messageContent cl
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
 		note := messageContent.(*client.MessageVoiceNote).VoiceNote
 
-		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) < p.OptionFetchMaxSize {
-			localFile, err := downloadFile(p, note.Voice.Remote.Id, "")
-
-			if err == nil && p.OptionFetchMetadata {
-				writeMetadata(p, localFile, &dataItem.TELEGRAM)
-			} else if err == nil {
-				dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
-			}
+		if !checkFileSize(p, dataItem, p.OptionFetchVoiceNote, "voice_note", note.Voice.Size) {
+			return
 		}
 
-		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && int64(note.Voice.Size) > p.OptionFetchMaxSize {
-			dataItem.WARNINGS = append(dataItem.WARNINGS, fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-				"voice_note", core.BytesToSize(int64(note.Voice.Size)), core.BytesToSize(p.OptionFetchMaxSize)))
-		}
+        downloadFileAndWriteMeta(p, dataItem, note.Voice.Remote.Id, "")
 	}
 }
 
@@ -1166,6 +1143,7 @@ type Plugin struct {
 	OptionFetchMetadata       bool
 	OptionFetchMime           []string
 	OptionFetchMimeMap        map[string]bool
+	OptionFetchMimeNot        bool
 	OptionFetchOrigName       bool
 	OptionFetchPhoto          bool
 	OptionFetchTimeout        int
@@ -1468,6 +1446,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"fetch_max_size":       -1,
 		"fetch_metadata":       -1,
 		"fetch_mime":           -1,
+		"fetch_mime_not":       -1,
 		"fetch_orig_name":      -1,
 		"fetch_timeout":        -1,
 		"file_path":            -1,
@@ -1702,6 +1681,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	for _, v := range plugin.OptionFetchMime {
 		plugin.OptionFetchMimeMap[v] = true
 	}
+
+	// fetch_mime_not.
+	setFetchMimeNot := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["fetch_mime_not"] = 0
+			plugin.OptionFetchMimeNot = v
+		}
+	}
+	setFetchMimeNot(DEFAULT_FETCH_MIME_NOT)
+	setFetchMimeNot(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_mime_not", template)))
+	setFetchMimeNot((*pluginConfig.PluginParams)["fetch_mime_not"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_mime_not", plugin.OptionFetchMimeNot)
 
 	// fetch_orig_name.
 	setFetchOrigName := func(p interface{}) {
