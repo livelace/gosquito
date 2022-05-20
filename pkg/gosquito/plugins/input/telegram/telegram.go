@@ -58,8 +58,8 @@ const (
 	SQL_FIND_CHAT = `
       SELECT * FROM chats WHERE name=?
     `
-	
-    SQL_COUNT_CHAT = `
+
+	SQL_COUNT_CHAT = `
       SELECT count(*) FROM chats
     `
 
@@ -143,6 +143,7 @@ var (
 	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %v, %v")
 	ERROR_CHAT_UPDATE_ERROR     = errors.New("cannnot update chat: %v, %v, %v, %v")
 	ERROR_FETCH_ERROR           = errors.New("fetch error: %v")
+	ERROR_FETCH_MIME            = errors.New("mime filtered: %v, %v")
 	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %v")
 	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %v (%v > %v)")
 	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %v")
@@ -416,6 +417,12 @@ func parseMessageAudio(p *Plugin, dataItem *core.DataItem, messageContent client
 		audio := messageContent.(*client.MessageAudio).Audio
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
+		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[audio.MimeType] {
+			core.LogInputPlugin(p.LogFields, "fetch",
+				fmt.Sprintf(ERROR_FETCH_MIME.Error(), audio.FileName, audio.MimeType))
+			return
+		}
+
 		if (p.OptionFetchAll || p.OptionFetchAudio) && int64(audio.Audio.Size) < p.OptionFetchMaxSize {
 			localFile, err := downloadFile(p, audio.Audio.Remote.Id, audio.FileName)
 
@@ -461,6 +468,12 @@ func parseMessageDocument(p *Plugin, dataItem *core.DataItem, messageContent cli
 		document := messageContent.(*client.MessageDocument).Document
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
 
+		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[document.MimeType] {
+			core.LogInputPlugin(p.LogFields, "fetch",
+				fmt.Sprintf(ERROR_FETCH_MIME.Error(), document.FileName, document.MimeType))
+			return
+		}
+
 		if (p.OptionFetchAll || p.OptionFetchDocument) && int64(document.Document.Size) < p.OptionFetchMaxSize {
 			localFile, err := downloadFile(p, document.Document.Remote.Id, document.FileName)
 
@@ -497,6 +510,12 @@ func parseMessageVideo(p *Plugin, dataItem *core.DataItem, messageContent client
 	if p.OptionProcessAll || p.OptionProcessVideo {
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 		video := messageContent.(*client.MessageVideo).Video
+
+		if len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[video.MimeType] {
+			core.LogInputPlugin(p.LogFields, "fetch",
+				fmt.Sprintf(ERROR_FETCH_MIME.Error(), video.FileName, video.MimeType))
+			return
+		}
 
 		if (p.OptionFetchAll || p.OptionFetchVideo) && int64(video.Video.Size) < p.OptionFetchMaxSize {
 			localFile, err := downloadFile(p, video.Video.Remote.Id, video.FileName)
@@ -681,11 +700,11 @@ func receiveUpdates(p *Plugin) {
 					p.ConnectionState = "waiting for network"
 				}
 
-            // Chat online members.
-            case *client.UpdateChatOnlineMemberCount:
-                memberData := update.(*client.UpdateChatOnlineMemberCount)
-                // ToDo: Atomic ? 
-                p.ChatsCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
+			// Chat online members.
+			case *client.UpdateChatOnlineMemberCount:
+				memberData := update.(*client.UpdateChatOnlineMemberCount)
+				// ToDo: Atomic ?
+				p.ChatsCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
 
 			// Chats.
 			case *client.UpdateNewChat:
@@ -788,7 +807,7 @@ func receiveUpdates(p *Plugin) {
 							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
 							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
 							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
-                            CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
+							CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
 							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
 							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
 							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
@@ -833,7 +852,7 @@ func receiveUpdates(p *Plugin) {
 					case *client.MessageDocument:
 						parseMessageDocument(p, &dataItem, messageContent)
 						validMessage = true
-					
+
 					case *client.MessagePhoto:
 						parseMessagePhoto(p, &dataItem, messageContent)
 						validMessage = true
@@ -906,14 +925,14 @@ func showStatus(p *Plugin) {
 			core.LogInputPlugin(p.LogFields, "status",
 				fmt.Errorf(ERROR_STATUS_ERROR.Error(), networkError, sessionError, storageError))
 		} else {
-            networkSent := ""
-            networkReceived := ""
+			networkSent := ""
+			networkReceived := ""
 
 			for _, entry := range network.Entries {
-                switch v := entry.(type) {
+				switch v := entry.(type) {
 				case *client.NetworkStatisticsEntryFile:
-                    networkReceived = core.BytesToSize(v.ReceivedBytes)
-                    networkSent = core.BytesToSize(v.SentBytes)
+					networkReceived = core.BytesToSize(v.ReceivedBytes)
+					networkSent = core.BytesToSize(v.SentBytes)
 				}
 			}
 
@@ -940,7 +959,7 @@ func showStatus(p *Plugin) {
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
 						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
-                        networkReceived, networkSent,
+						networkReceived, networkSent,
 						len(p.UpdateListener.Updates), p.OptionProxyEnable,
 						countChats(p), countUsers(p),
 					)
@@ -1145,6 +1164,8 @@ type Plugin struct {
 	OptionFetchDocument       bool
 	OptionFetchMaxSize        int64
 	OptionFetchMetadata       bool
+	OptionFetchMime           []string
+	OptionFetchMimeMap        map[string]bool
 	OptionFetchOrigName       bool
 	OptionFetchPhoto          bool
 	OptionFetchTimeout        int
@@ -1446,6 +1467,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"device_model":         -1,
 		"fetch_max_size":       -1,
 		"fetch_metadata":       -1,
+		"fetch_mime":           -1,
 		"fetch_orig_name":      -1,
 		"fetch_timeout":        -1,
 		"file_path":            -1,
@@ -1664,6 +1686,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFetchMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_metadata", template)))
 	setFetchMetadata((*pluginConfig.PluginParams)["fetch_metadata"])
 	core.ShowPluginParam(plugin.LogFields, "fetch_metadata", plugin.OptionFetchMetadata)
+
+	// fetch_mime.
+	setFetchMime := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			availableParams["fetch_mime"] = 0
+			plugin.OptionFetchMime = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+		}
+	}
+	setFetchMime(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.fetch_mime", template)))
+	setFetchMime((*pluginConfig.PluginParams)["fetch_mime"])
+	core.ShowPluginParam(plugin.LogFields, "fetch_mime", plugin.OptionFetchMime)
+
+	plugin.OptionFetchMimeMap = make(map[string]bool, 0)
+	for _, v := range plugin.OptionFetchMime {
+		plugin.OptionFetchMimeMap[v] = true
+	}
 
 	// fetch_orig_name.
 	setFetchOrigName := func(p interface{}) {
