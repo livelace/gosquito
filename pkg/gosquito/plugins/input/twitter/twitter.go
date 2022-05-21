@@ -414,6 +414,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+    
+    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -421,7 +426,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setAccessToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_token"] = 0
-			plugin.OptionAccessToken = v
+			plugin.OptionAccessToken = core.GetCredValue(v, vault)
 		}
 	}
 	setAccessToken(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_token", cred)))
@@ -431,7 +436,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setAccessSecret := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_secret"] = 0
-			plugin.OptionAccessSecret = v
+			plugin.OptionAccessSecret = core.GetCredValue(v, vault)
 		}
 	}
 	setAccessSecret(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_secret", cred)))
@@ -441,7 +446,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setConsumerKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["consumer_key"] = 0
-			plugin.OptionConsumerKey = v
+			plugin.OptionConsumerKey = core.GetCredValue(v, vault)
 		}
 	}
 	setConsumerKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.consumer_key", cred)))
@@ -451,7 +456,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setConsumerSecret := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["consumer_secret"] = 0
-			plugin.OptionConsumerSecret = v
+			plugin.OptionConsumerSecret = core.GetCredValue(v, vault)
 		}
 	}
 	setConsumerSecret(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.consumer_secret", cred)))

@@ -259,10 +259,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	var err error
-
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+    
+    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -270,7 +273,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["token"] = 0
-			plugin.OptionToken = v
+			plugin.OptionToken = core.GetCredValue(v, vault)
 		}
 	}
 	setToken(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.token", cred)))

@@ -24,6 +24,8 @@ import (
 	"github.com/dgraph-io/badger/v3"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/google/renameio"
+	vault "github.com/hashicorp/vault/api"
+	auth "github.com/hashicorp/vault/api/auth/approle"
 	"github.com/itchyny/gojq"
 	log "github.com/livelace/logrus"
 	"github.com/spf13/viper"
@@ -53,7 +55,7 @@ func Base64Encode(s string) string {
 }
 
 func BytesToSize(s int64) string {
-  return bytefmt.ByteSize(uint64(s)) 
+	return bytefmt.ByteSize(uint64(s))
 }
 
 func CheckPluginParams(availableParams *map[string]int, params *map[string]interface{}) error {
@@ -410,6 +412,102 @@ func GenUID() string {
 	return string(b)
 }
 
+func GetCredFromEnv(cred string) string {
+	if c := strings.Split(cred, "env://"); len(c) > 1 {
+		return os.Getenv(c[1])
+	}
+	return cred
+}
+
+func GetVault(m map[string]interface{}) (*vault.Client, error) {
+	if len(m) > 0 {
+		var address string
+		var app_role string
+		var app_secret string
+
+		if v, b := IsString(m["address"]); b {
+			if address = GetCredFromEnv(v); address == "" {
+				return nil, fmt.Errorf("vault address env not set: %v", v)
+			}
+		} else {
+			return nil, fmt.Errorf("vault address must be set: %v", m["address"])
+		}
+
+		if v, b := IsString(m["app_role"]); b {
+			if app_role = GetCredFromEnv(v); app_role == "" {
+				return nil, fmt.Errorf("vault app_role env not set: %v", v)
+			}
+		} else {
+			return nil, fmt.Errorf("vault app_role must be set: %v", m["app_role"])
+		}
+
+		if v, b := IsString(m["app_secret"]); b {
+			if app_secret = GetCredFromEnv(v); app_secret == "" {
+				return nil, fmt.Errorf("vault app_secret env not set: %v", v)
+			}
+		} else {
+			return nil, fmt.Errorf("vault app_secret must be set: %v", m["app_secret"])
+		}
+
+		vaultConfig := vault.DefaultConfig()
+		vaultConfig.Address = address
+
+		vaultClient, err := vault.NewClient(vaultConfig)
+		if err != nil {
+			return nil, fmt.Errorf("cannot initialize vault client: %v", err)
+		}
+
+		appRoleAuth, err := auth.NewAppRoleAuth(
+			app_role,
+			&auth.SecretID{FromString: app_secret},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("cannot initialize app role auth: %v", err)
+		}
+
+		authInfo, err := vaultClient.Auth().Login(context.TODO(), appRoleAuth)
+		if err != nil {
+			return nil, fmt.Errorf("cannot login with app role: %v", err)
+		}
+		if authInfo == nil {
+			return nil, fmt.Errorf("no auth info for app role")
+		}
+
+		return vaultClient, nil
+	}
+
+	return nil, nil
+}
+
+func GetCredValue(cred string, vault *vault.Client) string {
+    // Get from environment variable.
+	if strings.Contains(cred, "env://") {
+		return GetCredFromEnv(cred)
+	}
+
+    // Get from vault secret.
+	if c := strings.Split(cred, "vault://"); len(c) > 1 && vault != nil {
+		if s := strings.Split(c[1], ","); len(s) > 1 {
+            secretPath := s[0]
+            secretKey := s[1]
+
+			secret, err := vault.Logical().Read(secretPath)
+			if err != nil {
+				return ""
+			}
+
+			value, ok := secret.Data[secretKey].(string)
+			if !ok {
+				return ""
+			}
+
+            return value
+		}
+	}
+
+	return cred
+}
+
 func GetDataFieldType(field interface{}) (reflect.Kind, error) {
 	if f, ok := field.(string); ok {
 		rv, err := ReflectDataField(&DataItem{}, f)
@@ -563,11 +661,17 @@ func IsFlowName(name string) bool {
 }
 
 func IsInt(i interface{}) (int, bool) {
-	if v, ok := i.(int); ok && v > 0 {
-		return v, true
-	} else {
-		return 0, false
+	switch v := i.(type) {
+	case int:
+		if v > 0 {
+			return v, true
+		}
+	case string:
+		if si, err := strconv.ParseInt(v, 10, 64); err == nil && si > 0 {
+			return int(si), true
+		}
 	}
+	return 0, false
 }
 
 func IsInterval(i interface{}) (int64, bool) {

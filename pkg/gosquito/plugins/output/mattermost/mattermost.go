@@ -294,28 +294,21 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	var err error
-
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+    
+    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-
-	// username.
-	setUsername := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["username"] = 0
-			plugin.OptionUsername = v
-		}
-	}
-	setUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.username", cred)))
-	setUsername((*pluginConfig.PluginParams)["username"])
 
 	// password.
 	setPassword := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["password"] = 0
-			plugin.OptionPassword = v
+			plugin.OptionPassword = core.GetCredValue(v, vault)
 		}
 	}
 	setPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.password", cred)))
@@ -325,7 +318,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTeam := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["team"] = 0
-			plugin.OptionTeam = v
+			plugin.OptionTeam = core.GetCredValue(v, vault)
 		}
 	}
 	setTeam(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.team", cred)))
@@ -335,12 +328,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setURL := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["url"] = 0
-			plugin.OptionURL = v
+			plugin.OptionURL = core.GetCredValue(v, vault)
 		}
 	}
 	setURL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.url", cred)))
 	setURL((*pluginConfig.PluginParams)["url"])
 	core.ShowPluginParam(plugin.LogFields, "url", plugin.OptionURL)
+	
+    // username.
+	setUsername := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["username"] = 0
+			plugin.OptionUsername = core.GetCredValue(v, vault)
+		}
+	}
+	setUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.username", cred)))
+	setUsername((*pluginConfig.PluginParams)["username"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 

@@ -462,7 +462,7 @@ func parseMessageAudio(p *Plugin, dataItem *core.DataItem, messageContent client
 			return
 		}
 
-        downloadFileAndWriteMeta(p, dataItem, audio.Audio.Remote.Id, audio.FileName)
+		downloadFileAndWriteMeta(p, dataItem, audio.Audio.Remote.Id, audio.FileName)
 	}
 }
 
@@ -476,7 +476,7 @@ func parseMessagePhoto(p *Plugin, dataItem *core.DataItem, messageContent client
 			return
 		}
 
-        downloadFileAndWriteMeta(p, dataItem, photoFile.Photo.Remote.Id, "")
+		downloadFileAndWriteMeta(p, dataItem, photoFile.Photo.Remote.Id, "")
 	}
 }
 
@@ -484,8 +484,8 @@ func parseMessageDocument(p *Plugin, dataItem *core.DataItem, messageContent cli
 	if p.OptionProcessAll || p.OptionProcessDocument {
 		document := messageContent.(*client.MessageDocument).Document
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-		
-        if !checkMimeType(p, dataItem, document.FileName, document.MimeType) {
+
+		if !checkMimeType(p, dataItem, document.FileName, document.MimeType) {
 			return
 		}
 
@@ -493,7 +493,7 @@ func parseMessageDocument(p *Plugin, dataItem *core.DataItem, messageContent cli
 			return
 		}
 
-        downloadFileAndWriteMeta(p, dataItem, document.Document.Remote.Id, document.FileName)
+		downloadFileAndWriteMeta(p, dataItem, document.Document.Remote.Id, document.FileName)
 	}
 }
 
@@ -517,15 +517,15 @@ func parseMessageVideo(p *Plugin, dataItem *core.DataItem, messageContent client
 		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 		video := messageContent.(*client.MessageVideo).Video
 
-        if !checkMimeType(p, dataItem, video.FileName, video.MimeType) {
+		if !checkMimeType(p, dataItem, video.FileName, video.MimeType) {
 			return
 		}
 
 		if !checkFileSize(p, dataItem, p.OptionFetchVideo, video.FileName, video.Video.Size) {
 			return
 		}
-		
-        downloadFileAndWriteMeta(p, dataItem, video.Video.Remote.Id, video.FileName)
+
+		downloadFileAndWriteMeta(p, dataItem, video.Video.Remote.Id, video.FileName)
 	}
 }
 
@@ -537,7 +537,7 @@ func parseMessageVideoNote(p *Plugin, dataItem *core.DataItem, messageContent cl
 			return
 		}
 
-        downloadFileAndWriteMeta(p, dataItem, note.Video.Remote.Id, "")
+		downloadFileAndWriteMeta(p, dataItem, note.Video.Remote.Id, "")
 	}
 }
 
@@ -550,7 +550,7 @@ func parseMessageVoiceNote(p *Plugin, dataItem *core.DataItem, messageContent cl
 			return
 		}
 
-        downloadFileAndWriteMeta(p, dataItem, note.Voice.Remote.Id, "")
+		downloadFileAndWriteMeta(p, dataItem, note.Voice.Remote.Id, "")
 	}
 }
 
@@ -897,10 +897,12 @@ func showStatus(p *Plugin) {
 		network, networkError := p.TdlibClient.GetNetworkStatistics(&client.GetNetworkStatisticsRequest{OnlyCurrent: true})
 		session, sessionError := p.TdlibClient.GetActiveSessions()
 		storage, storageError := p.TdlibClient.GetStorageStatisticsFast()
+		user, userError := p.TdlibClient.GetMe()
 
-		if networkError != nil || sessionError != nil || storageError != nil {
+		if networkError != nil || sessionError != nil || storageError != nil || userError != nil {
 			core.LogInputPlugin(p.LogFields, "status",
-				fmt.Errorf(ERROR_STATUS_ERROR.Error(), networkError, sessionError, storageError))
+				fmt.Errorf(ERROR_STATUS_ERROR.Error(),
+					networkError, sessionError, storageError, userError))
 		} else {
 			networkSent := ""
 			networkReceived := ""
@@ -930,6 +932,8 @@ func showStatus(p *Plugin) {
 						"proxy: %v,",
 						"saved chats: %v,",
 						"saved users: %v",
+						"user id: %v",
+						"user name: %v",
 					}
 					info := fmt.Sprintf(strings.Join(m, " "),
 						core.BytesToSize(storage.DatabaseSize), storage.FileCount,
@@ -939,6 +943,7 @@ func showStatus(p *Plugin) {
 						networkReceived, networkSent,
 						len(p.UpdateListener.Updates), p.OptionProxyEnable,
 						countChats(p), countUsers(p),
+                        user.Id, user.Username,
 					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -1126,7 +1131,7 @@ type Plugin struct {
 	OptionAdsEnable           bool
 	OptionAdsPeriod           int64
 	OptionApiHash             string
-	OptionApiId               int
+	OptionApiId               int32
 	OptionAppVersion          string
 	OptionChatDatabase        string
 	OptionChatSave            bool
@@ -1476,13 +1481,40 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
 
+	vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
+
 	// -----------------------------------------------------------------------------------------------------------------
+
+	// api_id.
+	setApiID := func(p interface{}) {
+		if sv, sb := core.IsString(p); sb {
+			if iv, ib := core.IsInt(core.GetCredValue(sv, vault)); ib {
+				availableParams["api_id"] = 0
+				plugin.OptionApiId = int32(iv)
+			}
+		}
+	}
+	setApiID(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.api_id", cred)))
+	setApiID((*pluginConfig.PluginParams)["api_id"])
+
+	// api_hash.
+	setApiHash := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["api_hash"] = 0
+			plugin.OptionApiHash = core.GetCredValue(v, vault)
+		}
+	}
+	setApiHash(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.api_hash", cred)))
+	setApiHash((*pluginConfig.PluginParams)["api_hash"])
 
 	// proxy_username.
 	setProxyUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["proxy_username"] = 0
-			plugin.OptionProxyUsername = v
+			plugin.OptionProxyUsername = core.GetCredValue(v, vault)
 		}
 	}
 	setProxyUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_userrname", cred)))
@@ -1492,33 +1524,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setProxyPassword := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["proxy_password"] = 0
-			plugin.OptionProxyPassword = v
+			plugin.OptionProxyPassword = core.GetCredValue(v, vault)
 		}
 	}
 	setProxyPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy_password", cred)))
 	setProxyPassword((*pluginConfig.PluginParams)["proxy_password"])
-
-	// -----------------------------------------------------------------------------------------------------------------
-
-	// api_id.
-	setApiID := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["api_id"] = 0
-			plugin.OptionApiId = v
-		}
-	}
-	setApiID(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.api_id", cred)))
-	setApiID((*pluginConfig.PluginParams)["api_id"])
-
-	// api_hash.
-	setApiHash := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["api_hash"] = 0
-			plugin.OptionApiHash = v
-		}
-	}
-	setApiHash(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.api_hash", cred)))
-	setApiHash((*pluginConfig.PluginParams)["api_hash"])
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -2083,7 +2093,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	plugin.TdlibParams = &client.TdlibParameters{
 		ApiHash:                plugin.OptionApiHash,
-		ApiId:                  int32(plugin.OptionApiId),
+		ApiId:                  plugin.OptionApiId,
 		ApplicationVersion:     plugin.OptionAppVersion,
 		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            plugin.OptionDeviceModel,

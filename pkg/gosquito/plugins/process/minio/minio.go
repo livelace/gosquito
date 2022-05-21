@@ -219,6 +219,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+	
+    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -226,7 +231,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setAccessKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["access_key"] = 0
-			plugin.OptionAccessKey = v
+			plugin.OptionAccessKey = core.GetCredValue(v, vault)
 		}
 	}
 	setAccessKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.access_key", cred)))
@@ -236,7 +241,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSecretKey := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["secret_key"] = 0
-			plugin.OptionSecretKey = v
+			plugin.OptionSecretKey = core.GetCredValue(v, vault)
 		}
 	}
 	setSecretKey(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.secret_key", cred)))
@@ -246,7 +251,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setServer := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["server"] = 0
-			plugin.OptionServer = v
+			plugin.OptionServer = core.GetCredValue(v, vault)
 		}
 	}
 	setServer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.server", cred)))

@@ -569,10 +569,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Get plugin specific settings.
 
-	var err error
-
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
+	
+    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+	if err != nil {
+		return &plugin, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -580,7 +583,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBearerToken := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["bearer_token"] = 0
-			plugin.OptionBearerToken = v
+			plugin.OptionBearerToken = core.GetCredValue(v, vault)
 		}
 	}
 	setBearerToken(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.bearer_token", cred)))
@@ -590,7 +593,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["username"] = 0
-			plugin.OptionUsername = v
+			plugin.OptionUsername = core.GetCredValue(v, vault)
 		}
 	}
 	setUsername(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.username", cred)))
@@ -600,7 +603,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setPassword := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["password"] = 0
-			plugin.OptionPassword = v
+			plugin.OptionPassword = core.GetCredValue(v, vault)
 		}
 	}
 	setPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.password", cred)))
