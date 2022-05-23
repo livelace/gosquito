@@ -28,7 +28,7 @@ var (
 )
 
 func uploadFile(p *Plugin, channel string, file string) error {
-	mime, err := core.DetectFileType(file)
+	mime, err := core.GetFileMimeType(file)
 	if err != nil {
 		return err
 	}
