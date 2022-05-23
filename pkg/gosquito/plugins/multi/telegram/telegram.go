@@ -220,26 +220,26 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	}
 }
 
-func checkFileSize(p *Plugin, dataItem *core.Datum, needFetch bool, fileName string, fileSize int32) bool {
+func checkFileSize(p *Plugin, datum *core.Datum, needFetch bool, fileName string, fileSize int32) bool {
 	if (p.OptionFetchAll || needFetch) && int64(fileSize) > p.OptionFetchMaxSize {
 		warning := fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
 			fileName, core.BytesToSize(int64(fileSize)), core.BytesToSize(p.OptionFetchMaxSize))
 
 		core.LogInputPlugin(p.LogFields, "fetch", warning)
-		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+		datum.WARNINGS = append(datum.WARNINGS, warning)
 
 		return false
 	}
 	return true
 }
 
-func checkMimeType(p *Plugin, dataItem *core.Datum, fileName string, mimeType string) bool {
+func checkMimeType(p *Plugin, datum *core.Datum, fileName string, mimeType string) bool {
 	if (len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[mimeType] && !p.OptionFetchMimeNot) ||
 		(len(p.OptionFetchMimeMap) > 0 && p.OptionFetchMimeMap[mimeType] && p.OptionFetchMimeNot) {
 		warning := fmt.Sprintf(ERROR_FETCH_MIME.Error(), fileName, mimeType)
 
 		core.LogInputPlugin(p.LogFields, "fetch", warning)
-		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+		datum.WARNINGS = append(datum.WARNINGS, warning)
 
 		return false
 	}
@@ -322,13 +322,16 @@ stopWaiting:
 	return localFile, nil
 }
 
-func downloadFileAndWriteMeta(p *Plugin, dataItem *core.Datum, fileId string, fileName string) {
+func downloadFileAndWriteMeta(p *Plugin, datum *core.Datum, fileId string, fileName string) {
 	localFile, err := downloadFile(p, fileId, fileName)
 
 	if err == nil && p.OptionFetchMetadata {
-		writeMetadata(p, localFile, &dataItem.TELEGRAM)
+        if m, e := core.GetFileMimeType(localFile); e == nil {
+            datum.TELEGRAM.MESSAGEMIME = m.String()
+        }
+        writeMetadata(p, localFile, &datum.TELEGRAM)
 	} else if err == nil {
-		dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+		datum.TELEGRAM.MESSAGEMEDIA = append(datum.TELEGRAM.MESSAGEMEDIA, localFile)
 	}
 }
 
@@ -598,7 +601,7 @@ func inputDatum(p *Plugin) {
 
 			// Process new and updated messages.
 			case *client.UpdateNewMessage, *client.UpdateMessageContent:
-				var dataItem = core.Datum{}
+				var datum = core.Datum{}
 				var message *client.Message
 				var messageChat *client.Chat
 				var messageContent client.MessageContent
@@ -658,7 +661,7 @@ func inputDatum(p *Plugin) {
 				if chatData, ok := p.ChatByIdDataCache[messageChat.Id]; ok {
 					var u, _ = uuid.NewRandom()
 
-					dataItem = core.Datum{
+					datum = core.Datum{
 						FLOW:       p.Flow.FlowName,
 						PLUGIN:     p.PluginName,
 						SOURCE:     chatData.CHATNAME,
@@ -714,36 +717,36 @@ func inputDatum(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						parseMessageAudio(p, &dataItem, messageContent)
+						parseMessageAudio(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessageDocument:
-						parseMessageDocument(p, &dataItem, messageContent)
+						parseMessageDocument(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessagePhoto:
-						parseMessagePhoto(p, &dataItem, messageContent)
+						parseMessagePhoto(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessageText:
-						parseMessageText(p, &dataItem, messageContent)
+						parseMessageText(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessageVideo:
-						parseMessageVideo(p, &dataItem, messageContent)
+						parseMessageVideo(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessageVideoNote:
-						parseMessageVideoNote(p, &dataItem, messageContent)
+						parseMessageVideoNote(p, &datum, messageContent)
 						validMessage = true
 
 					case *client.MessageVoiceNote:
-						parseMessageVoiceNote(p, &dataItem, messageContent)
+						parseMessageVoiceNote(p, &datum, messageContent)
 						validMessage = true
 					}
 
 					if validMessage {
-						p.InputDatumChannel <- &dataItem
+						p.InputDatumChannel <- &datum
 					}
 
 				} else {
@@ -772,13 +775,13 @@ func outputMessage(p *Plugin) {
 
 			switch v := update.(type) {
 			case *client.UpdateMessageSendFailed:
-				p.OutputMessageChannel <- &core.TelegramMessageStatus{
+				p.OutputMessageChannel <- &core.TelegramSendingStatus{
 					MessageId:    v.OldMessageId,
 					ErrorCode:    v.ErrorCode,
 					ErrorMessage: v.ErrorMessage,
 				}
 			case *client.UpdateMessageSendSucceeded:
-				p.OutputMessageChannel <- &core.TelegramMessageStatus{
+				p.OutputMessageChannel <- &core.TelegramSendingStatus{
 					MessageId:    v.OldMessageId,
 					ErrorCode:    0,
 					ErrorMessage: "",
@@ -790,108 +793,110 @@ func outputMessage(p *Plugin) {
 	}
 }
 
-func parseMessageAudio(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageAudio(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessAudio {
 		audio := messageContent.(*client.MessageAudio).Audio
-		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
 
-		if !checkMimeType(p, dataItem, audio.FileName, audio.MimeType) {
+		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
 			return
 		}
 
-		if !checkFileSize(p, dataItem, p.OptionFetchAudio, audio.FileName, audio.Audio.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchAudio, audio.FileName, audio.Audio.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, audio.Audio.Remote.Id, audio.FileName)
+		downloadFileAndWriteMeta(p, datum, audio.Audio.Remote.Id, audio.FileName)
 	}
 }
 
-func parseMessagePhoto(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessPhoto {
 		photo := messageContent.(*client.MessagePhoto).Photo
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
-		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
-		if !checkFileSize(p, dataItem, p.OptionFetchPhoto, "photo", photoFile.Photo.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchPhoto, "photo", photoFile.Photo.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, photoFile.Photo.Remote.Id, "")
+		downloadFileAndWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
 	}
 }
 
-func parseMessageDocument(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageDocument(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessDocument {
 		document := messageContent.(*client.MessageDocument).Document
-		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
 
-		if !checkMimeType(p, dataItem, document.FileName, document.MimeType) {
+		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
 			return
 		}
 
-		if !checkFileSize(p, dataItem, p.OptionFetchDocument, document.FileName, document.Document.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchDocument, document.FileName, document.Document.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, document.Document.Remote.Id, document.FileName)
+		downloadFileAndWriteMeta(p, datum, document.Document.Remote.Id, document.FileName)
 	}
 }
 
-func parseMessageText(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessText {
 		formattedText := messageContent.(*client.MessageText).Text
-		dataItem.TELEGRAM.MESSAGETEXT = formattedText.Text
+        datum.TELEGRAM.MESSAGEMIME = "text/plain"
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
 
 		for _, entity := range formattedText.Entities {
 			switch entity.Type.(type) {
 			case *client.TextEntityTypeTextUrl:
-				dataItem.TELEGRAM.MESSAGETEXTURL =
-					append(dataItem.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+				datum.TELEGRAM.MESSAGETEXTURL =
+					append(datum.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
 			}
 		}
 	}
 }
 
-func parseMessageVideo(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessVideo {
-		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 		video := messageContent.(*client.MessageVideo).Video
+        datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 
-		if !checkMimeType(p, dataItem, video.FileName, video.MimeType) {
+		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return
 		}
 
-		if !checkFileSize(p, dataItem, p.OptionFetchVideo, video.FileName, video.Video.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchVideo, video.FileName, video.Video.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, video.Video.Remote.Id, video.FileName)
+		downloadFileAndWriteMeta(p, datum, video.Video.Remote.Id, video.FileName)
 	}
 }
 
-func parseMessageVideoNote(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessVideoNote {
 		note := messageContent.(*client.MessageVideoNote).VideoNote
+        datum.TELEGRAM.MESSAGETEXT = ""
 
-		if !checkFileSize(p, dataItem, p.OptionFetchVideoNote, "video_note", note.Video.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchVideoNote, "video_note", note.Video.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, note.Video.Remote.Id, "")
+		downloadFileAndWriteMeta(p, datum, note.Video.Remote.Id, "")
 	}
 }
 
-func parseMessageVoiceNote(p *Plugin, dataItem *core.Datum, messageContent client.MessageContent) {
+func parseMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessVoiceNote {
-		dataItem.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
 		note := messageContent.(*client.MessageVoiceNote).VoiceNote
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
 
-		if !checkFileSize(p, dataItem, p.OptionFetchVoiceNote, "voice_note", note.Voice.Size) {
+		if !checkFileSize(p, datum, p.OptionFetchVoiceNote, "voice_note", note.Voice.Size) {
 			return
 		}
 
-		downloadFileAndWriteMeta(p, dataItem, note.Voice.Remote.Id, "")
+		downloadFileAndWriteMeta(p, datum, note.Voice.Remote.Id, "")
 	}
 }
 
@@ -1321,7 +1326,7 @@ type Plugin struct {
 	InputFileChannel  chan int32
 	InputFileListener *client.Listener
 
-	OutputMessageChannel  chan *core.TelegramMessageStatus
+	OutputMessageChannel  chan *core.TelegramSendingStatus
 	OutputMessageListener *client.Listener
 
 	ChatDbClient *sql.DB
@@ -2633,7 +2638,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Output mode:
 
 	if plugin.PluginType == "output" {
-		plugin.OutputMessageChannel = make(chan *core.TelegramMessageStatus, DEFAULT_CHANNEL_SIZE)
+		plugin.OutputMessageChannel = make(chan *core.TelegramSendingStatus, DEFAULT_CHANNEL_SIZE)
 		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 		go outputMessage(&plugin)
 	}

@@ -260,6 +260,7 @@ type Telegram struct {
 
 	MESSAGEID        string
 	MESSAGEMEDIA     []string
+	MESSAGEMIME      string
 	MESSAGESENDERID  string
 	MESSAGETEXT      string
 	MESSAGETEXTURL   []string
@@ -287,7 +288,7 @@ type Telegram struct {
 	USERTIMESTAMP     string
 }
 
-type TelegramMessageStatus struct {
+type TelegramSendingStatus struct {
     MessageId int64
     ErrorCode int32
     ErrorMessage string

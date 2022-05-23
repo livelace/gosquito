@@ -97,14 +97,6 @@ func CreateDirIfNotExist(d string) error {
 	return nil
 }
 
-func DetectFileType(path string) (*mimetype.MIME, error) {
-	if IsFile(path, "") {
-		return mimetype.DetectFile(path)
-	} else {
-		return &mimetype.MIME{}, fmt.Errorf("not a file: %v", path)
-	}
-}
-
 func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) []string {
 	temp := make([]string, 0)
 
@@ -419,6 +411,70 @@ func GetCredFromEnv(cred string) string {
 	return cred
 }
 
+func GetCredValue(cred string, vault *vault.Client) string {
+    // Get from environment variable.
+	if strings.Contains(cred, "env://") {
+		return GetCredFromEnv(cred)
+	}
+
+    // Get from vault secret.
+	if c := strings.Split(cred, "vault://"); len(c) > 1 && vault != nil {
+		if s := strings.Split(c[1], ","); len(s) > 1 {
+            secretPath := s[0]
+            secretKey := s[1]
+
+			secret, err := vault.Logical().Read(secretPath)
+			if err != nil {
+				return ""
+			}
+
+			value, ok := secret.Data[secretKey].(string)
+			if !ok {
+				return ""
+			}
+
+            return value
+		}
+	}
+
+	return cred
+}
+
+func GetDataFieldType(field interface{}) (reflect.Kind, error) {
+	if f, ok := field.(string); ok {
+		rv, err := ReflectDataField(&Datum{}, f)
+
+		if err != nil {
+			return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
+		} else {
+			return rv.Kind(), nil
+		}
+
+	} else {
+		return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
+	}
+}
+
+func GetFileMimeType(path string) (*mimetype.MIME, error) {
+	if IsFile(path, "") {
+		return mimetype.DetectFile(path)
+	} else {
+		return &mimetype.MIME{}, fmt.Errorf("not a file: %v", path)
+	}
+}
+
+func GetFileNameAndExtension(file string) (string, string) {
+	if file == "/" || file == " " || file == "" || file == "." || file == ".." {
+		return "", ""
+	}
+
+	fileWithExtension := filepath.Base(file)
+	fileExtension := filepath.Ext(fileWithExtension)
+	fileName := fileWithExtension[0 : len(fileWithExtension)-len(fileExtension)]
+
+	return fileName, fileExtension
+}
+
 func GetVault(m map[string]interface{}) (*vault.Client, error) {
 	if len(m) > 0 {
 		var address string
@@ -477,62 +533,6 @@ func GetVault(m map[string]interface{}) (*vault.Client, error) {
 	}
 
 	return nil, nil
-}
-
-func GetCredValue(cred string, vault *vault.Client) string {
-    // Get from environment variable.
-	if strings.Contains(cred, "env://") {
-		return GetCredFromEnv(cred)
-	}
-
-    // Get from vault secret.
-	if c := strings.Split(cred, "vault://"); len(c) > 1 && vault != nil {
-		if s := strings.Split(c[1], ","); len(s) > 1 {
-            secretPath := s[0]
-            secretKey := s[1]
-
-			secret, err := vault.Logical().Read(secretPath)
-			if err != nil {
-				return ""
-			}
-
-			value, ok := secret.Data[secretKey].(string)
-			if !ok {
-				return ""
-			}
-
-            return value
-		}
-	}
-
-	return cred
-}
-
-func GetDataFieldType(field interface{}) (reflect.Kind, error) {
-	if f, ok := field.(string); ok {
-		rv, err := ReflectDataField(&Datum{}, f)
-
-		if err != nil {
-			return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
-		} else {
-			return rv.Kind(), nil
-		}
-
-	} else {
-		return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
-	}
-}
-
-func GetFileNameAndExtension(file string) (string, string) {
-	if file == "/" || file == " " || file == "" || file == "." || file == ".." {
-		return "", ""
-	}
-
-	fileWithExtension := filepath.Base(file)
-	fileExtension := filepath.Ext(fileWithExtension)
-	fileName := fileWithExtension[0 : len(fileWithExtension)-len(fileExtension)]
-
-	return fileName, fileExtension
 }
 
 func HashString(s *string) string {
