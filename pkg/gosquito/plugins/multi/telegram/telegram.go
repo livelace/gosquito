@@ -628,9 +628,9 @@ func inputDatum(p *Plugin) {
 					messageContent = message.Content
 					messageId = message.Id
 				case *client.UpdateMessageContent:
-                    if !p.OptionMessageEdited {
-                        return
-                    }
+					if !p.OptionMessageEdited {
+						return
+					}
 
 					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
 					if err != nil {
@@ -2594,6 +2594,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		chatData := getChat(&plugin, chatName)
 
+        // Join only to unknown chats (api limits).
 		if chatData.CHATID == "" {
 			chatIdRegexp := regexp.MustCompile(`^[0-9]+$`)
 
@@ -2609,24 +2610,24 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
+			
+            err = sqlUpdateChat(&plugin, chatId, chatName)
+			if err != nil {
+				core.LogInputPlugin(plugin.LogFields, "chat", err)
+				continue
+			}
+
+			err = joinToChat(&plugin, chatId, chatName)
+			if err != nil {
+				core.LogInputPlugin(plugin.LogFields, "chat", err)
+				continue
+			}
+
+			// Get updated chat again.
+			chatData = getChat(&plugin, chatName)
 		} else {
 			chatId, _ = strconv.ParseInt(chatData.CHATID, 10, 64)
 		}
-
-		err = sqlUpdateChat(&plugin, chatId, chatName)
-		if err != nil {
-			core.LogInputPlugin(plugin.LogFields, "chat", err)
-			continue
-		}
-
-		err = joinToChat(&plugin, chatId, chatName)
-		if err != nil {
-			core.LogInputPlugin(plugin.LogFields, "chat", err)
-			continue
-		}
-
-		// Get updated chat again.
-		chatData = getChat(&plugin, chatName)
 
 		plugin.ChatByIdDataCache[chatId] = &chatData
 		plugin.ChatByNameIdCache[chatName] = chatId
