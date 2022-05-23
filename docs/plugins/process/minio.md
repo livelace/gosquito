@@ -22,7 +22,7 @@
 | **output**     | +        | array  | -    | +        | []      | ["data.array1"]    | List of target [DataItem](../../concept.md) fields.                           |
 | **secret_key** | +        | string | +    | -        | ""      | ""                 | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html) |
 | **server**     | +        | string | +    | -        | ""      | "host.example.com" | Minio server.                                                                 |
-| source_delete  | -        | bool   | -    | +        | false   | true               | Delete source file after uploading.                                           |
+| source_delete  | -        | bool   | -    | +        | false   | true               | Delete source file after get/put.                                             |
 | ssl            | -        | bool   | -    | +        | true    | false              | Use SSL for connection.                                                       |
 
 ### Flow sample:

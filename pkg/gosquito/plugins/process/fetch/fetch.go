@@ -95,7 +95,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil

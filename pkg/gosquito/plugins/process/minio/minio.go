@@ -4,47 +4,44 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"reflect"
-	"time"
-
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"os"
+	"path/filepath"
+	"reflect"
+	"time"
 )
 
 const (
 	PLUGIN_NAME = "minio"
 
+	DEFAULT_MIME_TYPE     = "octet/stream"
 	DEFAULT_SOURCE_DELETE = false
 	DEFAULT_SSL_ENABLE    = true
 )
 
 var (
-	ERROR_ACTION_UNKNOWN = errors.New("action unknown: %s")
+	ERROR_ACTION_TIMEOUT = errors.New("action timeout: %v, %v")
+	ERROR_ACTION_UNKNOWN = errors.New("action unknown: %v")
+	ERROR_GET_OBJECT     = errors.New("cannot get object: %v, %v")
 	ERROR_IN_OUT_AMOUNT  = errors.New("input and output objects amount not equal: %d != %d")
-	ERROR_DELETE_FILE    = errors.New("cannot delete file: %s, %v")
+	ERROR_PUT_OBJECT     = errors.New("cannot put object: %v, %v")
+	ERROR_REMOVE_FILE    = errors.New("cannot remove file: %v, %v")
+	ERROR_REMOVE_OBJECT  = errors.New("cannot remove object: %v, %v")
 )
 
-func minioPut(p *Plugin, file string, object string, timeout int) error {
+func minioRemoveObject(p *Plugin, object string, timeout int) error {
 	// context.
 	c := make(chan error, 0)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// client.
-	client, err := minio.New(p.OptionServer, &minio.Options{
-		Creds:  credentials.NewStaticV4(p.OptionAccessKey, p.OptionSecretKey, ""),
-		Secure: p.OptionSSL,
-	})
-	if err != nil {
-		return err
-	}
-
 	// background.
 	go func() {
-		_, err = client.FPutObject(ctx, p.OptionBucket, object, file, minio.PutObjectOptions{ContentType: "octet/stream"})
+		err := p.MinioClient.RemoveObject(ctx, p.OptionBucket, object,
+			minio.RemoveObjectOptions{})
 		c <- err
 	}()
 
@@ -53,16 +50,82 @@ func minioPut(p *Plugin, file string, object string, timeout int) error {
 	case <-ctx.Done():
 	case err := <-c:
 		if err != nil {
-			return fmt.Errorf("error: %s, %s", file, err)
+			return fmt.Errorf(ERROR_REMOVE_FILE.Error(), object, err)
 		}
 	case <-time.After(time.Duration(timeout) * time.Second):
-		return fmt.Errorf("timeout: %s", file)
+		return fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), "remove", object)
+	}
+
+	return nil
+}
+
+func minioGetObject(p *Plugin, object string, file string, timeout int) error {
+	// context.
+	c := make(chan error, 0)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// background.
+	go func() {
+		err := p.MinioClient.FGetObject(ctx, p.OptionBucket, object, file,
+			minio.GetObjectOptions{})
+		c <- err
+	}()
+
+	// wait for completion.
+	select {
+	case <-ctx.Done():
+	case err := <-c:
+		if err != nil {
+			return fmt.Errorf(ERROR_GET_OBJECT.Error(), object, err)
+		}
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), "get", object)
+	}
+
+	if p.OptionSourceDelete {
+		err := minioRemoveObject(p, object, timeout)
+		if err != nil {
+			core.LogProcessPlugin(p.LogFields, err)
+		}
+	}
+
+	return nil
+}
+
+func minioPutObject(p *Plugin, file string, object string, timeout int) error {
+	// context.
+	c := make(chan error, 0)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// background.
+	go func() {
+		mimeType := DEFAULT_MIME_TYPE
+		if m, e := core.GetFileMimeType(file); e == nil {
+			mimeType = m.String()
+		}
+		_, err := p.MinioClient.FPutObject(ctx, p.OptionBucket, object, file,
+			minio.PutObjectOptions{ContentType: mimeType})
+		c <- err
+	}()
+
+	// wait for completion.
+	select {
+	case <-ctx.Done():
+	case err := <-c:
+		if err != nil {
+			return fmt.Errorf(ERROR_PUT_OBJECT.Error(), object, err)
+		}
+	case <-time.After(time.Duration(timeout) * time.Second):
+		return fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), "put", object)
 	}
 
 	if p.OptionSourceDelete {
 		err := os.Remove(file)
 		if err != nil {
-			core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_DELETE_FILE.Error(), file, err))
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf(ERROR_REMOVE_FILE.Error(), file, err))
 		}
 	}
 
@@ -78,6 +141,8 @@ type Plugin struct {
 	PluginAlias string
 	PluginName  string
 	PluginType  string
+
+	MinioClient *minio.Client
 
 	OptionAccessKey    string
 	OptionAction       string
@@ -123,6 +188,9 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
 	p.LogFields["run"] = p.Flow.GetRunID()
 
+	outputDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
+	_ = core.CreateDirIfNotExist(outputDir)
+
 	if len(data) == 0 {
 		return temp, nil
 	}
@@ -131,17 +199,32 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		performed := false
 
 		for index, input := range p.OptionInput {
+			var err error
 			ri, _ := core.ReflectDataField(item, input)
 			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.String:
-				if err := minioPut(p, ri.String(), ro.String(), p.OptionTimeout); err != nil {
+                var input string
+                var output string
+
+				switch p.OptionAction {
+				case "get":
+                    input = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ri.String())
+                    output = filepath.Join(outputDir, ro.String())
+					err = minioGetObject(p, ri.String(), output, p.OptionTimeout)
+				case "put":
+                    input = ri.String()
+                    output = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ro.String())
+					err = minioPutObject(p, input, ro.String(), p.OptionTimeout)
+				}
+
+				if err != nil {
 					return temp, err
 				} else {
 					performed = true
 					core.LogProcessPlugin(p.LogFields,
-						fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, ro.String()))
+						fmt.Sprintf("%v: %v -> %v", p.OptionAction, input, output))
 				}
 
 			case reflect.Slice:
@@ -150,12 +233,26 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				}
 
 				for i := 0; i < ri.Len(); i++ {
-					if err := minioPut(p, ri.Index(i).String(), ro.Index(i).String(), p.OptionTimeout); err != nil {
+                    var input string
+                    var output string
+					
+                    switch p.OptionAction {
+					case "get":
+                        input = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ri.Index(i).String())
+                        output = filepath.Join(outputDir, ro.Index(i).String())
+						err = minioGetObject(p, ri.Index(i).String(), output, p.OptionTimeout)
+					case "put":
+                        input = ri.Index(i).String()
+                        output = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ro.Index(i).String())
+						err = minioPutObject(p, input, ro.Index(i).String(), p.OptionTimeout)
+					}
+
+					if err != nil {
 						return temp, err
 					} else {
 						performed = true
 						core.LogProcessPlugin(p.LogFields,
-							fmt.Sprintf("put: %s/%s/%s", p.OptionServer, p.OptionBucket, ro.Index(i).String()))
+							fmt.Sprintf("%v: %v -> %v", p.OptionAction, input, output))
 					}
 				}
 			}
@@ -197,6 +294,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
+		"cred":     -1,
 		"include":  -1,
 		"require":  -1,
 		"template": -1,
@@ -204,7 +302,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"access_key":    1,
 		"action":        1,
 		"bucket":        1,
-		"cred":          -1,
 		"input":         1,
 		"output":        1,
 		"secret_key":    1,
@@ -219,8 +316,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
-	
-    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+
+	vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
 	if err != nil {
 		return &plugin, err
 	}
@@ -383,8 +480,19 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	}
 
-	if plugin.OptionAction != "put" {
+	if plugin.OptionAction != "get" && plugin.OptionAction != "put" {
 		return &Plugin{}, fmt.Errorf(ERROR_ACTION_UNKNOWN.Error(), plugin.OptionAction)
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Minio client.
+
+	plugin.MinioClient, err = minio.New(plugin.OptionServer, &minio.Options{
+		Creds:  credentials.NewStaticV4(plugin.OptionAccessKey, plugin.OptionSecretKey, ""),
+		Secure: plugin.OptionSSL,
+	})
+	if err != nil {
+		return &plugin, err
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
