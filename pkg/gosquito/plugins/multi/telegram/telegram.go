@@ -43,6 +43,7 @@ const (
 	DEFAULT_INCLUDE_OTHER    = false
 	DEFAULT_LOG_LEVEL        = 0
 	DEFAULT_MATCH_TTL        = "1d"
+	DEFAULT_MESSAGE_EDITED   = false
 	DEFAULT_MESSAGE_PREVIEW  = true
 	DEFAULT_POOL_SIZE        = 100000
 	DEFAULT_PROXY_ENABLE     = false
@@ -132,6 +133,7 @@ const (
         is_accessible INTEGER NOT NULL,
         is_contact INTEGER NOT NULL,
         is_fake INTEGER NOT NULL,
+
         is_mutual_contact INTEGER NOT NULL,
         is_scam INTEGER NOT NULL,
         is_support INTEGER NOT NULL,
@@ -326,10 +328,10 @@ func downloadFileAndWriteMeta(p *Plugin, datum *core.Datum, fileId string, fileN
 	localFile, err := downloadFile(p, fileId, fileName)
 
 	if err == nil && p.OptionFetchMetadata {
-        if m, e := core.GetFileMimeType(localFile); e == nil {
-            datum.TELEGRAM.MESSAGEMIME = m.String()
-        }
-        writeMetadata(p, localFile, &datum.TELEGRAM)
+		if m, e := core.GetFileMimeType(localFile); e == nil {
+			datum.TELEGRAM.MESSAGEMIME = m.String()
+		}
+		writeMetadata(p, localFile, &datum.TELEGRAM)
 	} else if err == nil {
 		datum.TELEGRAM.MESSAGEMEDIA = append(datum.TELEGRAM.MESSAGEMEDIA, localFile)
 	}
@@ -626,6 +628,10 @@ func inputDatum(p *Plugin) {
 					messageContent = message.Content
 					messageId = message.Id
 				case *client.UpdateMessageContent:
+                    if !p.OptionMessageEdited {
+                        return
+                    }
+
 					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
 					if err != nil {
 						continue
@@ -844,7 +850,7 @@ func parseMessageDocument(p *Plugin, datum *core.Datum, messageContent client.Me
 func parseMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessText {
 		formattedText := messageContent.(*client.MessageText).Text
-        datum.TELEGRAM.MESSAGEMIME = "text/plain"
+		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
 
 		for _, entity := range formattedText.Entities {
@@ -860,7 +866,7 @@ func parseMessageText(p *Plugin, datum *core.Datum, messageContent client.Messag
 func parseMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessVideo {
 		video := messageContent.(*client.MessageVideo).Video
-        datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
 
 		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return
@@ -877,7 +883,7 @@ func parseMessageVideo(p *Plugin, datum *core.Datum, messageContent client.Messa
 func parseMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) {
 	if p.OptionProcessAll || p.OptionProcessVideoNote {
 		note := messageContent.(*client.MessageVideoNote).VideoNote
-        datum.TELEGRAM.MESSAGETEXT = ""
+		datum.TELEGRAM.MESSAGETEXT = ""
 
 		if !checkFileSize(p, datum, p.OptionFetchVideoNote, "video_note", note.Video.Size) {
 			return
@@ -1380,6 +1386,7 @@ type Plugin struct {
 	OptionMatchSignature        []string
 	OptionMatchTTL              time.Duration
 	OptionMessage               string
+	OptionMessageEdited         bool
 	OptionMessagePreview        bool
 	OptionMessageDisablePreview bool
 	OptionMessageTemplate       *tmpl.Template
@@ -1747,6 +1754,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["input"] = 1
 		availableParams["match_signature"] = -1
 		availableParams["match_ttl"] = -1
+		availableParams["message_edited"] = -1
 		availableParams["message_type_fetch"] = -1
 		availableParams["message_type_process"] = -1
 		availableParams["pool_size"] = -1
@@ -2056,6 +2064,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 		core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
 
+		// message_edited.
+		setMessageEdited := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["message_edited"] = 0
+				plugin.OptionMessageEdited = v
+			}
+		}
+		setMessageEdited(DEFAULT_MESSAGE_EDITED)
+		setMessageEdited(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_edited", template)))
+		setMessageEdited((*pluginConfig.PluginParams)["message_edited"])
+		core.ShowPluginParam(plugin.LogFields, "message_edited", plugin.OptionMessageEdited)
+
 		// message_type_fetch.
 		setMessageTypeFetch := func(p interface{}) {
 			if v, b := core.IsSliceOfString(p); b {
@@ -2222,8 +2242,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMessagePreview(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_preview", template)))
 		setMessagePreview((*pluginConfig.PluginParams)["message_preview"])
 		core.ShowPluginParam(plugin.LogFields, "message_preview", plugin.OptionMessagePreview)
-		
-        if plugin.OptionMessagePreview {
+
+		if plugin.OptionMessagePreview {
 			plugin.OptionMessageDisablePreview = false
 		} else {
 			plugin.OptionMessageDisablePreview = true
