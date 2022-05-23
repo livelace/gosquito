@@ -16,7 +16,7 @@
 | Param          | Required | Type   | Cred | Template | Default | Example            | Description                                                                   |
 |:---------------|:--------:|:------:|:----:|:--------:|:-------:|:------------------:|:------------------------------------------------------------------------------|
 | **access_key** | +        | string | +    | -        | ""      | ""                 | [Minio Admin Guide](https://docs.min.io/docs/minio-admin-complete-guide.html) |
-| **action**     | +        | string | -    | +        | ""      | "put"              | Perform action (only "put" is supported).                                     |
+| **action**     | +        | string | -    | +        | ""      | "put"              | Available cctions: get, put.                                     |
 | **bucket**     | +        | string | -    | +        | ""      | "news"             | Bucket name.                                                                  |
 | **input**      | +        | array  | -    | +        | []      | ["data.array0"]    | List of [DataItem](../../concept.md) fields with files paths.                 |
 | **output**     | +        | array  | -    | +        | []      | ["data.array1"]    | List of target [DataItem](../../concept.md) fields.                           |
