@@ -30,6 +30,9 @@ var (
 	ERROR_PUT_OBJECT     = errors.New("cannot put object: %v, %v")
 	ERROR_REMOVE_FILE    = errors.New("cannot remove file: %v, %v")
 	ERROR_REMOVE_OBJECT  = errors.New("cannot remove object: %v, %v")
+
+	INFO_REMOVE_FILE   = "remove file: %v"
+	INFO_REMOVE_OBJECT = "remove object: %v"
 )
 
 func minioRemoveObject(p *Plugin, object string, timeout int) error {
@@ -60,6 +63,8 @@ func minioRemoveObject(p *Plugin, object string, timeout int) error {
 }
 
 func minioGetObject(p *Plugin, object string, file string, timeout int) error {
+	var err error
+
 	// context.
 	c := make(chan error, 0)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -67,33 +72,46 @@ func minioGetObject(p *Plugin, object string, file string, timeout int) error {
 
 	// background.
 	go func() {
-		err := p.MinioClient.FGetObject(ctx, p.OptionBucket, object, file,
+		e := p.MinioClient.FGetObject(ctx, p.OptionBucket, object, file,
 			minio.GetObjectOptions{})
-		c <- err
+		c <- e
 	}()
 
 	// wait for completion.
 	select {
 	case <-ctx.Done():
-	case err := <-c:
+	case err = <-c:
 		if err != nil {
-			return fmt.Errorf(ERROR_GET_OBJECT.Error(), object, err)
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf(ERROR_GET_OBJECT.Error(), object, err))
 		}
 	case <-time.After(time.Duration(timeout) * time.Second):
-		return fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), "get", object)
+        err = fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), p.OptionAction, object)
+		core.LogProcessPlugin(p.LogFields, err)
 	}
 
-	if p.OptionSourceDelete {
-		err := minioRemoveObject(p, object, timeout)
-		if err != nil {
-			core.LogProcessPlugin(p.LogFields, err)
+	if err == nil {
+		core.LogProcessPlugin(p.LogFields,
+			fmt.Sprintf("%v: %v/%v/%v -> %v",
+				p.OptionAction, p.OptionServer, p.OptionBucket, object, file))
+
+		if p.OptionSourceDelete {
+			err = minioRemoveObject(p, object, timeout)
+			if err == nil {
+				core.LogProcessPlugin(p.LogFields,
+					fmt.Sprintf(INFO_REMOVE_OBJECT, object))
+			} else {
+				core.LogProcessPlugin(p.LogFields, err)
+			}
 		}
 	}
 
-	return nil
+	return err
 }
 
 func minioPutObject(p *Plugin, file string, object string, timeout int) error {
+	var err error
+
 	// context.
 	c := make(chan error, 0)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -105,31 +123,42 @@ func minioPutObject(p *Plugin, file string, object string, timeout int) error {
 		if m, e := core.GetFileMimeType(file); e == nil {
 			mimeType = m.String()
 		}
-		_, err := p.MinioClient.FPutObject(ctx, p.OptionBucket, object, file,
+		_, e := p.MinioClient.FPutObject(ctx, p.OptionBucket, object, file,
 			minio.PutObjectOptions{ContentType: mimeType})
-		c <- err
+		c <- e
 	}()
 
 	// wait for completion.
 	select {
 	case <-ctx.Done():
-	case err := <-c:
-		if err != nil {
-			return fmt.Errorf(ERROR_PUT_OBJECT.Error(), object, err)
-		}
-	case <-time.After(time.Duration(timeout) * time.Second):
-		return fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), "put", object)
-	}
-
-	if p.OptionSourceDelete {
-		err := os.Remove(file)
+	case err = <-c:
 		if err != nil {
 			core.LogProcessPlugin(p.LogFields,
-				fmt.Errorf(ERROR_REMOVE_FILE.Error(), file, err))
+				fmt.Errorf(ERROR_PUT_OBJECT.Error(), object, err))
+		}
+	case <-time.After(time.Duration(timeout) * time.Second):
+        err = fmt.Errorf(ERROR_ACTION_TIMEOUT.Error(), p.OptionAction, object)
+		core.LogProcessPlugin(p.LogFields, err)
+	}
+
+	if err == nil {
+		core.LogProcessPlugin(p.LogFields,
+			fmt.Sprintf("%v: %v -> %v/%v/%v",
+				p.OptionAction, file, p.OptionServer, p.OptionBucket, object))
+
+		if p.OptionSourceDelete {
+			err = os.Remove(file)
+			if err == nil {
+				core.LogProcessPlugin(p.LogFields,
+					fmt.Sprintf(INFO_REMOVE_FILE, file))
+			} else {
+				core.LogProcessPlugin(p.LogFields,
+					fmt.Errorf(ERROR_REMOVE_FILE.Error(), file, err))
+			}
 		}
 	}
 
-	return nil
+	return err
 }
 
 type Plugin struct {
@@ -184,82 +213,73 @@ func (p *Plugin) GetRequire() []int {
 	return p.OptionRequire
 }
 
-func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
+func (p *Plugin) Process(datums []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
 	p.LogFields["run"] = p.Flow.GetRunID()
 
 	outputDir := filepath.Join(p.Flow.FlowTempDir, p.PluginType, p.PluginName)
 	_ = core.CreateDirIfNotExist(outputDir)
 
-	if len(data) == 0 {
+	if len(datums) == 0 {
 		return temp, nil
 	}
 
-	for _, item := range data {
-		performed := false
+	for _, datum := range datums {
+		datumSucceed := false
 
 		for index, input := range p.OptionInput {
 			var err error
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+			ri, _ := core.ReflectDataField(datum, input)
+			ro, _ := core.ReflectDataField(datum, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.String:
-                var input string
-                var output string
-
 				switch p.OptionAction {
 				case "get":
-                    input = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ri.String())
-                    output = filepath.Join(outputDir, ro.String())
-					err = minioGetObject(p, ri.String(), output, p.OptionTimeout)
+					err = minioGetObject(p, ri.String(),
+						filepath.Join(outputDir, ro.String()), p.OptionTimeout)
 				case "put":
-                    input = ri.String()
-                    output = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ro.String())
-					err = minioPutObject(p, input, ro.String(), p.OptionTimeout)
+					err = minioPutObject(p, ri.String(), 
+                        ro.String(), p.OptionTimeout)
 				}
 
-				if err != nil {
-					return temp, err
-				} else {
-					performed = true
-					core.LogProcessPlugin(p.LogFields,
-						fmt.Sprintf("%v: %v -> %v", p.OptionAction, input, output))
+				if err == nil {
+					datumSucceed = true
 				}
 
 			case reflect.Slice:
+				// Skip input/output if their length is different.
 				if ro.Len() != ri.Len() {
-					return temp, fmt.Errorf(ERROR_IN_OUT_AMOUNT.Error(), ri.Len(), ro.Len())
+					break
 				}
 
+				allSuccessed := true
+
 				for i := 0; i < ri.Len(); i++ {
-                    var input string
-                    var output string
-					
-                    switch p.OptionAction {
+					switch p.OptionAction {
 					case "get":
-                        input = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ri.Index(i).String())
-                        output = filepath.Join(outputDir, ro.Index(i).String())
-						err = minioGetObject(p, ri.Index(i).String(), output, p.OptionTimeout)
+						err = minioGetObject(p, ri.Index(i).String(),
+							filepath.Join(outputDir, ro.Index(i).String()), p.OptionTimeout)
 					case "put":
-                        input = ri.Index(i).String()
-                        output = fmt.Sprintf("%v/%v/%v", p.OptionServer, p.OptionBucket, ro.Index(i).String())
-						err = minioPutObject(p, input, ro.Index(i).String(), p.OptionTimeout)
+						err = minioPutObject(p, ri.Index(i).String(),
+							ro.Index(i).String(), p.OptionTimeout)
 					}
 
 					if err != nil {
-						return temp, err
-					} else {
-						performed = true
-						core.LogProcessPlugin(p.LogFields,
-							fmt.Sprintf("%v: %v -> %v", p.OptionAction, input, output))
-					}
+                        allSuccessed = false
+                        break
+                    }
+				}
+
+				if allSuccessed {
+					datumSucceed = true
 				}
 			}
 		}
 
-		if performed {
-			temp = append(temp, item)
+		// Only fully processed datums are included for futher processing.
+		if datumSucceed {
+			temp = append(temp, datum)
 		}
 	}
 
