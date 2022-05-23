@@ -151,10 +151,10 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	return data, nil
 }
 
-func (p *Plugin) Receive() ([]*core.DataItem, error) {
+func (p *Plugin) Receive() ([]*core.Datum, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
-	temp := make([]*core.DataItem, 0)
+	temp := make([]*core.Datum, 0)
 	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
@@ -266,7 +266,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 			// Add item to result.
 			if itemNew {
-				temp = append(temp, &core.DataItem{
+				temp = append(temp, &core.Datum{
 					FLOW:       p.Flow.FlowName,
 					PLUGIN:     p.PluginName,
 					SOURCE:     source,

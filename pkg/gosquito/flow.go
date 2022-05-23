@@ -5,10 +5,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
-	telegramIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/telegram"
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
 	kafkaMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/kafka"
 	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
+	telegramMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/telegram"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
 	smtpOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/smtp"
@@ -101,7 +101,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Need for Telegram instance amount restrictions.
 	// Only one Telegram plugin instance available right now (since tdlib 1.7.0).
-	telegramInPluginTotal := 0
+	telegramPluginTotal := 0
 
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
@@ -323,12 +323,12 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
-			if telegramInPluginTotal < telegramIn.MAX_INSTANCE_PER_APP {
-				inputPlugin, err = telegramIn.Init(&inputPluginConfig)
-				telegramInPluginTotal += 1
+			if telegramPluginTotal < telegramMulti.MAX_INSTANCE_PER_APP {
+				inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
+				telegramPluginTotal += 1
 			} else {
 				logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
-					fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramInPluginTotal))
+					fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramPluginTotal))
 				continue
 			}
 		case "twitter":
@@ -467,6 +467,15 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				outputPlugin, err = slackOut.Init(&outputPluginConfig)
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
+			case "telegram":
+				if telegramPluginTotal < telegramMulti.MAX_INSTANCE_PER_APP {
+					outputPlugin, err = telegramMulti.Init(&outputPluginConfig)
+					telegramPluginTotal += 1
+				} else {
+					logInputOutputPluginError(flowBody.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT,
+						fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramPluginTotal))
+					continue
+				}
 			default:
 				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, flowBody.Flow.Output.Plugin)
 			}
@@ -572,7 +581,7 @@ func runFlow(flow *core.Flow) {
 	// -------------------------------------------------------------------------------------------------------------
 	// Process plugins.
 
-	processResults := make(map[int][]*core.DataItem)
+	processResults := make(map[int][]*core.Datum)
 
 	if len(flow.ProcessPlugins) > 0 {
 		log.WithFields(log.Fields{
@@ -585,7 +594,7 @@ func runFlow(flow *core.Flow) {
 		// Every "process" plugin generates its own dataset.
 		// Any dataset could be excluded from sending through "output" plugin.
 		for pluginID := 0; pluginID < len(flow.ProcessPlugins); pluginID++ {
-			pluginResult := make([]*core.DataItem, 0)
+			pluginResult := make([]*core.Datum, 0)
 
 			plugin := flow.ProcessPlugins[pluginID]
 			pluginRequire := flow.ProcessPlugins[pluginID].GetRequire()
@@ -602,7 +611,7 @@ func runFlow(flow *core.Flow) {
 				// Combine data from required plugins:
 				// 1. Plugin cannot require itself (1 -> 1).
 				// 2. Plugin cannot require data from higher id (1 -> 2, ordered processing).
-				var combinedResult = make([]*core.DataItem, 0)
+				var combinedResult = make([]*core.Datum, 0)
 
 				for i := 0; i < len(pluginRequire); i++ {
 					requirePluginID := pluginRequire[i]

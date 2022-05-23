@@ -1,4 +1,4 @@
-package telegramIn
+package telegramMulti
 
 import (
 	"database/sql"
@@ -17,6 +17,7 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	_ "github.com/mattn/go-sqlite3"
+	tmpl "text/template"
 )
 
 const (
@@ -25,27 +26,31 @@ const (
 	DEFAULT_ADS_ENABLE       = true
 	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
+	DEFAULT_ALBUM_SIZE       = 10
 	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHAT_DB          = "chats.sqlite"
 	DEFAULT_CHAT_SAVE        = false
 	DEFAULT_DATABASE_DIR     = "database"
 	DEFAULT_FETCH_ALL        = true
+	DEFAULT_FETCH_DIR        = "files"
 	DEFAULT_FETCH_MAX_SIZE   = "10m"
 	DEFAULT_FETCH_METADATA   = false
 	DEFAULT_FETCH_MIME_NOT   = false
 	DEFAULT_FETCH_OTHER      = false
 	DEFAULT_FETCH_TIMEOUT    = "1h"
-	DEFAULT_FILE_DIR         = "files"
 	DEFAULT_FILE_ORIG_NAME   = true
 	DEFAULT_INCLUDE_ALL      = true
 	DEFAULT_INCLUDE_OTHER    = false
 	DEFAULT_LOG_LEVEL        = 0
 	DEFAULT_MATCH_TTL        = "1d"
+	DEFAULT_MESSAGE_PREVIEW  = true
 	DEFAULT_POOL_SIZE        = 100000
 	DEFAULT_PROXY_ENABLE     = false
 	DEFAULT_PROXY_PORT       = 9050
 	DEFAULT_PROXY_SERVER     = "127.0.0.1"
 	DEFAULT_PROXY_TYPE       = "socks"
+	DEFAULT_SEND_ALBUM       = true
+	DEFAULT_SEND_TIMEOUT     = "1h"
 	DEFAULT_SESSION_TTL      = 366
 	DEFAULT_STATUS_ENABLE    = true
 	DEFAULT_STATUS_PERIOD    = "1h"
@@ -139,34 +144,34 @@ const (
 )
 
 var (
-	ERROR_CHAT_COMMON_ERROR     = errors.New("chat error: %v, %v")
-	ERROR_CHAT_GET_ERROR        = errors.New("cannot get chat: %v, %v")
-	ERROR_CHAT_JOIN_ERROR       = errors.New("join chat error: %d, %v, %v")
-	ERROR_CHAT_UPDATE_ERROR     = errors.New("cannnot update chat: %v, %v, %v, %v")
-	ERROR_FETCH_ERROR           = errors.New("fetch error: %v")
-	ERROR_FETCH_MIME            = errors.New("mime filtered: %v, %v")
-	ERROR_FETCH_TIMEOUT         = errors.New("fetch timeout: %v")
-	ERROR_FILE_SIZE_EXCEEDED    = errors.New("file size exceeded: %v (%v > %v)")
-	ERROR_LOAD_USERS_ERROR      = errors.New("cannot load users: %v")
-	ERROR_NO_CHATS              = errors.New("no chats!")
-	ERROR_PROXY_TYPE_UNKNOWN    = errors.New("proxy type unknown: %v")
-	ERROR_SAVE_CHATS_ERROR      = errors.New("cannot save chats: %v")
-	ERROR_SQL_BEGIN_TRANSACTION = errors.New("cannot start transaction: %v, %v")
-	ERROR_SQL_DB_OPTION         = errors.New("chat or user database not set: %v, %v")
-	ERROR_SQL_EXEC_ERROR        = errors.New("cannot execute query: %v, %v")
-	ERROR_SQL_INIT_DB           = errors.New("cannot init database: %v, %v")
-	ERROR_SQL_PREPARE_ERROR     = errors.New("cannot prepare query: %v, %v")
-	ERROR_STATUS_ERROR          = errors.New("network error: %v, session error: %v, storage error: %v")
-	ERROR_USER_UPDATE_ERROR     = errors.New("cannot save user: %v")
-)
+	ERROR_CHAT_COMMON_ERROR        = errors.New("chat error: %v, %v")
+	ERROR_CHAT_GET_ERROR           = errors.New("cannot get chat: %v, %v")
+	ERROR_CHAT_JOIN_ERROR          = errors.New("join chat error: %d, %v, %v")
+	ERROR_CHAT_UPDATE_ERROR        = errors.New("cannnot update chat: %v, %v, %v, %v")
+	ERROR_FETCH_ERROR              = errors.New("fetch error: %v")
+	ERROR_FETCH_MIME               = errors.New("mime filtered: %v, %v")
+	ERROR_FETCH_TIMEOUT            = errors.New("fetch timeout: %v")
+	ERROR_FILE_SIZE_EXCEEDED       = errors.New("file size exceeded: %v (%v > %v)")
+	ERROR_LOAD_USERS_ERROR         = errors.New("cannot load users: %v")
+	ERROR_NO_CHATS                 = errors.New("no chats!")
+	ERROR_PROXY_TYPE_UNKNOWN       = errors.New("proxy type unknown: %v")
+	ERROR_SAVE_CHATS_ERROR         = errors.New("cannot save chats: %v")
+	ERROR_SEND_ALBUM_ERROR         = errors.New("send album: %v")
+	ERROR_SEND_ALBUM_MESSAGE_ERROR = errors.New("send album message: %v, %v")
+	ERROR_SEND_ALBUM_TIMEOUT       = errors.New("send album timeout: %v")
+	ERROR_SEND_MESSAGE_ERROR       = errors.New("send message: %v, %v")
+	ERROR_SEND_MESSAGE_TIMEOUT     = errors.New("send message timeout: %v")
+	ERROR_SQL_BEGIN_TRANSACTION    = errors.New("cannot start transaction: %v, %v")
+	ERROR_SQL_DB_OPTION            = errors.New("chat or user database not set: %v, %v")
+	ERROR_SQL_EXEC_ERROR           = errors.New("cannot execute query: %v, %v")
+	ERROR_SQL_INIT_DB              = errors.New("cannot init database: %v, %v")
+	ERROR_SQL_PREPARE_ERROR        = errors.New("cannot prepare query: %v, %v")
+	ERROR_STATUS_ERROR             = errors.New("network error: %v, session error: %v, storage error: %v")
+	ERROR_USER_UPDATE_ERROR        = errors.New("cannot save user: %v")
 
-type clientAuthorizer struct {
-	TdlibParameters chan *client.TdlibParameters
-	PhoneNumber     chan string
-	Code            chan string
-	State           chan client.AuthorizationState
-	Password        chan string
-}
+	INFO_SEND_ALBUM_MESSAGE_SUCCESS = "send album message: %v"
+	INFO_SEND_MESSAGE_SUCCESS       = "send message: %v"
+)
 
 func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	showMessage := func(m string) {
@@ -215,9 +220,43 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	}
 }
 
+func checkFileSize(p *Plugin, dataItem *core.Datum, needFetch bool, fileName string, fileSize int32) bool {
+	if (p.OptionFetchAll || needFetch) && int64(fileSize) > p.OptionFetchMaxSize {
+		warning := fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
+			fileName, core.BytesToSize(int64(fileSize)), core.BytesToSize(p.OptionFetchMaxSize))
+
+		core.LogInputPlugin(p.LogFields, "fetch", warning)
+		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+
+		return false
+	}
+	return true
+}
+
+func checkMimeType(p *Plugin, dataItem *core.Datum, fileName string, mimeType string) bool {
+	if (len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[mimeType] && !p.OptionFetchMimeNot) ||
+		(len(p.OptionFetchMimeMap) > 0 && p.OptionFetchMimeMap[mimeType] && p.OptionFetchMimeNot) {
+		warning := fmt.Sprintf(ERROR_FETCH_MIME.Error(), fileName, mimeType)
+
+		core.LogInputPlugin(p.LogFields, "fetch", warning)
+		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
+
+		return false
+	}
+	return true
+}
+
+type clientAuthorizer struct {
+	TdlibParameters chan *client.TdlibParameters
+	PhoneNumber     chan string
+	Code            chan string
+	State           chan client.AuthorizationState
+	Password        chan string
+}
+
 func countChats(p *Plugin) int {
 	count := 0
-	stmt, _ := p.ChatsDbClient.Prepare(SQL_COUNT_CHAT)
+	stmt, _ := p.ChatDbClient.Prepare(SQL_COUNT_CHAT)
 	defer stmt.Close()
 	stmt.QueryRow().Scan(&count)
 	return count
@@ -225,7 +264,7 @@ func countChats(p *Plugin) int {
 
 func countUsers(p *Plugin) int {
 	count := 0
-	stmt, _ := p.UsersDbClient.Prepare(SQL_COUNT_USER)
+	stmt, _ := p.UserDbClient.Prepare(SQL_COUNT_USER)
 	defer stmt.Close()
 	stmt.QueryRow().Scan(&count)
 	return count
@@ -255,8 +294,8 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 		// 1. Read files IDs from file channel.
 		// 2. Return error if timeout is happened.
 		for i := 0; i < p.OptionFetchTimeout; i++ {
-			if len(p.FileChannel) > 0 {
-				for id := range p.FileChannel {
+			if len(p.InputFileChannel) > 0 {
+				for id := range p.InputFileChannel {
 					if id == downloadFile.Id {
 						if f, err := p.TdlibClient.GetFile(&client.GetFileRequest{FileId: id}); err == nil {
 							localFile = f.Local.Path
@@ -283,10 +322,48 @@ stopWaiting:
 	return localFile, nil
 }
 
+func downloadFileAndWriteMeta(p *Plugin, dataItem *core.Datum, fileId string, fileName string) {
+	localFile, err := downloadFile(p, fileId, fileName)
+
+	if err == nil && p.OptionFetchMetadata {
+		writeMetadata(p, localFile, &dataItem.TELEGRAM)
+	} else if err == nil {
+		dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+	}
+}
+
+func getAudioMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessageAudio {
+	return &client.InputMessageAudio{
+		Audio:   &client.InputFileLocal{Path: file},
+		Caption: caption,
+	}
+}
+
+func getDocumentMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessageDocument {
+	return &client.InputMessageDocument{
+		Caption:  caption,
+		Document: &client.InputFileLocal{Path: file},
+	}
+}
+
+func getPhotoMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessagePhoto {
+	return &client.InputMessagePhoto{
+		Caption: caption,
+		Photo:   &client.InputFileLocal{Path: file},
+	}
+}
+
+func getVideoMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessageVideo {
+	return &client.InputMessageVideo{
+		Caption: caption,
+		Video:   &client.InputFileLocal{Path: file},
+	}
+}
+
 func getChat(p *Plugin, chatName string) core.Telegram {
 	d := core.Telegram{}
 
-	stmt, _ := p.ChatsDbClient.Prepare(SQL_FIND_CHAT)
+	stmt, _ := p.ChatDbClient.Prepare(SQL_FIND_CHAT)
 	defer stmt.Close()
 	stmt.QueryRow(chatName).Scan(&d.CHATID, &d.CHATNAME,
 		&d.CHATTYPE, &d.CHATTITLE, &d.CHATCLIENTDATA,
@@ -375,7 +452,7 @@ func getPublicChatId(p *Plugin, name string) (int64, error) {
 func getUser(p *Plugin, userId int64) core.Telegram {
 	d := core.Telegram{}
 
-	stmt, _ := p.UsersDbClient.Prepare(SQL_FIND_USER)
+	stmt, _ := p.UserDbClient.Prepare(SQL_FIND_USER)
 	defer stmt.Close()
 	stmt.QueryRow(userId).Scan(&d.USERID, &d.USERVERSION, &d.USERNAME,
 		&d.USERTYPE, &d.USERLANG, &d.USERFIRSTNAME, &d.USERLASTNAME,
@@ -405,6 +482,281 @@ func initUsersDb(p *Plugin) (*sql.DB, error) {
 	return db, err
 }
 
+func inputAds(p *Plugin) {
+	for {
+		for chatId, chatData := range p.ChatByIdDataCache {
+			sponsoredMessage, err :=
+				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
+
+			if err == nil {
+				switch sponsoredMessage.Content.(type) {
+				case *client.MessageText:
+					var u, _ = uuid.NewRandom()
+
+					messageText := sponsoredMessage.Content.(*client.MessageText)
+					messageTextURLs := make([]string, 0)
+					messageTime := time.Now().UTC()
+
+					for _, entity := range messageText.Text.Entities {
+						switch entity.Type.(type) {
+						case *client.TextEntityTypeTextUrl:
+							messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+						}
+					}
+
+					// Send data to channel.
+					p.InputDatumChannel <- &core.Datum{
+						FLOW:       p.Flow.FlowName,
+						PLUGIN:     p.PluginName,
+						SOURCE:     chatData.CHATNAME,
+						TIME:       messageTime,
+						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						UUID:       u,
+
+						TELEGRAM: core.Telegram{
+							CHATID:               chatData.CHATID,
+							CHATNAME:             chatData.CHATNAME,
+							CHATTYPE:             chatData.CHATTYPE,
+							CHATTITLE:            chatData.CHATTITLE,
+							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
+
+							MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
+							MESSAGEMEDIA:     make([]string, 0),
+							MESSAGESENDERID:  "",
+							MESSAGETYPE:      messageText.GetType(),
+							MESSAGETEXT:      messageText.Text.Text,
+							MESSAGETEXTURL:   messageTextURLs,
+							MESSAGETIMESTAMP: "",
+							MESSAGEURL:       "",
+
+							USERID:            "",
+							USERVERSION:       "",
+							USERNAME:          DEFAULT_ADS_ID,
+							USERTYPE:          "",
+							USERLANG:          "",
+							USERFIRSTNAME:     "",
+							USERLASTNAME:      "",
+							USERPHONE:         "",
+							USERSTATUS:        "",
+							USERACCESSIBLE:    "",
+							USERCONTACT:       "",
+							USERFAKE:          "",
+							USERMUTUALCONTACT: "",
+							USERSCAM:          "",
+							USERSUPPORT:       "",
+							USERVERIFIED:      "",
+							USERRESTRICTION:   "",
+							USERTIMESTAMP:     "",
+						},
+
+						WARNINGS: make([]string, 0),
+					}
+				}
+			}
+		}
+
+		time.Sleep(time.Duration(p.OptionAdsPeriod) * time.Second)
+	}
+}
+
+func inputFile(p *Plugin) {
+	for {
+		if len(p.InputFileListener.Updates) > 0 {
+			update := <-p.InputFileListener.Updates
+
+			switch update.(type) {
+			case *client.UpdateFile:
+				newFile := update.(*client.UpdateFile).File
+				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
+					p.InputFileChannel <- newFile.Id
+				}
+			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+func inputDatum(p *Plugin) {
+	for {
+		if len(p.InputDatumListener.Updates) > 0 {
+			update := <-p.InputDatumListener.Updates
+
+			switch update.(type) {
+
+			// Update chat's online members amount.
+			case *client.UpdateChatOnlineMemberCount:
+				memberData := update.(*client.UpdateChatOnlineMemberCount)
+				// ToDo: Atomic ?
+				p.ChatByIdDataCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
+
+			// Process new and updated messages.
+			case *client.UpdateNewMessage, *client.UpdateMessageContent:
+				var dataItem = core.Datum{}
+				var message *client.Message
+				var messageChat *client.Chat
+				var messageContent client.MessageContent
+				var messageId int64
+				var messageTime time.Time
+				var messageTimestamp int32
+				var messageType string
+				var messageSenderId = int64(-1)
+				var messageURL = ""
+				var userData = core.Telegram{}
+				var validMessage = false
+
+				var err error
+
+				switch v := update.(type) {
+				case *client.UpdateNewMessage:
+					message = v.Message
+					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.ChatId})
+					if err != nil {
+						continue
+					}
+					messageContent = message.Content
+					messageId = message.Id
+				case *client.UpdateMessageContent:
+					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
+					if err != nil {
+						continue
+					}
+					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: v.ChatId})
+					if err != nil {
+						continue
+					}
+					messageContent = v.NewContent
+					messageId = message.Id
+				}
+
+				messageTime = time.Unix(int64(message.Date), 0).UTC()
+				messageTimestamp = message.Date
+				messageType = messageContent.MessageContentType()
+
+				// Get message url.
+				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{
+					ChatId: messageChat.Id, MessageId: messageId}); err == nil {
+					messageURL = v.Link
+				}
+
+				// Get sender id, saved user.
+				switch messageSender := message.SenderId.(type) {
+				case *client.MessageSenderChat:
+					messageSenderId = int64(messageSender.ChatId)
+				case *client.MessageSenderUser:
+					messageSenderId = int64(messageSender.UserId)
+					userData = getUser(p, messageSenderId)
+				}
+
+				// Process only target chats.
+				if chatData, ok := p.ChatByIdDataCache[messageChat.Id]; ok {
+					var u, _ = uuid.NewRandom()
+
+					dataItem = core.Datum{
+						FLOW:       p.Flow.FlowName,
+						PLUGIN:     p.PluginName,
+						SOURCE:     chatData.CHATNAME,
+						TIME:       messageTime,
+						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						UUID:       u,
+
+						TELEGRAM: core.Telegram{
+							CHATID:               chatData.CHATID,
+							CHATNAME:             chatData.CHATNAME,
+							CHATTYPE:             chatData.CHATTYPE,
+							CHATTITLE:            chatData.CHATTITLE,
+							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+							CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
+							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
+
+							MESSAGEID:        fmt.Sprintf("%v", messageId),
+							MESSAGEMEDIA:     make([]string, 0),
+							MESSAGESENDERID:  fmt.Sprintf("%v", messageSenderId),
+							MESSAGETYPE:      messageType,
+							MESSAGETEXT:      "",
+							MESSAGETEXTURL:   make([]string, 0),
+							MESSAGETIMESTAMP: fmt.Sprintf("%v", messageTimestamp),
+							MESSAGEURL:       messageURL,
+
+							USERID:            userData.USERID,
+							USERVERSION:       userData.USERVERSION,
+							USERNAME:          userData.USERNAME,
+							USERTYPE:          userData.USERTYPE,
+							USERLANG:          userData.USERLANG,
+							USERFIRSTNAME:     userData.USERFIRSTNAME,
+							USERLASTNAME:      userData.USERLASTNAME,
+							USERPHONE:         userData.USERPHONE,
+							USERSTATUS:        userData.USERSTATUS,
+							USERACCESSIBLE:    userData.USERACCESSIBLE,
+							USERCONTACT:       userData.USERCONTACT,
+							USERFAKE:          userData.USERFAKE,
+							USERMUTUALCONTACT: userData.USERMUTUALCONTACT,
+							USERSCAM:          userData.USERSCAM,
+							USERSUPPORT:       userData.USERSUPPORT,
+							USERVERIFIED:      userData.USERVERIFIED,
+							USERRESTRICTION:   userData.USERRESTRICTION,
+							USERTIMESTAMP:     userData.USERTIMESTAMP,
+						},
+
+						WARNINGS: make([]string, 0),
+					}
+
+					switch messageContent.(type) {
+					case *client.MessageAudio:
+						parseMessageAudio(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessageDocument:
+						parseMessageDocument(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessagePhoto:
+						parseMessagePhoto(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessageText:
+						parseMessageText(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessageVideo:
+						parseMessageVideo(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessageVideoNote:
+						parseMessageVideoNote(p, &dataItem, messageContent)
+						validMessage = true
+
+					case *client.MessageVoiceNote:
+						parseMessageVoiceNote(p, &dataItem, messageContent)
+						validMessage = true
+					}
+
+					if validMessage {
+						p.InputDatumChannel <- &dataItem
+					}
+
+				} else {
+					core.LogInputPlugin(p.LogFields, "chat",
+						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+				}
+			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
 func joinToChat(p *Plugin, chatId int64, chatName string) error {
 	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: chatId})
 	if err != nil {
@@ -413,39 +765,28 @@ func joinToChat(p *Plugin, chatId int64, chatName string) error {
 	return nil
 }
 
-func checkFileSize(p *Plugin, dataItem *core.Datum, needFetch bool, fileName string, fileSize int32) bool {
-	if (p.OptionFetchAll || needFetch) && int64(fileSize) > p.OptionFetchMaxSize {
-		warning := fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
-			fileName, core.BytesToSize(int64(fileSize)), core.BytesToSize(p.OptionFetchMaxSize))
+func outputMessage(p *Plugin) {
+	for {
+		if len(p.OutputMessageListener.Updates) > 0 {
+			update := <-p.OutputMessageListener.Updates
 
-		core.LogInputPlugin(p.LogFields, "fetch", warning)
-		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
-
-		return false
-	}
-	return true
-}
-
-func checkMimeType(p *Plugin, dataItem *core.Datum, fileName string, mimeType string) bool {
-	if (len(p.OptionFetchMimeMap) > 0 && !p.OptionFetchMimeMap[mimeType] && !p.OptionFetchMimeNot) ||
-		(len(p.OptionFetchMimeMap) > 0 && p.OptionFetchMimeMap[mimeType] && p.OptionFetchMimeNot) {
-		warning := fmt.Sprintf(ERROR_FETCH_MIME.Error(), fileName, mimeType)
-
-		core.LogInputPlugin(p.LogFields, "fetch", warning)
-		dataItem.WARNINGS = append(dataItem.WARNINGS, warning)
-
-		return false
-	}
-	return true
-}
-
-func downloadFileAndWriteMeta(p *Plugin, dataItem *core.Datum, fileId string, fileName string) {
-	localFile, err := downloadFile(p, fileId, fileName)
-
-	if err == nil && p.OptionFetchMetadata {
-		writeMetadata(p, localFile, &dataItem.TELEGRAM)
-	} else if err == nil {
-		dataItem.TELEGRAM.MESSAGEMEDIA = append(dataItem.TELEGRAM.MESSAGEMEDIA, localFile)
+			switch v := update.(type) {
+			case *client.UpdateMessageSendFailed:
+				p.OutputMessageChannel <- &core.TelegramMessageStatus{
+					MessageId:    v.OldMessageId,
+					ErrorCode:    v.ErrorCode,
+					ErrorMessage: v.ErrorMessage,
+				}
+			case *client.UpdateMessageSendSucceeded:
+				p.OutputMessageChannel <- &core.TelegramMessageStatus{
+					MessageId:    v.OldMessageId,
+					ErrorCode:    0,
+					ErrorMessage: "",
+				}
+			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
@@ -554,341 +895,200 @@ func parseMessageVoiceNote(p *Plugin, dataItem *core.Datum, messageContent clien
 	}
 }
 
-func receiveAds(p *Plugin) {
+func saveChat(p *Plugin) {
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+
 	for {
-		for chatId, chatData := range p.ChatsCache {
-			sponsoredMessage, err :=
-				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
+		if len(listener.Updates) > 0 {
+			var chatId int64
+			update := <-listener.Updates
 
-			if err == nil {
-				switch sponsoredMessage.Content.(type) {
-				case *client.MessageText:
-					var u, _ = uuid.NewRandom()
-
-					messageText := sponsoredMessage.Content.(*client.MessageText)
-					messageTextURLs := make([]string, 0)
-					messageTime := time.Now().UTC()
-
-					for _, entity := range messageText.Text.Entities {
-						switch entity.Type.(type) {
-						case *client.TextEntityTypeTextUrl:
-							messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-						}
-					}
-
-					// Send data to channel.
-					p.DataChannel <- &core.Datum{
-						FLOW:       p.Flow.FlowName,
-						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATNAME,
-						TIME:       messageTime,
-						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-						UUID:       u,
-
-						TELEGRAM: core.Telegram{
-							CHATID:               chatData.CHATID,
-							CHATNAME:             chatData.CHATNAME,
-							CHATTYPE:             chatData.CHATTYPE,
-							CHATTITLE:            chatData.CHATTITLE,
-							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
-							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
-							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
-							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
-							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
-							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
-
-							MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
-							MESSAGEMEDIA:     make([]string, 0),
-							MESSAGESENDERID:  "",
-							MESSAGETYPE:      messageText.GetType(),
-							MESSAGETEXT:      messageText.Text.Text,
-							MESSAGETEXTURL:   messageTextURLs,
-							MESSAGETIMESTAMP: "",
-							MESSAGEURL:       "",
-
-							USERID:            "",
-							USERVERSION:       "",
-							USERNAME:          DEFAULT_ADS_ID,
-							USERTYPE:          "",
-							USERLANG:          "",
-							USERFIRSTNAME:     "",
-							USERLASTNAME:      "",
-							USERPHONE:         "",
-							USERSTATUS:        "",
-							USERACCESSIBLE:    "",
-							USERCONTACT:       "",
-							USERFAKE:          "",
-							USERMUTUALCONTACT: "",
-							USERSCAM:          "",
-							USERSUPPORT:       "",
-							USERVERIFIED:      "",
-							USERRESTRICTION:   "",
-							USERTIMESTAMP:     "",
-						},
-
-						WARNINGS: make([]string, 0),
-					}
-				}
-			}
-		}
-
-		time.Sleep(time.Duration(p.OptionAdsPeriod) * time.Second)
-	}
-}
-
-func receiveFiles(p *Plugin) {
-	for {
-		if len(p.FileListener.Updates) > 0 {
-			update := <-p.FileListener.Updates
-
-			switch update.(type) {
-			case *client.UpdateFile:
-				newFile := update.(*client.UpdateFile).File
-				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
-					p.FileChannel <- newFile.Id
-				}
-			}
-		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
-func receiveUpdates(p *Plugin) {
-	for {
-		if len(p.UpdateListener.Updates) > 0 {
-			update := <-p.UpdateListener.Updates
-
-			switch update.(type) {
-
-			// Connection state.
-			case *client.UpdateConnectionState:
-				switch update.(*client.UpdateConnectionState).State.ConnectionStateType() {
-				case "connectionStateConnecting":
-					p.ConnectionState = "connecting"
-				case "connectionStateConnectingToProxy":
-					p.ConnectionState = "connecting to proxy"
-				case "connectionStateReady":
-					p.ConnectionState = "ready"
-				case "connectionStateUpdating":
-					p.ConnectionState = "updating"
-				case "connectionStateWaitingForNetwork":
-					p.ConnectionState = "waiting for network"
-				}
-
-			// Chat online members.
-			case *client.UpdateChatOnlineMemberCount:
-				memberData := update.(*client.UpdateChatOnlineMemberCount)
-				// ToDo: Atomic ?
-				p.ChatsCache[memberData.ChatId].CHATMEMBERONLINE = fmt.Sprintf("%v", memberData.OnlineMemberCount)
-
-			// Chats.
+			switch v := update.(type) {
 			case *client.UpdateNewChat:
-				if p.OptionChatSave {
-					chat := update.(*client.UpdateNewChat).Chat
-					err := updateChat(p, chat.Id, chat.Title)
-					if err != nil {
-						core.LogInputPlugin(p.LogFields, "chat",
-							fmt.Sprintf(ERROR_CHAT_UPDATE_ERROR.Error(), chat.Id, chat.Type.ChatTypeType(), chat.Title, err))
-					}
-				}
+				chatId = v.Chat.Id
+			case *client.UpdateNewMessage:
+				chatId = v.Message.ChatId
+			default:
+				chatId = 0
+			}
 
-			// Messages.
-			case *client.UpdateNewMessage, *client.UpdateMessageContent:
-				var dataItem = core.Datum{}
-				var message *client.Message
-				var messageChat *client.Chat
-				var messageContent client.MessageContent
-				var messageId int64
-				var messageTime time.Time
-				var messageTimestamp int32
-				var messageType string
-				var messageSenderId = int64(-1)
-				var messageURL = ""
-				var userData = core.Telegram{}
-				var validMessage = false
+			if chatId != 0 {
+				sqlUpdateChat(p, chatId, "")
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
 
-				var err error
+func saveUser(p *Plugin) {
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 
-				switch v := update.(type) {
-				case *client.UpdateNewMessage:
-					message = v.Message
-					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: message.ChatId})
-					if err != nil {
-						continue
-					}
-					messageContent = message.Content
-					messageId = message.Id
-				case *client.UpdateMessageContent:
-					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
-					if err != nil {
-						continue
-					}
-					messageChat, err = p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: v.ChatId})
-					if err != nil {
-						continue
-					}
-					messageContent = v.NewContent
-					messageId = message.Id
-				}
+	for {
+		if len(listener.Updates) > 0 {
+			update := <-listener.Updates
 
-				messageTime = time.Unix(int64(message.Date), 0).UTC()
-				messageTimestamp = message.Date
-				messageType = messageContent.MessageContentType()
-
-				// Get message url.
-				if v, err := p.TdlibClient.GetMessageLink(&client.GetMessageLinkRequest{
-					ChatId: messageChat.Id, MessageId: messageId}); err == nil {
-					messageURL = v.Link
-				}
-
-				// Get sender id, saved user.
-				switch messageSender := message.SenderId.(type) {
-				case *client.MessageSenderChat:
-					messageSenderId = int64(messageSender.ChatId)
-				case *client.MessageSenderUser:
-					messageSenderId = int64(messageSender.UserId)
-					userData = getUser(p, messageSenderId)
-				}
-
-				// Save chat.
-				if p.OptionChatSave {
-					// Just try to update chat. Chat can be already there with different name (unique error).
-					err := updateChat(p, messageChat.Id, messageChat.Title)
-					if err != nil {
-						core.LogInputPlugin(p.LogFields, "chat",
-							fmt.Sprintf(ERROR_CHAT_UPDATE_ERROR.Error(),
-								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, err))
-					}
-				}
-
-				// Process only specified chats.
-				if chatData, ok := p.ChatsCache[messageChat.Id]; ok {
-					var u, _ = uuid.NewRandom()
-
-					dataItem = core.Datum{
-						FLOW:       p.Flow.FlowName,
-						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATNAME,
-						TIME:       messageTime,
-						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-						UUID:       u,
-
-						TELEGRAM: core.Telegram{
-							CHATID:               chatData.CHATID,
-							CHATNAME:             chatData.CHATNAME,
-							CHATTYPE:             chatData.CHATTYPE,
-							CHATTITLE:            chatData.CHATTITLE,
-							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
-							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
-							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
-							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
-							CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
-							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
-							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
-
-							MESSAGEID:        fmt.Sprintf("%v", messageId),
-							MESSAGEMEDIA:     make([]string, 0),
-							MESSAGESENDERID:  fmt.Sprintf("%v", messageSenderId),
-							MESSAGETYPE:      messageType,
-							MESSAGETEXT:      "",
-							MESSAGETEXTURL:   make([]string, 0),
-							MESSAGETIMESTAMP: fmt.Sprintf("%v", messageTimestamp),
-							MESSAGEURL:       messageURL,
-
-							USERID:            userData.USERID,
-							USERVERSION:       userData.USERVERSION,
-							USERNAME:          userData.USERNAME,
-							USERTYPE:          userData.USERTYPE,
-							USERLANG:          userData.USERLANG,
-							USERFIRSTNAME:     userData.USERFIRSTNAME,
-							USERLASTNAME:      userData.USERLASTNAME,
-							USERPHONE:         userData.USERPHONE,
-							USERSTATUS:        userData.USERSTATUS,
-							USERACCESSIBLE:    userData.USERACCESSIBLE,
-							USERCONTACT:       userData.USERCONTACT,
-							USERFAKE:          userData.USERFAKE,
-							USERMUTUALCONTACT: userData.USERMUTUALCONTACT,
-							USERSCAM:          userData.USERSCAM,
-							USERSUPPORT:       userData.USERSUPPORT,
-							USERVERIFIED:      userData.USERVERIFIED,
-							USERRESTRICTION:   userData.USERRESTRICTION,
-							USERTIMESTAMP:     userData.USERTIMESTAMP,
-						},
-
-						WARNINGS: make([]string, 0),
-					}
-
-					switch messageContent.(type) {
-					case *client.MessageAudio:
-						parseMessageAudio(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessageDocument:
-						parseMessageDocument(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessagePhoto:
-						parseMessagePhoto(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessageText:
-						parseMessageText(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessageVideo:
-						parseMessageVideo(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessageVideoNote:
-						parseMessageVideoNote(p, &dataItem, messageContent)
-						validMessage = true
-
-					case *client.MessageVoiceNote:
-						parseMessageVoiceNote(p, &dataItem, messageContent)
-						validMessage = true
-					}
-
-					// Send data to channel.
-					if validMessage {
-						p.DataChannel <- &dataItem
-					}
-
-				} else {
-					core.LogInputPlugin(p.LogFields, "chat",
-						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
-				}
-
-			// Users.
+			switch v := update.(type) {
 			case *client.UpdateUser:
-				if p.OptionUserSave {
-					user := update.(*client.UpdateUser).User
-					isNew, isChanged, version, err := updateUser(p, user)
+				isNew, isChanged, version, err := sqlUpdateUser(p, v.User)
 
-					if err == nil {
-						if isNew {
-							core.LogInputPlugin(p.LogFields, "user",
-								fmt.Sprintf("new: %v, version: %v, username: %v", user.Id, version, user.Username))
-						} else {
-							core.LogInputPlugin(p.LogFields, "user",
-								fmt.Sprintf("old: %v, version: %v, username: %v", user.Id, version, user.Username))
-						}
-
-						if isChanged {
-							core.LogInputPlugin(p.LogFields, "user",
-								fmt.Sprintf("changed: %v, version: %v, username: %v", user.Id, version, user.Username))
-						}
+				if err == nil {
+					if isNew {
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Sprintf("new: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
+							fmt.Sprintf("old: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
 					}
+
+					if isChanged {
+						core.LogInputPlugin(p.LogFields, "user",
+							fmt.Sprintf("changed: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
+					}
+				} else {
+					core.LogInputPlugin(p.LogFields, "user",
+						fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 				}
 			}
-		} else {
-			time.Sleep(100 * time.Millisecond)
 		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.FormattedText, files []string) {
+	if len(files) > 1 && p.OptionSendAlbum {
+		// Splite files into albums.
+		var albums [][]string
+		for i := 0; i < len(files); i += DEFAULT_ALBUM_SIZE {
+			end := i + DEFAULT_ALBUM_SIZE
+			if end > len(files) {
+				end = len(files)
+			}
+			albums = append(albums, files[i:end])
+		}
+
+		// Send albums one by one.
+		for _, album := range albums {
+			content := make([]client.InputMessageContent, 0)
+			for _, file := range album {
+				switch fileType {
+				case "audio":
+					content = append(content, getAudioMessage(p, &fileCaption, file))
+				case "document":
+					content = append(content, getDocumentMessage(p, &fileCaption, file))
+				case "photo":
+					content = append(content, getPhotoMessage(p, &fileCaption, file))
+				case "video":
+					content = append(content, getVideoMessage(p, &fileCaption, file))
+				}
+			}
+			sendMessageAlbum(p, chatId, content)
+		}
+
+	} else if len(files) > 0 {
+		for _, file := range files {
+			switch fileType {
+			case "audio":
+				sendMessage(p, chatId, getAudioMessage(p, &fileCaption, file))
+			case "document":
+				sendMessage(p, chatId, getDocumentMessage(p, &fileCaption, file))
+			case "photo":
+				sendMessage(p, chatId, getPhotoMessage(p, &fileCaption, file))
+			case "video":
+				sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file))
+			}
+		}
+	}
+}
+
+func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) {
+	message, err := p.TdlibClient.SendMessage(&client.SendMessageRequest{
+		ChatId:           chatId,
+		MessageThreadId:  0,
+		ReplyToMessageId: 0,
+		Options: &client.MessageSendOptions{
+			DisableNotification: false,
+			FromBackground:      true,
+			SchedulingState:     nil,
+		},
+		InputMessageContent: content,
+	})
+
+	if err == nil {
+		for i := 0; i < p.OptionSendTimeout; i++ {
+			if len(p.OutputMessageChannel) > 0 {
+				status := <-p.OutputMessageChannel
+
+				if status.MessageId == message.Id && status.ErrorCode == 0 {
+					core.LogOutputPlugin(p.LogFields, "send",
+						fmt.Sprintf(INFO_SEND_MESSAGE_SUCCESS, status.MessageId))
+					return
+				}
+
+				if status.MessageId == message.Id && status.ErrorCode != 0 {
+					core.LogOutputPlugin(p.LogFields, "send",
+						fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), status.MessageId, status.ErrorMessage))
+					return
+				}
+			}
+			time.Sleep(1 * time.Second)
+		}
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_MESSAGE_TIMEOUT.Error(), message.Id))
+	} else {
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
+	}
+}
+
+func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageContent) {
+	messages, err := p.TdlibClient.SendMessageAlbum(&client.SendMessageAlbumRequest{
+		ChatId:           chatId,
+		MessageThreadId:  0,
+		ReplyToMessageId: 0,
+		Options: &client.MessageSendOptions{
+			DisableNotification: false,
+			FromBackground:      true,
+			SchedulingState:     nil,
+		},
+		InputMessageContents: content,
+	})
+
+	if err == nil {
+		messageCounter := int32(0)
+		messageIdMap := make(map[int64]bool, 0)
+
+		for _, message := range messages.Messages {
+			messageIdMap[message.Id] = true
+		}
+
+		for i := 0; i < p.OptionSendTimeout; i++ {
+			if messageCounter == messages.TotalCount {
+				return
+			}
+
+			if len(p.OutputMessageChannel) > 0 {
+				status := <-p.OutputMessageChannel
+
+				if messageIdMap[status.MessageId] && status.ErrorCode == 0 {
+					core.LogOutputPlugin(p.LogFields, "send",
+						fmt.Sprintf(INFO_SEND_ALBUM_MESSAGE_SUCCESS, status.MessageId))
+					messageCounter += 1
+
+				} else if messageIdMap[status.MessageId] && status.ErrorCode != 0 {
+					core.LogOutputPlugin(p.LogFields, "send",
+						fmt.Errorf(ERROR_SEND_ALBUM_MESSAGE_ERROR.Error(), status.MessageId, status.ErrorMessage))
+					messageCounter += 1
+				}
+			}
+			time.Sleep(1 * time.Second)
+		}
+
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_ALBUM_TIMEOUT.Error(), "album"))
+
+	} else {
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_ALBUM_ERROR.Error(), err))
 	}
 }
 
@@ -924,26 +1124,24 @@ func showStatus(p *Plugin) {
 						"geo: %v,",
 						"ip: %v,",
 						"last active: %v,",
-						"last state: %v,",
 						"login date: %v,",
+						"me id: %v",
+						"me name: %v",
 						"network received: %v,",
 						"network sent: %v,",
-						"pool size: %v,",
 						"proxy: %v,",
 						"saved chats: %v,",
 						"saved users: %v",
-						"user id: %v",
-						"user name: %v",
 					}
 					info := fmt.Sprintf(strings.Join(m, " "),
 						core.BytesToSize(storage.DatabaseSize), storage.FileCount,
 						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
 						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
-						p.ConnectionState, time.Unix(int64(s.LogInDate), 0),
+						time.Unix(int64(s.LogInDate), 0),
 						networkReceived, networkSent,
-						len(p.UpdateListener.Updates), p.OptionProxyEnable,
+						p.OptionProxyEnable,
 						countChats(p), countUsers(p),
-                        user.Id, user.Username,
+						user.Id, user.Username,
 					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -955,7 +1153,7 @@ func showStatus(p *Plugin) {
 	}
 }
 
-func storageOptimize(p *Plugin) {
+func storageOptimizer(p *Plugin) {
 	for {
 		p.m.Lock()
 		_, err := p.TdlibClient.OptimizeStorage(&client.OptimizeStorageRequest{})
@@ -969,9 +1167,9 @@ func storageOptimize(p *Plugin) {
 	}
 }
 
-func updateChat(p *Plugin, chatId int64, chatName string) error {
+func sqlUpdateChat(p *Plugin, chatId int64, chatName string) error {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
-	tx, err := p.ChatsDbClient.Begin()
+	tx, err := p.ChatDbClient.Begin()
 	if err != nil {
 		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatName, err)
 	}
@@ -981,7 +1179,12 @@ func updateChat(p *Plugin, chatId int64, chatName string) error {
 		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatName, err)
 	}
 
-	stmt, err := p.ChatsDbClient.Prepare(SQL_UPDATE_CHAT)
+	// Use chat title if chat name is not specified.
+	if chatName == "" {
+		chatName = chat.Title
+	}
+
+	stmt, err := p.ChatDbClient.Prepare(SQL_UPDATE_CHAT)
 	if err != nil {
 		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatName, err)
 	}
@@ -1006,7 +1209,7 @@ func updateChat(p *Plugin, chatId int64, chatName string) error {
 	return tx.Commit()
 }
 
-func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
+func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
 	oldUser := getUser(p, user.Id)
 	userVersion := 0
@@ -1057,12 +1260,12 @@ func updateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	}
 
 	if isNew || isChanged {
-		tx, err := p.UsersDbClient.Begin()
+		tx, err := p.UserDbClient.Begin()
 		if err != nil {
 			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
 		}
 
-		stmt, err := p.UsersDbClient.Prepare(SQL_UPDATE_USER)
+		stmt, err := p.UserDbClient.Prepare(SQL_UPDATE_USER)
 		if err != nil {
 			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
 		}
@@ -1112,84 +1315,100 @@ type Plugin struct {
 	PluginDataDir string
 	PluginTempDir string
 
-	ConnectionState string
+	InputDatumChannel  chan *core.Datum
+	InputDatumListener *client.Listener
 
-	FileListener   *client.Listener
-	UpdateListener *client.Listener
+	InputFileChannel  chan int32
+	InputFileListener *client.Listener
 
-	FileChannel chan int32
-	DataChannel chan *core.Datum
+	OutputMessageChannel  chan *core.TelegramMessageStatus
+	OutputMessageListener *client.Listener
 
-	ChatsCache map[int64]*core.Telegram
-
-	ChatsDbClient *sql.DB
-	UsersDbClient *sql.DB
+	ChatDbClient *sql.DB
+	UserDbClient *sql.DB
 
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
 
-	OptionAdsEnable           bool
-	OptionAdsPeriod           int64
-	OptionApiHash             string
-	OptionApiId               int32
-	OptionAppVersion          string
-	OptionChatDatabase        string
-	OptionChatSave            bool
-	OptionDeviceModel         string
-	OptionExpireAction        []string
-	OptionExpireActionDelay   int64
-	OptionExpireActionTimeout int
-	OptionExpireInterval      int64
-	OptionExpireLast          int64
-	OptionFetchAll            bool
-	OptionFetchAudio          bool
-	OptionFetchDocument       bool
-	OptionFetchMaxSize        int64
-	OptionFetchMetadata       bool
-	OptionFetchMime           []string
-	OptionFetchMimeMap        map[string]bool
-	OptionFetchMimeNot        bool
-	OptionFetchOrigName       bool
-	OptionFetchPhoto          bool
-	OptionFetchTimeout        int
-	OptionFetchVideo          bool
-	OptionFetchVideoNote      bool
-	OptionFetchVoiceNote      bool
-	OptionFilePath            string
-	OptionForce               bool
-	OptionForceCount          int
-	OptionIgnoreFileName      bool
-	OptionInput               []string
-	OptionLogLevel            int
-	OptionMatchSignature      []string
-	OptionMatchTTL            time.Duration
-	OptionMessageTypeFetch    []string
-	OptionMessageTypeProcess  []string
-	OptionPoolSize            int
-	OptionProcessAll          bool
-	OptionProcessAudio        bool
-	OptionProcessDocument     bool
-	OptionProcessPhoto        bool
-	OptionProcessText         bool
-	OptionProcessVideo        bool
-	OptionProcessVideoNote    bool
-	OptionProcessVoiceNote    bool
-	OptionProxyEnable         bool
-	OptionProxyPassword       string
-	OptionProxyPort           int
-	OptionProxyServer         string
-	OptionProxyType           string
-	OptionProxyUsername       string
-	OptionSessionTTL          int
-	OptionStatusEnable        bool
-	OptionStatusPeriod        int64
-	OptionStorageOptimize     bool
-	OptionStoragePeriod       int64
-	OptionTimeFormat          string
-	OptionTimeZone            *time.Location
-	OptionTimeout             int
-	OptionUserDatabase        string
-	OptionUserSave            bool
+	ChatByIdDataCache map[int64]*core.Telegram
+	ChatByNameIdCache map[string]int64
+
+	OptionAdsEnable             bool
+	OptionAdsPeriod             int64
+	OptionApiHash               string
+	OptionApiId                 int32
+	OptionAppVersion            string
+	OptionChatDatabase          string
+	OptionChatSave              bool
+	OptionDeviceModel           string
+	OptionExpireAction          []string
+	OptionExpireActionDelay     int64
+	OptionExpireActionTimeout   int
+	OptionExpireInterval        int64
+	OptionExpireLast            int64
+	OptionFetchAll              bool
+	OptionFetchAudio            bool
+	OptionFetchDir              string
+	OptionFetchDocument         bool
+	OptionFetchMaxSize          int64
+	OptionFetchMetadata         bool
+	OptionFetchMime             []string
+	OptionFetchMimeMap          map[string]bool
+	OptionFetchMimeNot          bool
+	OptionFetchOrigName         bool
+	OptionFetchPhoto            bool
+	OptionFetchTimeout          int
+	OptionFetchVideo            bool
+	OptionFetchVideoNote        bool
+	OptionFetchVoiceNote        bool
+	OptionFileAudio             []string
+	OptionFileCaption           string
+	OptionFileCaptionTemplate   *tmpl.Template
+	OptionFileDocument          []string
+	OptionFilePhoto             []string
+	OptionFileVideo             []string
+	OptionForce                 bool
+	OptionForceCount            int
+	OptionIgnoreFileName        bool
+	OptionInput                 []string
+	OptionLogLevel              int
+	OptionMatchSignature        []string
+	OptionMatchTTL              time.Duration
+	OptionMessage               string
+	OptionMessagePreview        bool
+	OptionMessageDisablePreview bool
+	OptionMessageTemplate       *tmpl.Template
+	OptionMessageTypeFetch      []string
+	OptionMessageTypeProcess    []string
+	OptionOutput                []string
+	OptionPoolSize              int
+	OptionProcessAll            bool
+	OptionProcessAudio          bool
+	OptionProcessDocument       bool
+	OptionProcessPhoto          bool
+	OptionProcessText           bool
+	OptionProcessVideo          bool
+	OptionProcessVideoNote      bool
+	OptionProcessVoiceNote      bool
+	OptionProxyEnable           bool
+	OptionProxyPassword         string
+	OptionProxyPort             int
+	OptionProxyServer           string
+	OptionProxyType             string
+	OptionProxyUsername         string
+	OptionSendAlbum             bool
+	OptionSendTimeout           int
+	OptionSessionTTL            int
+	OptionStatusEnable          bool
+	OptionStatusPeriod          int64
+	OptionStorageOptimize       bool
+	OptionStoragePeriod         int64
+	OptionTargetChat            []string
+	OptionTimeFormat            string
+	OptionTimeZone              *time.Location
+	OptionTimeout               int
+	OptionUserDatabase          string
+	OptionUserSave              bool
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -1216,6 +1435,10 @@ func (p *Plugin) GetInput() []string {
 
 func (p *Plugin) GetName() string {
 	return p.PluginName
+}
+
+func (p *Plugin) GetOutput() []string {
+	return p.OptionOutput
 }
 
 func (p *Plugin) LoadState() (map[string]time.Time, error) {
@@ -1248,7 +1471,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 	sourceReceivedStat := make(map[string]int32)
 
 	// Fixate channel length (channel changes length size in the loop).
-	length := len(p.DataChannel)
+	length := len(p.InputDatumChannel)
 
 	// Process only specific amount of messages from every source if force = true.
 	var start = 0
@@ -1266,7 +1489,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 		var itemSignatureHash string
 		var sourceLastTime time.Time
 
-		item := <-p.DataChannel
+		item := <-p.InputDatumChannel
 
 		// Check if we work with source first time.
 		if v, ok := flowStates[item.SOURCE]; ok {
@@ -1385,6 +1608,52 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
+func (p *Plugin) Send(data []*core.Datum) error {
+	p.LogFields["run"] = p.Flow.GetRunID()
+
+	for _, item := range data {
+		for _, chatName := range p.OptionOutput {
+			chatId := p.ChatByNameIdCache[chatName]
+
+			// Construct file caption.
+			var fileCaption client.FormattedText
+			if c, err := core.ExtractTemplateIntoString(item, p.OptionFileCaptionTemplate); err == nil && len(c) > 0 {
+				fileCaption = client.FormattedText{
+					Text: c,
+				}
+			}
+
+			// Construct text message.
+			if m, err := core.ExtractTemplateIntoString(item, p.OptionMessageTemplate); err == nil && len(m) > 0 {
+				content := &client.InputMessageText{
+					ClearDraft:            false,
+					DisableWebPagePreview: p.OptionMessageDisablePreview,
+					Text:                  &client.FormattedText{Text: m},
+				}
+				sendMessage(p, chatId, content)
+			}
+
+			// Send audio files.
+			audio := core.ExtractDataFieldIntoArray(item, p.OptionFileAudio)
+			sendFiles(p, chatId, "audio", fileCaption, audio)
+
+			// Send document files.
+			document := core.ExtractDataFieldIntoArray(item, p.OptionFileDocument)
+			sendFiles(p, chatId, "document", fileCaption, document)
+
+			// Send photo files.
+			photo := core.ExtractDataFieldIntoArray(item, p.OptionFilePhoto)
+			sendFiles(p, chatId, "photo", fileCaption, photo)
+
+			// Send video files.
+			video := core.ExtractDataFieldIntoArray(item, p.OptionFileVideo)
+			sendFiles(p, chatId, "video", fileCaption, video)
+		}
+	}
+
+	return nil
+}
+
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -1402,7 +1671,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		PluginType:             pluginConfig.PluginType,
 		PluginDataDir:          filepath.Join(pluginConfig.Flow.FlowDataDir, pluginConfig.PluginType, PLUGIN_NAME),
 		PluginTempDir:          filepath.Join(pluginConfig.Flow.FlowTempDir, pluginConfig.PluginType, PLUGIN_NAME),
-		ConnectionState:        "unknown",
 		OptionExpireLast:       0,
 		OptionFetchAll:         DEFAULT_FETCH_ALL,
 		OptionFetchAudio:       DEFAULT_FETCH_OTHER,
@@ -1428,51 +1696,68 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"cred":                  -1,
-		"expire_action":         -1,
-		"expire_action_timeout": -1,
-		"expire_delay":          -1,
-		"expire_interval":       -1,
-		"force":                 -1,
-		"force_count":           -1,
-		"template":              -1,
-		"timeout":               -1,
-		"time_format":           -1,
-		"time_zone":             -1,
+		"cred":        -1,
+		"template":    -1,
+		"timeout":     -1,
+		"time_format": -1,
+		"time_zone":   -1,
 
-		"ads_enable":           -1,
-		"ads_period":           1,
-		"api_hash":             1,
-		"api_id":               1,
-		"app_version":          -1,
-		"chat_database":        -1,
-		"chat_save":            -1,
-		"device_model":         -1,
-		"fetch_max_size":       -1,
-		"fetch_metadata":       -1,
-		"fetch_mime":           -1,
-		"fetch_mime_not":       -1,
-		"fetch_orig_name":      -1,
-		"fetch_timeout":        -1,
-		"file_path":            -1,
-		"input":                1,
-		"log_level":            -1,
-		"match_signature":      -1,
-		"match_ttl":            -1,
-		"message_type_fetch":   -1,
-		"message_type_process": -1,
-		"pool_size":            -1,
-		"proxy_enable":         -1,
-		"proxy_port":           -1,
-		"proxy_server":         -1,
-		"proxy_type":           -1,
-		"session_ttl":          -1,
-		"status_enable":        -1,
-		"status_period":        -1,
-		"storage_optimize":     -1,
-		"storage_period":       -1,
-		"user_database":        -1,
-		"user_save":            -1,
+		"api_hash":         1,
+		"api_id":           1,
+		"app_version":      -1,
+		"chat_database":    -1,
+		"chat_save":        -1,
+		"device_model":     -1,
+		"log_level":        -1,
+		"proxy_enable":     -1,
+		"proxy_port":       -1,
+		"proxy_server":     -1,
+		"proxy_type":       -1,
+		"session_ttl":      -1,
+		"status_enable":    -1,
+		"status_period":    -1,
+		"storage_optimize": -1,
+		"storage_period":   -1,
+		"user_database":    -1,
+		"user_save":        -1,
+	}
+
+	switch pluginConfig.PluginType {
+	case "input":
+		availableParams["ads_enable"] = -1
+		availableParams["ads_period"] = -1
+		availableParams["expire_action"] = -1
+		availableParams["expire_action_timeout"] = -1
+		availableParams["expire_delay"] = -1
+		availableParams["expire_interval"] = -1
+		availableParams["fetch_dir"] = -1
+		availableParams["fetch_max_size"] = -1
+		availableParams["fetch_metadata"] = -1
+		availableParams["fetch_mime"] = -1
+		availableParams["fetch_mime_not"] = -1
+		availableParams["fetch_orig_name"] = -1
+		availableParams["fetch_timeout"] = -1
+		availableParams["force"] = -1
+		availableParams["force_count"] = -1
+		availableParams["input"] = 1
+		availableParams["match_signature"] = -1
+		availableParams["match_ttl"] = -1
+		availableParams["message_type_fetch"] = -1
+		availableParams["message_type_process"] = -1
+		availableParams["pool_size"] = -1
+		break
+	case "output":
+		availableParams["file_audio"] = -1
+		availableParams["file_caption"] = -1
+		availableParams["file_document"] = -1
+		availableParams["file_photo"] = -1
+		availableParams["file_video"] = -1
+		availableParams["message"] = -1
+		availableParams["message_preview"] = -1
+		availableParams["output"] = 1
+		availableParams["send_album"] = -1
+		availableParams["send_timeout"] = -1
+		break
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1532,29 +1817,450 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	// ads_enable.
-	setAdsEnable := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["ads_enable"] = 0
-			plugin.OptionAdsEnable = v
-		}
-	}
-	setAdsEnable(DEFAULT_ADS_ENABLE)
-	setAdsEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_enable", template)))
-	setAdsEnable((*pluginConfig.PluginParams)["ads_enable"])
-	core.ShowPluginParam(plugin.LogFields, "ads_enable", plugin.OptionAdsEnable)
+	switch pluginConfig.PluginType {
 
-	// ads_period.
-	setAdsPeriod := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["ads_period"] = 0
-			plugin.OptionAdsPeriod = v
+	case "input":
+		// ads_enable.
+		setAdsEnable := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["ads_enable"] = 0
+				plugin.OptionAdsEnable = v
+			}
 		}
+		setAdsEnable(DEFAULT_ADS_ENABLE)
+		setAdsEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_enable", template)))
+		setAdsEnable((*pluginConfig.PluginParams)["ads_enable"])
+		core.ShowPluginParam(plugin.LogFields, "ads_enable", plugin.OptionAdsEnable)
+
+		// ads_period.
+		setAdsPeriod := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["ads_period"] = 0
+				plugin.OptionAdsPeriod = v
+			}
+		}
+		setAdsPeriod(DEFAULT_ADS_PERIOD)
+		setAdsPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_period", template)))
+		setAdsPeriod((*pluginConfig.PluginParams)["ads_period"])
+		core.ShowPluginParam(plugin.LogFields, "ads_period", plugin.OptionAdsPeriod)
+
+		// expire_action.
+		setExpireAction := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["expire_action"] = 0
+				plugin.OptionExpireAction = v
+			}
+		}
+		setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
+		setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
+		setExpireAction((*pluginConfig.PluginParams)["expire_action"])
+		core.ShowPluginParam(plugin.LogFields, "expire_action", plugin.OptionExpireAction)
+
+		// expire_action_delay.
+		setExpireActionDelay := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["expire_action_delay"] = 0
+				plugin.OptionExpireActionDelay = v
+			}
+		}
+		setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
+		setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
+		setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
+		core.ShowPluginParam(plugin.LogFields, "expire_action_delay", plugin.OptionExpireActionDelay)
+
+		// expire_action_timeout.
+		setExpireActionTimeout := func(p interface{}) {
+			if v, b := core.IsInt(p); b {
+				availableParams["expire_action_timeout"] = 0
+				plugin.OptionExpireActionTimeout = v
+			}
+		}
+		setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
+		setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
+		setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
+		core.ShowPluginParam(plugin.LogFields, "expire_action_timeout", plugin.OptionExpireActionTimeout)
+
+		// expire_interval.
+		setExpireInterval := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["expire_interval"] = 0
+				plugin.OptionExpireInterval = v
+			}
+		}
+		setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
+		setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
+		setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
+		core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
+
+		// fetch_dir.
+		setFetchDir := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["fetch_dir"] = 0
+				plugin.OptionFetchDir = v
+			}
+		}
+		setFetchDir(filepath.Join(plugin.PluginDataDir, DEFAULT_FETCH_DIR))
+		setFetchDir(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_dir", template)))
+		setFetchDir((*pluginConfig.PluginParams)["fetch_dir"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_dir", plugin.OptionFetchDir)
+
+		// fetch_max_size.
+		setFetchMaxSize := func(p interface{}) {
+			if v, b := core.IsSize(p); b {
+				availableParams["fetch_max_size"] = 0
+				plugin.OptionFetchMaxSize = v
+			}
+		}
+		setFetchMaxSize(DEFAULT_FETCH_MAX_SIZE)
+		setFetchMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_max_size", template)))
+		setFetchMaxSize((*pluginConfig.PluginParams)["fetch_max_size"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_max_size", plugin.OptionFetchMaxSize)
+
+		// fetch_metadata.
+		setFetchMetadata := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["fetch_metadata"] = 0
+				plugin.OptionFetchMetadata = v
+			}
+		}
+		setFetchMetadata(DEFAULT_FETCH_METADATA)
+		setFetchMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_metadata", template)))
+		setFetchMetadata((*pluginConfig.PluginParams)["fetch_metadata"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_metadata", plugin.OptionFetchMetadata)
+
+		// fetch_mime.
+		setFetchMime := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["fetch_mime"] = 0
+				plugin.OptionFetchMime = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setFetchMime(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.fetch_mime", template)))
+		setFetchMime((*pluginConfig.PluginParams)["fetch_mime"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_mime", plugin.OptionFetchMime)
+
+		plugin.OptionFetchMimeMap = make(map[string]bool, 0)
+		for _, v := range plugin.OptionFetchMime {
+			plugin.OptionFetchMimeMap[v] = true
+		}
+
+		// fetch_mime_not.
+		setFetchMimeNot := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["fetch_mime_not"] = 0
+				plugin.OptionFetchMimeNot = v
+			}
+		}
+		setFetchMimeNot(DEFAULT_FETCH_MIME_NOT)
+		setFetchMimeNot(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_mime_not", template)))
+		setFetchMimeNot((*pluginConfig.PluginParams)["fetch_mime_not"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_mime_not", plugin.OptionFetchMimeNot)
+
+		// fetch_orig_name.
+		setFetchOrigName := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["fetch_orig_name"] = 0
+				plugin.OptionFetchOrigName = v
+			}
+		}
+		setFetchOrigName(DEFAULT_FILE_ORIG_NAME)
+		setFetchOrigName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_orig_name", template)))
+		setFetchOrigName((*pluginConfig.PluginParams)["fetch_orig_name"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_orig_name", plugin.OptionFetchOrigName)
+
+		if plugin.OptionFetchOrigName {
+			plugin.OptionIgnoreFileName = false
+		} else {
+			plugin.OptionIgnoreFileName = true
+		}
+
+		// fetch_timeout.
+		setFetchTimeout := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["fetch_timeout"] = 0
+				plugin.OptionFetchTimeout = int(v)
+			}
+		}
+		setFetchTimeout(DEFAULT_FETCH_TIMEOUT)
+		setFetchTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_timeout", template)))
+		setFetchTimeout((*pluginConfig.PluginParams)["fetch_timeout"])
+		core.ShowPluginParam(plugin.LogFields, "fetch_timeout", plugin.OptionFetchTimeout)
+
+		// force.
+		setForce := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["force"] = 0
+				plugin.OptionForce = v
+			}
+		}
+		setForce(core.DEFAULT_FORCE_INPUT)
+		setForce(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.force", template)))
+		setForce((*pluginConfig.PluginParams)["force"])
+		core.ShowPluginParam(plugin.LogFields, "force", plugin.OptionForce)
+
+		// force_count.
+		setForceCount := func(p interface{}) {
+			if v, b := core.IsInt(p); b {
+				availableParams["force_count"] = 0
+				plugin.OptionForceCount = v
+			}
+		}
+		setForceCount(core.DEFAULT_FORCE_COUNT)
+		setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
+		setForceCount((*pluginConfig.PluginParams)["force_count"])
+		core.ShowPluginParam(plugin.LogFields, "force_count", plugin.OptionForceCount)
+
+		// input.
+		setInput := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["input"] = 0
+				plugin.OptionInput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
+		setInput((*pluginConfig.PluginParams)["input"])
+		core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
+
+		plugin.OptionTargetChat = plugin.OptionInput
+
+		// match_signature.
+		setMatchSignature := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["match_signature"] = 0
+				plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
+		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
+		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
+		core.SliceStringToUpper(&plugin.OptionMatchSignature)
+
+		for i := 0; i < len(plugin.OptionMatchSignature); i++ {
+			plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
+		}
+
+		// match_ttl.
+		setMatchTTL := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["match_ttl"] = 0
+				plugin.OptionMatchTTL = time.Duration(v) * time.Second
+			}
+		}
+		setMatchTTL(DEFAULT_MATCH_TTL)
+		setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
+		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
+		core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
+
+		// message_type_fetch.
+		setMessageTypeFetch := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["message_type_fetch"] = 0
+				plugin.OptionMessageTypeFetch = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setMessageTypeFetch(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_fetch", template)))
+		setMessageTypeFetch((*pluginConfig.PluginParams)["message_type_fetch"])
+		core.ShowPluginParam(plugin.LogFields, "message_type_fetch", plugin.OptionMessageTypeFetch)
+		core.SliceStringToUpper(&plugin.OptionMessageTypeFetch)
+
+		if len(plugin.OptionMessageTypeFetch) > 0 {
+			plugin.OptionFetchAll = false
+			for _, v := range plugin.OptionMessageTypeFetch {
+				switch v {
+				case "AUDIO":
+					plugin.OptionFetchAudio = true
+				case "DOCUMENT":
+					plugin.OptionFetchDocument = true
+				case "PHOTO":
+					plugin.OptionFetchPhoto = true
+				case "VIDEO":
+					plugin.OptionFetchVideo = true
+				case "VIDEO_NOTE":
+					plugin.OptionFetchVideoNote = true
+				case "VOICE_NOTE":
+					plugin.OptionFetchVoiceNote = true
+				}
+			}
+		}
+
+		// message_type_process.
+		setMessageTypeProcess := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["message_type_process"] = 0
+				plugin.OptionMessageTypeProcess = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setMessageTypeProcess(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_process", template)))
+		setMessageTypeProcess((*pluginConfig.PluginParams)["message_type_process"])
+		core.ShowPluginParam(plugin.LogFields, "message_type_process", plugin.OptionMessageTypeProcess)
+		core.SliceStringToUpper(&plugin.OptionMessageTypeProcess)
+
+		if len(plugin.OptionMessageTypeProcess) > 0 {
+			plugin.OptionProcessAll = false
+			for _, v := range plugin.OptionMessageTypeProcess {
+				switch v {
+				case "AUDIO":
+					plugin.OptionProcessAudio = true
+				case "DOCUMENT":
+					plugin.OptionProcessDocument = true
+				case "PHOTO":
+					plugin.OptionProcessPhoto = true
+				case "TEXT":
+					plugin.OptionProcessText = true
+				case "VIDEO":
+					plugin.OptionProcessVideo = true
+				case "VIDEO_NOTE":
+					plugin.OptionProcessVideoNote = true
+				case "VOICE_NOTE":
+					plugin.OptionProcessVoiceNote = true
+				}
+			}
+		}
+
+		// pool_size.
+		setPoolSize := func(p interface{}) {
+			if v, b := core.IsInt(p); b {
+				availableParams["pool_size"] = 0
+				plugin.OptionPoolSize = v
+			}
+		}
+		setPoolSize(DEFAULT_POOL_SIZE)
+		setPoolSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.pool_size", template)))
+		setPoolSize((*pluginConfig.PluginParams)["pool_size"])
+		core.ShowPluginParam(plugin.LogFields, "pool_size", plugin.OptionPoolSize)
+
+	case "output":
+		// file_audio.
+		setFileAudio := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["file_audio"] = 0
+				plugin.OptionFileAudio = v
+			}
+		}
+		setFileAudio(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.file_audio", template)))
+		setFileAudio((*pluginConfig.PluginParams)["file_audio"])
+		core.ShowPluginParam(plugin.LogFields, "file_audio", plugin.OptionFileAudio)
+
+		// file_caption.
+		setFileCaption := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["file_caption"] = 0
+				plugin.OptionFileCaption = v
+			}
+		}
+		setFileCaption(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_caption", template)))
+		setFileCaption((*pluginConfig.PluginParams)["file_caption"])
+		core.ShowPluginParam(plugin.LogFields, "file_caption", plugin.OptionFileCaption)
+
+		plugin.OptionFileCaptionTemplate, err = tmpl.New("file_caption").Funcs(core.TemplateFuncMap).Parse(plugin.OptionFileCaption)
+		if err != nil {
+			return &Plugin{}, err
+		}
+
+		// file_document.
+		setFileDocument := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["file_document"] = 0
+				plugin.OptionFileDocument = v
+			}
+		}
+		setFileDocument(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.file_document", template)))
+		setFileDocument((*pluginConfig.PluginParams)["file_document"])
+		core.ShowPluginParam(plugin.LogFields, "file_document", plugin.OptionFileDocument)
+
+		// file_photo.
+		setFilePhoto := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["file_photo"] = 0
+				plugin.OptionFilePhoto = v
+			}
+		}
+		setFilePhoto(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.file_photo", template)))
+		setFilePhoto((*pluginConfig.PluginParams)["file_photo"])
+		core.ShowPluginParam(plugin.LogFields, "file_photo", plugin.OptionFilePhoto)
+
+		// file_video.
+		setFileVideo := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["file_video"] = 0
+				plugin.OptionFileVideo = v
+			}
+		}
+		setFileVideo(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.file_video", template)))
+		setFileVideo((*pluginConfig.PluginParams)["file_video"])
+		core.ShowPluginParam(plugin.LogFields, "file_video", plugin.OptionFileVideo)
+
+		// message.
+		setMessage := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["message"] = 0
+				plugin.OptionMessage = v
+			}
+		}
+		setMessage(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message", template)))
+		setMessage((*pluginConfig.PluginParams)["message"])
+		core.ShowPluginParam(plugin.LogFields, "message", plugin.OptionMessage)
+
+		plugin.OptionMessageTemplate, err = tmpl.New("message").Funcs(core.TemplateFuncMap).Parse(plugin.OptionMessage)
+		if err != nil {
+			return &Plugin{}, err
+		}
+
+		// message_preview.
+		setMessagePreview := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["message_preview"] = 0
+				plugin.OptionMessagePreview = v
+			}
+		}
+		setMessagePreview(DEFAULT_MESSAGE_PREVIEW)
+		setMessagePreview(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_preview", template)))
+		setMessagePreview((*pluginConfig.PluginParams)["message_preview"])
+		core.ShowPluginParam(plugin.LogFields, "message_preview", plugin.OptionMessagePreview)
+		
+        if plugin.OptionMessagePreview {
+			plugin.OptionMessageDisablePreview = false
+		} else {
+			plugin.OptionMessageDisablePreview = true
+		}
+
+		// output.
+		setOutput := func(p interface{}) {
+			if v, b := core.IsSliceOfString(p); b {
+				availableParams["output"] = 0
+				plugin.OptionOutput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
+			}
+		}
+		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
+		setOutput((*pluginConfig.PluginParams)["output"])
+		core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
+
+		plugin.OptionTargetChat = plugin.OptionOutput
+
+		// send_album.
+		setSendAlbum := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["send_album"] = 0
+				plugin.OptionSendAlbum = v
+			}
+		}
+		setSendAlbum(DEFAULT_SEND_ALBUM)
+		setSendAlbum(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_album", template)))
+		setSendAlbum((*pluginConfig.PluginParams)["send_album"])
+		core.ShowPluginParam(plugin.LogFields, "send_album", plugin.OptionSendAlbum)
+
+		// send_timeout.
+		setSendTimeout := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["send_timeout"] = 0
+				plugin.OptionSendTimeout = int(v)
+			}
+		}
+		setSendTimeout(DEFAULT_SEND_TIMEOUT)
+		setSendTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_timeout", template)))
+		setSendTimeout((*pluginConfig.PluginParams)["send_timeout"])
+		core.ShowPluginParam(plugin.LogFields, "send_timeout", plugin.OptionSendTimeout)
 	}
-	setAdsPeriod(DEFAULT_ADS_PERIOD)
-	setAdsPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.ads_period", template)))
-	setAdsPeriod((*pluginConfig.PluginParams)["ads_period"])
-	core.ShowPluginParam(plugin.LogFields, "ads_period", plugin.OptionAdsPeriod)
 
 	// app_version.
 	setAppVersion := func(p interface{}) {
@@ -1604,183 +2310,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setDeviceModel((*pluginConfig.PluginParams)["device_model"])
 	core.ShowPluginParam(plugin.LogFields, "device_model", plugin.OptionDeviceModel)
 
-	// expire_action.
-	setExpireAction := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["expire_action"] = 0
-			plugin.OptionExpireAction = v
-		}
-	}
-	setExpireAction(pluginConfig.AppConfig.GetStringSlice(core.VIPER_DEFAULT_EXPIRE_ACTION))
-	setExpireAction(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.expire_action", template)))
-	setExpireAction((*pluginConfig.PluginParams)["expire_action"])
-	core.ShowPluginParam(plugin.LogFields, "expire_action", plugin.OptionExpireAction)
-
-	// expire_action_delay.
-	setExpireActionDelay := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["expire_action_delay"] = 0
-			plugin.OptionExpireActionDelay = v
-		}
-	}
-	setExpireActionDelay(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_ACTION_DELAY))
-	setExpireActionDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_delay", template)))
-	setExpireActionDelay((*pluginConfig.PluginParams)["expire_action_delay"])
-	core.ShowPluginParam(plugin.LogFields, "expire_action_delay", plugin.OptionExpireActionDelay)
-
-	// expire_action_timeout.
-	setExpireActionTimeout := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["expire_action_timeout"] = 0
-			plugin.OptionExpireActionTimeout = v
-		}
-	}
-	setExpireActionTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_EXPIRE_ACTION_TIMEOUT))
-	setExpireActionTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_action_timeout", template)))
-	setExpireActionTimeout((*pluginConfig.PluginParams)["expire_action_timeout"])
-	core.ShowPluginParam(plugin.LogFields, "expire_action_timeout", plugin.OptionExpireActionTimeout)
-
-	// expire_interval.
-	setExpireInterval := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["expire_interval"] = 0
-			plugin.OptionExpireInterval = v
-		}
-	}
-	setExpireInterval(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_EXPIRE_INTERVAL))
-	setExpireInterval(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.expire_interval", template)))
-	setExpireInterval((*pluginConfig.PluginParams)["expire_interval"])
-	core.ShowPluginParam(plugin.LogFields, "expire_interval", plugin.OptionExpireInterval)
-
-	// fetch_max_size.
-	setFetchMaxSize := func(p interface{}) {
-		if v, b := core.IsSize(p); b {
-			availableParams["fetch_max_size"] = 0
-			plugin.OptionFetchMaxSize = v
-		}
-	}
-	setFetchMaxSize(DEFAULT_FETCH_MAX_SIZE)
-	setFetchMaxSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_max_size", template)))
-	setFetchMaxSize((*pluginConfig.PluginParams)["fetch_max_size"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_max_size", plugin.OptionFetchMaxSize)
-
-	// fetch_metadata.
-	setFetchMetadata := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["fetch_metadata"] = 0
-			plugin.OptionFetchMetadata = v
-		}
-	}
-	setFetchMetadata(DEFAULT_FETCH_METADATA)
-	setFetchMetadata(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_metadata", template)))
-	setFetchMetadata((*pluginConfig.PluginParams)["fetch_metadata"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_metadata", plugin.OptionFetchMetadata)
-
-	// fetch_mime.
-	setFetchMime := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["fetch_mime"] = 0
-			plugin.OptionFetchMime = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-		}
-	}
-	setFetchMime(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.fetch_mime", template)))
-	setFetchMime((*pluginConfig.PluginParams)["fetch_mime"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_mime", plugin.OptionFetchMime)
-
-	plugin.OptionFetchMimeMap = make(map[string]bool, 0)
-	for _, v := range plugin.OptionFetchMime {
-		plugin.OptionFetchMimeMap[v] = true
-	}
-
-	// fetch_mime_not.
-	setFetchMimeNot := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["fetch_mime_not"] = 0
-			plugin.OptionFetchMimeNot = v
-		}
-	}
-	setFetchMimeNot(DEFAULT_FETCH_MIME_NOT)
-	setFetchMimeNot(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_mime_not", template)))
-	setFetchMimeNot((*pluginConfig.PluginParams)["fetch_mime_not"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_mime_not", plugin.OptionFetchMimeNot)
-
-	// fetch_orig_name.
-	setFetchOrigName := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["fetch_orig_name"] = 0
-			plugin.OptionFetchOrigName = v
-		}
-	}
-	setFetchOrigName(DEFAULT_FILE_ORIG_NAME)
-	setFetchOrigName(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_orig_name", template)))
-	setFetchOrigName((*pluginConfig.PluginParams)["fetch_orig_name"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_orig_name", plugin.OptionFetchOrigName)
-
-	if plugin.OptionFetchOrigName {
-		plugin.OptionIgnoreFileName = false
-	} else {
-		plugin.OptionIgnoreFileName = true
-	}
-
-	// fetch_timeout.
-	setFetchTimeout := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["fetch_timeout"] = 0
-			plugin.OptionFetchTimeout = int(v)
-		}
-	}
-	setFetchTimeout(DEFAULT_FETCH_TIMEOUT)
-	setFetchTimeout(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.fetch_timeout", template)))
-	setFetchTimeout((*pluginConfig.PluginParams)["fetch_timeout"])
-	core.ShowPluginParam(plugin.LogFields, "fetch_timeout", plugin.OptionFetchTimeout)
-
-	// file_path.
-	setFilePath := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["file_path"] = 0
-			plugin.OptionFilePath = v
-		}
-	}
-	setFilePath(filepath.Join(plugin.PluginDataDir, DEFAULT_FILE_DIR))
-	setFilePath(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_path", template)))
-	setFilePath((*pluginConfig.PluginParams)["file_path"])
-	core.ShowPluginParam(plugin.LogFields, "file_path", plugin.OptionFilePath)
-
-	// force.
-	setForce := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["force"] = 0
-			plugin.OptionForce = v
-		}
-	}
-	setForce(core.DEFAULT_FORCE_INPUT)
-	setForce(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.force", template)))
-	setForce((*pluginConfig.PluginParams)["force"])
-	core.ShowPluginParam(plugin.LogFields, "force", plugin.OptionForce)
-
-	// force_count.
-	setForceCount := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["force_count"] = 0
-			plugin.OptionForceCount = v
-		}
-	}
-	setForceCount(core.DEFAULT_FORCE_COUNT)
-	setForceCount(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.force_count", template)))
-	setForceCount((*pluginConfig.PluginParams)["force_count"])
-	core.ShowPluginParam(plugin.LogFields, "force_count", plugin.OptionForceCount)
-
-	// input.
-	setInput := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["input"] = 0
-			plugin.OptionInput = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-		}
-	}
-	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
-	setInput((*pluginConfig.PluginParams)["input"])
-	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
-
 	// log_level.
 	setLogLevel := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -1792,112 +2321,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setLogLevel(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.log_level", template)))
 	setLogLevel((*pluginConfig.PluginParams)["log_level"])
 	core.ShowPluginParam(plugin.LogFields, "log_level", plugin.OptionLogLevel)
-
-	// match_signature.
-	setMatchSignature := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["match_signature"] = 0
-			plugin.OptionMatchSignature = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-		}
-	}
-	setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
-	setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
-	core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-	core.SliceStringToUpper(&plugin.OptionMatchSignature)
-
-	for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-		plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-	}
-
-	// match_ttl.
-	setMatchTTL := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["match_ttl"] = 0
-			plugin.OptionMatchTTL = time.Duration(v) * time.Second
-		}
-	}
-	setMatchTTL(DEFAULT_MATCH_TTL)
-	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
-	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
-	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
-
-	// message_type_fetch.
-	setMessageTypeFetch := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["message_type_fetch"] = 0
-			plugin.OptionMessageTypeFetch = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-		}
-	}
-	setMessageTypeFetch(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_fetch", template)))
-	setMessageTypeFetch((*pluginConfig.PluginParams)["message_type_fetch"])
-	core.ShowPluginParam(plugin.LogFields, "message_type_fetch", plugin.OptionMessageTypeFetch)
-	core.SliceStringToUpper(&plugin.OptionMessageTypeFetch)
-
-	if len(plugin.OptionMessageTypeFetch) > 0 {
-		plugin.OptionFetchAll = false
-		for _, v := range plugin.OptionMessageTypeFetch {
-			switch v {
-			case "AUDIO":
-				plugin.OptionFetchAudio = true
-			case "DOCUMENT":
-				plugin.OptionFetchDocument = true
-			case "PHOTO":
-				plugin.OptionFetchPhoto = true
-			case "VIDEO":
-				plugin.OptionFetchVideo = true
-			case "VIDEO_NOTE":
-				plugin.OptionFetchVideoNote = true
-			case "VOICE_NOTE":
-				plugin.OptionFetchVoiceNote = true
-			}
-		}
-	}
-
-	// message_type_process.
-	setMessageTypeProcess := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["message_type_process"] = 0
-			plugin.OptionMessageTypeProcess = core.ExtractConfigVariableIntoArray(pluginConfig.AppConfig, v)
-		}
-	}
-	setMessageTypeProcess(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.message_type_process", template)))
-	setMessageTypeProcess((*pluginConfig.PluginParams)["message_type_process"])
-	core.ShowPluginParam(plugin.LogFields, "message_type_process", plugin.OptionMessageTypeProcess)
-	core.SliceStringToUpper(&plugin.OptionMessageTypeProcess)
-
-	if len(plugin.OptionMessageTypeProcess) > 0 {
-		plugin.OptionProcessAll = false
-		for _, v := range plugin.OptionMessageTypeProcess {
-			switch v {
-			case "AUDIO":
-				plugin.OptionProcessAudio = true
-			case "DOCUMENT":
-				plugin.OptionProcessDocument = true
-			case "PHOTO":
-				plugin.OptionProcessPhoto = true
-			case "TEXT":
-				plugin.OptionProcessText = true
-			case "VIDEO":
-				plugin.OptionProcessVideo = true
-			case "VIDEO_NOTE":
-				plugin.OptionProcessVideoNote = true
-			case "VOICE_NOTE":
-				plugin.OptionProcessVoiceNote = true
-			}
-		}
-	}
-
-	// pool_size.
-	setPoolSize := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["pool_size"] = 0
-			plugin.OptionPoolSize = v
-		}
-	}
-	setPoolSize(DEFAULT_POOL_SIZE)
-	setPoolSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.pool_size", template)))
-	setPoolSize((*pluginConfig.PluginParams)["pool_size"])
-	core.ShowPluginParam(plugin.LogFields, "pool_size", plugin.OptionPoolSize)
 
 	// proxy_enable.
 	setProxyEnable := func(p interface{}) {
@@ -2098,7 +2521,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
 		DeviceModel:            plugin.OptionDeviceModel,
 		EnableStorageOptimizer: plugin.OptionStorageOptimize,
-		FilesDirectory:         plugin.OptionFilePath,
+		FilesDirectory:         plugin.OptionFetchDir,
 		IgnoreFileNames:        plugin.OptionIgnoreFileName,
 		SystemLanguageCode:     "en",
 		SystemVersion:          plugin.Flow.FlowName,
@@ -2118,18 +2541,29 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Set session TTL.
-	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{InactiveSessionTtlDays: int32(plugin.OptionSessionTTL)})
+	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{
+		InactiveSessionTtlDays: int32(plugin.OptionSessionTTL),
+	})
 
-	// Init chats database.
-	plugin.ChatsDbClient, err = initChatsDb(&plugin)
+	// -----------------------------------------------------------------------------------------------------------------
+	// Init chat/user databases.
+
+	plugin.ChatDbClient, err = initChatsDb(&plugin)
 	if err != nil {
 		return &plugin, err
 	}
 
-	// Update and join to chats.
-	plugin.ChatsCache = make(map[int64]*core.Telegram, len(plugin.OptionInput))
+	plugin.UserDbClient, err = initUsersDb(&plugin)
+	if err != nil {
+		return &plugin, err
+	}
 
-	for _, chatName := range plugin.OptionInput {
+	// -----------------------------------------------------------------------------------------------------------------
+	// Update and join to chats.
+	plugin.ChatByIdDataCache = make(map[int64]*core.Telegram, 0)
+	plugin.ChatByNameIdCache = make(map[string]int64, 0)
+
+	for _, chatName := range plugin.OptionTargetChat {
 		var chatId int64
 		var err error
 
@@ -2154,7 +2588,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			chatId, _ = strconv.ParseInt(chatData.CHATID, 10, 64)
 		}
 
-		err = updateChat(&plugin, chatId, chatName)
+		err = sqlUpdateChat(&plugin, chatId, chatName)
 		if err != nil {
 			core.LogInputPlugin(plugin.LogFields, "chat", err)
 			continue
@@ -2169,47 +2603,61 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		// Get updated chat again.
 		chatData = getChat(&plugin, chatName)
 
-		plugin.ChatsCache[chatId] = &chatData
+		plugin.ChatByIdDataCache[chatId] = &chatData
+		plugin.ChatByNameIdCache[chatName] = chatId
 	}
 
 	// Quit if there are no chats for join.
-	if len(plugin.ChatsCache) == 0 {
+	if len(plugin.ChatByIdDataCache) == 0 {
 		return &plugin, ERROR_NO_CHATS
 	}
 
-	// Get messages and files in background.
-	plugin.FileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
-	plugin.DataChannel = make(chan *core.Datum, DEFAULT_CHANNEL_SIZE)
+	// -----------------------------------------------------------------------------------------------------------------
+	// Input mode:
 
-	// Init message listeners.
-	plugin.FileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
-	plugin.UpdateListener = plugin.TdlibClient.GetListener(int64(plugin.OptionPoolSize))
+	if plugin.PluginType == "input" {
+		plugin.InputFileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
+		plugin.InputFileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		go inputFile(&plugin)
 
-	// Run main threads.
-	go receiveFiles(&plugin)
+		plugin.InputDatumChannel = make(chan *core.Datum, DEFAULT_CHANNEL_SIZE)
+		plugin.InputDatumListener = plugin.TdlibClient.GetListener(int64(plugin.OptionPoolSize))
+		go inputDatum(&plugin)
 
-	go receiveUpdates(&plugin)
-
-	if plugin.OptionAdsEnable {
-		go receiveAds(&plugin)
+		if plugin.OptionAdsEnable {
+			go inputAds(&plugin)
+		}
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Output mode:
+
+	if plugin.PluginType == "output" {
+		plugin.OutputMessageChannel = make(chan *core.TelegramMessageStatus, DEFAULT_CHANNEL_SIZE)
+		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		go outputMessage(&plugin)
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Input/output mode:
 
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
 	}
 
 	if plugin.OptionStorageOptimize {
-		go storageOptimize(&plugin)
+		go storageOptimizer(&plugin)
+	}
+
+	if plugin.OptionChatSave {
+		go saveChat(&plugin)
 	}
 
 	if plugin.OptionUserSave {
-		plugin.UsersDbClient, err = initUsersDb(&plugin)
-		if err != nil {
-			return &plugin, err
-		}
+		go saveUser(&plugin)
 	}
 
-	// -------------------------------------------------------------------------
+	// -----------------------------------------------------------------------------------------------------------------
 
 	return &plugin, nil
 }

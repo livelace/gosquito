@@ -18,7 +18,7 @@ type InputPlugin interface {
 	LoadState() (map[string]time.Time, error)
 	SaveState(map[string]time.Time) error
 
-	Receive() ([]*DataItem, error)
+	Receive() ([]*Datum, error)
 }
 
 type ProcessPlugin interface {
@@ -27,7 +27,7 @@ type ProcessPlugin interface {
 	GetInclude() bool
 	GetRequire() []int
 
-	Process(d []*DataItem) ([]*DataItem, error)
+	Process(d []*Datum) ([]*Datum, error)
 }
 
 type OutputPlugin interface {
@@ -36,7 +36,7 @@ type OutputPlugin interface {
 	GetName() string
 	GetOutput() []string
 
-	Send(d []*DataItem) error
+	Send(d []*Datum) error
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -287,6 +287,12 @@ type Telegram struct {
 	USERTIMESTAMP     string
 }
 
+type TelegramMessageStatus struct {
+    MessageId int64
+    ErrorCode int32
+    ErrorMessage string
+}
+
 type Twitter struct {
 	LANG  string
 	MEDIA []string
@@ -295,7 +301,7 @@ type Twitter struct {
 	URLS  []string
 }
 
-type DataItem struct {
+type Datum struct {
 	FLOW       string
 	PLUGIN     string
 	SOURCE     string

@@ -77,24 +77,24 @@ type Telegram struct {
 | ads_period           | -        | string | -    | -        | "5m"                      | "1h"                                            | [Sponsored messages](https://core.telegram.org/api/sponsored-messages) receiving interval.                 |
 | **api_id**           | +        | string | +    | -        | ""                        | ""                                              | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
 | **api_hash**         | +        | string | +    | -        | ""                        | ""                                              | [Telegram Apps](https://core.telegram.org/api/obtaining_api_id)                                            |
-| app_version          | -        | string | +    | -        | v3.9.2-b3c452             | "0.0.1"                                         | Custom application version.                                                                                |
-| device_model         | -        | string | +    | -        | gosquito                  | "Redmi Note 42"                                 | Custom device model.                                                                                       |
+| app_version          | -        | string | -    | -        | v3.9.2-b3c452             | "0.0.1"                                         | Custom application version.                                                                                |
+| device_model         | -        | string | -    | -        | gosquito                  | "Redmi Note 42"                                 | Custom device model.                                                                                       |
 | chat_database        | -        | string | -    | +        | <PLUGIN_DIR>/chats.sqlite | "/path/to/chats.db"                             | Path to internal chats database.                                                                           |
 | chat_save            | -        | bool   | -    | +        | false                     | true                                            | Try to save all seen chats in internal database.                                                           |
+| fetch_dir            | -        | string | -    | +        | <PLUGIN_DIR>              | "/data/files"                                   | Directory where fetched files will be saved.                                                           |
 | fetch_max_size       | -        | size   | -    | +        | "10m"                     | "1g"                                            | Maximum file size for fetching.                                                                            |
 | fetch_metadata       | -        | bool   | -    | +        | false                     | true                                            | Generate JSON metadata for fetched file.                                                                   |
 | fetch_mime           | -        | array  | -    | +        | "[]"                      | ["application/zip", "application/vnd.rar"]      | Fetch only specific mime types (audio, document, video).                                                   |
 | fetch_mime_not       | -        | bool   | -    | +        | false                     | true                                            | Fetch all mime types except specified in fetch_mime (if true).                                             |
 | fetch_orig_name      | -        | bool   | -    | +        | true                      | false                                           | Use original file name.                                                                                    |
 | fetch_timeout        | -        | string | -    | +        | "1h"                      | "24h"                                           | Maximum time for fetching.                                                                                 |
-| file_path            | -        | string | -    | +        | <PLUGIN_DIR>              | "/data/files"                                   | Directory where all fetched files will be saved.                                                           |
 | **input**            | +        | array  | -    | +        | []                        | ["breakingmash", "-1001117628569"]              | List of Telegram chats ("t.me/+" pattern is considered as a private chat).                                 |
 | log_level            | -        | int    | -    | +        | 0                         | 90                                              | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 | match_signature      | -        | array  | -    | +        | "[]"                      | ["telegram.messagetext", "telegram.messageurl"] | Match new messages by signature.                                                                           |
 | match_ttl            | -        | string | -    | +        | "1d"                      | "24h"                                           | TTL (Time To Live) for matched signatures.                                                                 |
 | message_type_fetch   | -        | array  | -    | +        | "[]"                      | ["audio", "document"]                           | Fetch files only for specific message types (audio, document, photo, video, video_note, voice_note).       |
 | message_type_process | -        | array  | -    | +        | "[]"                      | ["audio", "document"]                           | Process only specific message types (audio, document, photo, text, video, video_note, voice_note).         |
-| pool_size            | -        | int    | -    | +        | 100000                    | 10000                                           | Put arriving messages in pool during blocking operations (file fetching).                                  |
+| pool_size            | -        | int    | -    | +        | 100000                    | 10000                                           | Spool arriving updates.                                                                                    |
 | proxy_enable         | -        | bool   | -    | +        | false                     | true                                            | Enable/disable proxy.                                                                                      |
 | proxy_port           | -        | int    | -    | +        | 9050                      | true                                            | Proxy port number.                                                                                         |
 | proxy_server         | -        | string | -    | +        | "127.0.0.1"               | true                                            | Proxy server address.                                                                                      |
@@ -121,7 +121,7 @@ type Telegram struct {
 # last received message timestamp and if event contains new data - we process new data.
 # We cannot use "force" here and have to wait new messages explicitly.
 flow:
-  name: "telegram-example"
+  name: "telegram-input"
 
   input:
     plugin: "telegram"

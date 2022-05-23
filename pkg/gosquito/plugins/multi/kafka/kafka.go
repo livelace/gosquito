@@ -248,8 +248,8 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	return data, nil
 }
 
-func (p *Plugin) Receive() ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
+func (p *Plugin) Receive() ([]*core.Datum, error) {
+	temp := make([]*core.Datum, 0)
 	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
@@ -330,7 +330,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 			var itemSignatureHash string
 			var u, _ = uuid.NewRandom()
 
-			item := core.DataItem{
+			item := core.Datum{
 				FLOW:       p.Flow.FlowName,
 				PLUGIN:     p.PluginName,
 				SOURCE:     *message.TopicPartition.Topic,
@@ -503,7 +503,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
-func (p *Plugin) Send(data []*core.DataItem) error {
+func (p *Plugin) Send(data []*core.Datum) error {
 	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Generate and send messages for every provided topic.

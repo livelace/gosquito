@@ -161,15 +161,15 @@ func (p *Plugin) LoadState() (map[string]time.Time, error) {
 	return data, nil
 }
 
-func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
+func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
+	temp := make([]*core.Datum, 0)
 
 	if len(data) == 0 {
 		return temp, nil
 	}
 
 	// Perform request func.
-	makeRequest := func(item *core.DataItem) (*resty.Response, error) {
+	makeRequest := func(item *core.Datum) (*resty.Response, error) {
 		var resp *resty.Response
 		var err error
 
@@ -251,10 +251,10 @@ func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
 	return temp, nil
 }
 
-func (p *Plugin) Receive() ([]*core.DataItem, error) {
+func (p *Plugin) Receive() ([]*core.Datum, error) {
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
-	temp := make([]*core.DataItem, 0)
+	temp := make([]*core.Datum, 0)
 	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
@@ -282,7 +282,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 		}
 
 		// DataItem template for query formatting.
-		itemTpl := &core.DataItem{
+		itemTpl := &core.Datum{
 			FLOW:       p.Flow.FlowName,
 			PLUGIN:     p.PluginName,
 			SOURCE:     source,
@@ -362,7 +362,7 @@ func (p *Plugin) Receive() ([]*core.DataItem, error) {
 
 			// Add item to result.
 			if itemNew {
-				temp = append(temp, &core.DataItem{
+				temp = append(temp, &core.Datum{
 					FLOW:       p.Flow.FlowName,
 					PLUGIN:     p.PluginName,
 					SOURCE:     source,
@@ -447,7 +447,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 	return core.PluginSaveState(p.Flow.FlowStateDir, &data, p.OptionMatchTTL)
 }
 
-func (p *Plugin) Send(data []*core.DataItem) error {
+func (p *Plugin) Send(data []*core.Datum) error {
 	var resp *resty.Response
 	var err error
 

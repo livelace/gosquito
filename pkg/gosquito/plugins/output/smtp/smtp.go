@@ -83,8 +83,8 @@ func (p *Plugin) GetOutput() []string {
 	return p.OptionOutput
 }
 
-func (p *Plugin) Send(data []*core.DataItem) error {
-  p.LogFields["run"] = p.Flow.GetRunID()
+func (p *Plugin) Send(data []*core.Datum) error {
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Connection settings.
 	server := mail.NewSMTPClient()
@@ -215,8 +215,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
-    
-    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+
+	vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
 	if err != nil {
 		return &plugin, err
 	}
@@ -232,8 +232,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setPassword(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.password", cred)))
 	setPassword((*pluginConfig.PluginParams)["password"])
-	
-    // username.
+
+	// username.
 	setUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["username"] = 0

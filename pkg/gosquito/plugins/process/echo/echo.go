@@ -53,8 +53,8 @@ func (p *Plugin) GetRequire() []int {
 	return p.OptionRequire
 }
 
-func (p *Plugin) Process(data []*core.DataItem) ([]*core.DataItem, error) {
-	temp := make([]*core.DataItem, 0)
+func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
+	temp := make([]*core.Datum, 0)
   p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {

@@ -141,7 +141,7 @@ func (p *Plugin) GetOutput() []string {
 	return p.OptionOutput
 }
 
-func (p *Plugin) Send(data []*core.DataItem) error {
+func (p *Plugin) Send(data []*core.Datum) error {
   p.LogFields["run"] = p.Flow.GetRunID()
 	sendFail := false
 

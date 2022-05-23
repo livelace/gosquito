@@ -140,7 +140,7 @@ func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) [
 	return temp
 }
 
-func ExtractDataFieldIntoArray(data *DataItem, field interface{}) []string {
+func ExtractDataFieldIntoArray(data *Datum, field interface{}) []string {
 	temp := make([]string, 0)
 
 	// "field" might be just a regular string (not data field)
@@ -203,7 +203,7 @@ func ExtractDataFieldIntoArray(data *DataItem, field interface{}) []string {
 	return temp
 }
 
-func ExtractDataFieldIntoString(data *DataItem, field interface{}) string {
+func ExtractDataFieldIntoString(data *Datum, field interface{}) string {
 	temp := ""
 
 	// "field" might be just a regular string (not data field)
@@ -345,7 +345,7 @@ func ExtractScripts(config *viper.Viper, scripts []string) []string {
 	return temp
 }
 
-func ExtractTemplateIntoString(i *DataItem, t *tmpl.Template) (string, error) {
+func ExtractTemplateIntoString(i *Datum, t *tmpl.Template) (string, error) {
 	var b bytes.Buffer
 
 	if err := t.Execute(&b, i); err != nil {
@@ -355,7 +355,7 @@ func ExtractTemplateIntoString(i *DataItem, t *tmpl.Template) (string, error) {
 	return b.String(), nil
 }
 
-func ExtractTemplateMapIntoStringMap(i *DataItem, m map[string]*tmpl.Template) (map[string]string, error) {
+func ExtractTemplateMapIntoStringMap(i *Datum, m map[string]*tmpl.Template) (map[string]string, error) {
 	result := make(map[string]string, len(m))
 
 	for k, t := range m {
@@ -510,7 +510,7 @@ func GetCredValue(cred string, vault *vault.Client) string {
 
 func GetDataFieldType(field interface{}) (reflect.Kind, error) {
 	if f, ok := field.(string); ok {
-		rv, err := ReflectDataField(&DataItem{}, f)
+		rv, err := ReflectDataField(&Datum{}, f)
 
 		if err != nil {
 			return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
@@ -609,7 +609,7 @@ func IsDataFieldsSlice(fields *[]string) error {
 	temp := make([]string, 0)
 
 	for _, field := range *fields {
-		rv, err := ReflectDataField(&DataItem{}, field)
+		rv, err := ReflectDataField(&Datum{}, field)
 
 		if err != nil || rv.Kind() != reflect.Slice {
 			temp = append(temp, field)
@@ -627,8 +627,8 @@ func IsDataFieldsTypesEqual(a *[]string, b *[]string) error {
 	temp := make([]string, 0)
 
 	for i := 0; i < len(*a); i++ {
-		ra, ea := ReflectDataField(&DataItem{}, (*a)[i])
-		rb, eb := ReflectDataField(&DataItem{}, (*b)[i])
+		ra, ea := ReflectDataField(&Datum{}, (*a)[i])
+		rb, eb := ReflectDataField(&Datum{}, (*b)[i])
 
 		if ea != nil || eb != nil || ra.Kind() != rb.Kind() {
 			temp = append(temp, (*a)[i])
@@ -1080,7 +1080,7 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	return err
 }
 
-func ReflectDataField(item *DataItem, i interface{}) (reflect.Value, error) {
+func ReflectDataField(item *Datum, i interface{}) (reflect.Value, error) {
 	var temp reflect.Value
 
 	// Data field key must be string.
