@@ -70,6 +70,7 @@ graph TD;
 | [resty](docs/plugins/output/resty.md)           | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints. |
 | [slack](docs/plugins/output/slack.md)           | Send data to [Slack](https://slack.com) channels/users.                                       |
 | [smtp](docs/plugins/output/smtp.md)             | Send data as email.                                                                           |
+| [telegram](docs/plugins/output/telegram.md)     | Send data to [Telegram](https://telegram.org) chats.                                          |
 
 ### ToDo:
 
