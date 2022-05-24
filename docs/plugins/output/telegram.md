@@ -64,7 +64,7 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: ["https://tass.ru/rss/v2.xml"]
+      input: ["https://www.opennet.ru/opennews/opennews_all.rss"]
       force: true
       force_count: 10
 
@@ -84,9 +84,8 @@ flow:
 api_id = "<API_ID>"
 api_hash = "<API_HASH>"
 
-[templates.telegram.default]
-file_max_size = "3g"
-#log_level = 90
+[templates.rss.telegram.default]
+message = "{{ .RSS.DESCRIPTION }}\n\n{{ .RSS.LINK }}"
 ```
 
 
