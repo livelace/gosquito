@@ -591,6 +591,7 @@ func inputFile(p *Plugin) {
 func inputDatum(p *Plugin) {
 	for {
 		if len(p.InputDatumListener.Updates) > 0 {
+			fmt.Printf("Hello!: %v\n", len(p.InputDatumListener.Updates))
 			update := <-p.InputDatumListener.Updates
 
 			switch update.(type) {
@@ -629,9 +630,8 @@ func inputDatum(p *Plugin) {
 					messageId = message.Id
 				case *client.UpdateMessageContent:
 					if !p.OptionMessageEdited {
-						return
+						continue
 					}
-
 					message, err = p.TdlibClient.GetMessage(&client.GetMessageRequest{ChatId: v.ChatId, MessageId: v.MessageId})
 					if err != nil {
 						continue
@@ -2703,16 +2703,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Input/output mode:
 
+	if plugin.OptionChatSave {
+		go saveChat(&plugin)
+	}
+	
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
 	}
 
 	if plugin.OptionStorageOptimize {
 		go storageOptimizer(&plugin)
-	}
-
-	if plugin.OptionChatSave {
-		go saveChat(&plugin)
 	}
 
 	if plugin.OptionUserSave {
