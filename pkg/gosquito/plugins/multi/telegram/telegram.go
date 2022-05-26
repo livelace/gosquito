@@ -1128,32 +1128,68 @@ func showStatus(p *Plugin) {
 
 			for _, s := range session.Sessions {
 				if s.IsCurrent {
-					m := []string{
-						"database size: %v,",
-						"files amount: %v,",
-						"files size: %v,",
-						"geo: %v,",
-						"ip: %v,",
-						"last active: %v,",
-						"login date: %v,",
-						"me id: %v",
-						"me name: %v",
-						"network received: %v,",
-						"network sent: %v,",
-						"proxy: %v,",
-						"saved chats: %v,",
-						"saved users: %v",
+					var info string
+
+					if p.PluginType == "input" {
+					    m := []string{
+					    	"database size: %v,",
+					    	"files amount: %v,",
+					    	"files size: %v,",
+					    	"geo: %v,",
+					    	"ip: %v,",
+					    	"last active: %v,",
+					    	"login date: %v,",
+					    	"me id: %v",
+					    	"me name: %v",
+					    	"network received: %v,",
+					    	"network sent: %v,",
+					    	"pool size: %v,",
+					    	"proxy: %v,",
+					    	"saved chats: %v,",
+					    	"saved users: %v",
+					    }
+
+					    info = fmt.Sprintf(strings.Join(m, " "),
+					    	core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+					    	core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
+					    	s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+					    	time.Unix(int64(s.LogInDate), 0),
+					    	user.Id, user.Username,
+					    	networkReceived, networkSent,
+						len(p.InputDatumListener.Updates),
+					    	p.OptionProxyEnable,
+					    	countChats(p), countUsers(p),
+					    )
+
+					} else {
+					    m := []string{
+					    	"database size: %v,",
+					    	"files amount: %v,",
+					    	"files size: %v,",
+					    	"geo: %v,",
+					    	"ip: %v,",
+					    	"last active: %v,",
+					    	"login date: %v,",
+					    	"me id: %v",
+					    	"me name: %v",
+					    	"network received: %v,",
+					    	"network sent: %v,",
+					    	"proxy: %v,",
+					    	"saved chats: %v,",
+					    	"saved users: %v",
+					    }
+
+					    info = fmt.Sprintf(strings.Join(m, " "),
+					    	core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+					    	core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
+					    	s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+					    	time.Unix(int64(s.LogInDate), 0),
+					    	user.Id, user.Username,
+					    	networkReceived, networkSent,
+					    	p.OptionProxyEnable,
+					    	countChats(p), countUsers(p),
+					    )
 					}
-					info := fmt.Sprintf(strings.Join(m, " "),
-						core.BytesToSize(storage.DatabaseSize), storage.FileCount,
-						core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-						s.Ip, time.Unix(int64(s.LastActiveDate), 0),
-						time.Unix(int64(s.LogInDate), 0),
-						networkReceived, networkSent,
-						p.OptionProxyEnable,
-						countChats(p), countUsers(p),
-						user.Id, user.Username,
-					)
 
 					core.LogInputPlugin(p.LogFields, "status", info)
 				}
