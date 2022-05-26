@@ -591,7 +591,6 @@ func inputFile(p *Plugin) {
 func inputDatum(p *Plugin) {
 	for {
 		if len(p.InputDatumListener.Updates) > 0 {
-			fmt.Printf("Hello!: %v\n", len(p.InputDatumListener.Updates))
 			update := <-p.InputDatumListener.Updates
 
 			switch update.(type) {
