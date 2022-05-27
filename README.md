@@ -58,7 +58,7 @@ graph TD;
 | [regexpreplace](docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                         |
 | [resty](docs/plugins/process/resty.md)                 | Perform REST queries.                                             |
 | [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                      |
-| [webchela](docs/plugins/process/webchela.md)           | Interact with web pages with full browser (Chrome, Firefox).      |
+| [webchela](docs/plugins/process/webchela.md)           | Process web pages with full browser support (Chrome, Firefox).    |
 | [xpath](docs/plugins/process/xpath.md)                 | Extract HTML elements.                                            |
 
 ### Output plugins:
