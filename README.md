@@ -37,7 +37,7 @@ graph TD;
 
 | Plugin                                     | Description                                                                                    |
 |:-------------------------------------------|:-----------------------------------------------------------------------------------------------|
-| [kafka](docs/plugins/input/kafka.md)       | [Kafka](https://kafka.apache.org/) topics as data source.                                   |
+| [kafka](docs/plugins/input/kafka.md)       | [Kafka](https://kafka.apache.org/) topic as data source.                                   |
 | [resty](docs/plugins/input/resty.md)       | [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoint as data source. |
 | [rss](docs/plugins/input/rss.md)           | [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feed as data source.                             |
 | [telegram](docs/plugins/input/telegram.md) | [Telegram](https://telegram.org/) chat as data source.                                         |
@@ -47,30 +47,30 @@ graph TD;
 
 | Plugin                                                 | Description                                                       |
 |:-------------------------------------------------------|:------------------------------------------------------------------|
-| [dedup](docs/plugins/process/dedup.md)                 | Deduplicate data items by UUID.                                   |
+| [dedup](docs/plugins/process/dedup.md)                 | Deduplicate datums by UUID.                                       |
 | [echo](docs/plugins/process/echo.md)                   | Echoing processing data.                                          |
 | [expandurl](docs/plugins/process/expandurl.md)         | Expand short URLs.                                                |
 | [fetch](docs/plugins/process/fetch.md)                 | Fetch remote data.                                                |
 | [jq](docs/plugins/process/jq.md)                       | Extract JSON elements.                                            |
-| [minio](docs/plugins/process/minio.md)                 | Put data to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket. |
+| [minio](docs/plugins/process/minio.md)                 | Get/put data from/to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket. |
 | [regexpfind](docs/plugins/process/regexpfind.md)       | Find patters in data.                                             |
 | [regexpmatch](docs/plugins/process/regexpmatch.md)     | Match data by patterns.                                           |
 | [regexpreplace](docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                         |
 | [resty](docs/plugins/process/resty.md)                 | Perform REST queries.                                             |
 | [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                      |
-| [webchela](docs/plugins/process/webchela.md)           | Interact with web pages (Firefox and Chrome).                     |
+| [webchela](docs/plugins/process/webchela.md)           | Interact with web pages with full browser (Chrome, Firefox).      |
 | [xpath](docs/plugins/process/xpath.md)                 | Extract HTML elements.                                            |
 
 ### Output plugins:
 
 | Plugin                                          | Description                                                                                   |
 |:------------------------------------------------|:----------------------------------------------------------------------------------------------|
-| [kafka](docs/plugins/output/kafka.md)           | Send data to [Kafka](https://kafka.apache.org/) topics.                                       |
-| [mattermost](docs/plugins/output/mattermost.md) | Send data to [Mattermost](https://mattermost.org/) channels/users.                            |
-| [resty](docs/plugins/output/resty.md)           | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoints. |
-| [slack](docs/plugins/output/slack.md)           | Send data to [Slack](https://slack.com) channels/users.                                       |
+| [kafka](docs/plugins/output/kafka.md)           | Send data to [Kafka](https://kafka.apache.org/) topic.                                       |
+| [mattermost](docs/plugins/output/mattermost.md) | Send data to [Mattermost](https://mattermost.org/) channel/user.                            |
+| [resty](docs/plugins/output/resty.md)           | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoint. |
+| [slack](docs/plugins/output/slack.md)           | Send data to [Slack](https://slack.com) channel/user.                                       |
 | [smtp](docs/plugins/output/smtp.md)             | Send data as email.                                                                           |
-| [telegram](docs/plugins/output/telegram.md)     | Send data to [Telegram](https://telegram.org) chats.                                          |
+| [telegram](docs/plugins/output/telegram.md)     | Send data to [Telegram](https://telegram.org) chat.                                          |
 
 ### ToDo:
 
