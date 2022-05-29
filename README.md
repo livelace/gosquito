@@ -17,6 +17,7 @@ graph TD;
     P1-->O3(resty);
     P1-->O4(slack);
     P1-->O5(smtp);
+    P1-->O6(telegram);
 ```
 <br>
 
