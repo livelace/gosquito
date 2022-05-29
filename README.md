@@ -88,3 +88,4 @@ graph TD;
 12. process: lang detect plugin.
 13. core: file deduplication cache.
 14. process: exec plugin.
+15. core: top content ratio.
