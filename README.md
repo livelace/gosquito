@@ -10,8 +10,9 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 graph TD;
     I1(kafka)-->P1(process plugins);
     I2(resty)-->P1;
-    I3(telegram)-->P1;
-    I4(twitter)-->P1;
+    I3(rss)-->P1;
+    I4(telegram)-->P1;
+    I5(twitter)-->P1;
     P1-->O1(kafka);
     P1-->O2(mattermost);
     P1-->O3(resty);
