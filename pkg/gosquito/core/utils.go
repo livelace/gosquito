@@ -404,24 +404,17 @@ func GenUID() string {
 	return string(b)
 }
 
-func GetCredFromEnv(cred string) string {
-	if c := strings.Split(cred, "env://"); len(c) > 1 {
-		return os.Getenv(c[1])
-	}
-	return cred
-}
-
 func GetCredValue(cred string, vault *vault.Client) string {
-    // Get from environment variable.
+	// Get from environment variable.
 	if strings.Contains(cred, "env://") {
-		return GetCredFromEnv(cred)
+		return GetVarFromEnv(cred)
 	}
 
-    // Get from vault secret.
+	// Get from vault secret.
 	if c := strings.Split(cred, "vault://"); len(c) > 1 && vault != nil {
 		if s := strings.Split(c[1], ","); len(s) > 1 {
-            secretPath := s[0]
-            secretKey := s[1]
+			secretPath := s[0]
+			secretKey := s[1]
 
 			secret, err := vault.Logical().Read(secretPath)
 			if err != nil {
@@ -433,11 +426,18 @@ func GetCredValue(cred string, vault *vault.Client) string {
 				return ""
 			}
 
-            return value
+			return value
 		}
 	}
 
 	return cred
+}
+
+func GetVarFromEnv(v string) string {
+	if c := strings.Split(v, "env://"); len(c) > 1 {
+		return os.Getenv(c[1])
+	}
+	return v
 }
 
 func GetDataFieldType(field interface{}) (reflect.Kind, error) {
@@ -482,7 +482,7 @@ func GetVault(m map[string]interface{}) (*vault.Client, error) {
 		var app_secret string
 
 		if v, b := IsString(m["address"]); b {
-			if address = GetCredFromEnv(v); address == "" {
+			if address = GetVarFromEnv(v); address == "" {
 				return nil, fmt.Errorf("vault address env not set: %v", v)
 			}
 		} else {
@@ -490,7 +490,7 @@ func GetVault(m map[string]interface{}) (*vault.Client, error) {
 		}
 
 		if v, b := IsString(m["app_role"]); b {
-			if app_role = GetCredFromEnv(v); app_role == "" {
+			if app_role = GetVarFromEnv(v); app_role == "" {
 				return nil, fmt.Errorf("vault app_role env not set: %v", v)
 			}
 		} else {
@@ -498,7 +498,7 @@ func GetVault(m map[string]interface{}) (*vault.Client, error) {
 		}
 
 		if v, b := IsString(m["app_secret"]); b {
-			if app_secret = GetCredFromEnv(v); app_secret == "" {
+			if app_secret = GetVarFromEnv(v); app_secret == "" {
 				return nil, fmt.Errorf("vault app_secret env not set: %v", v)
 			}
 		} else {
@@ -573,12 +573,15 @@ func IsBool(i interface{}) (bool, bool) {
 	switch b := i.(type) {
 	case bool:
 		return b, true
-	default:
+	case string:
+		if strings.Contains(b, "env://") {
+			b = GetVarFromEnv(b)
+		}
 		if v, err := strconv.ParseBool(fmt.Sprintf("%v", b)); err == nil {
 			return v, true
 		}
-		return false, false
 	}
+    return false, false
 }
 
 func IsChatUsername(i interface{}) (string, bool) {
@@ -667,6 +670,9 @@ func IsInt(i interface{}) (int, bool) {
 			return v, true
 		}
 	case string:
+		if strings.Contains(v, "env://") {
+			v = GetVarFromEnv(v)
+		}
 		if si, err := strconv.ParseInt(v, 10, 64); err == nil && si > 0 {
 			return int(si), true
 		}
@@ -838,6 +844,9 @@ func IsSliceOfString(i interface{}) ([]string, bool) {
 
 func IsString(i interface{}) (string, bool) {
 	if v, ok := i.(string); ok && len(v) > 0 {
+		if strings.Contains(v, "env://") {
+			v = GetVarFromEnv(v)
+		}
 		return v, true
 	} else {
 		return "", false
