@@ -188,7 +188,7 @@ type Data struct {
 	ARRAYO []string
 	ARRAYP []string
 
-	TEXT0  string 
+	TEXT0  string
 	TEXT1  string
 	TEXT2  string
 	TEXT3  string
