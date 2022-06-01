@@ -5,18 +5,18 @@ gosquito is a relatively lightweight tool for fetching/preprocessing data at the
 ### Basic workflow:
 
 1. Input plugin receives data and forming data items.
-2. Data items are usual structs with fields.
-3. Process plugins use data items as a data source (input plugins fields) and as destination for saving data (data and iter fields).
-4. Process plugins don't make copies of input plugin data, they always work with the same set of data items (through pointers), but different process plugins use different data fields for saving data.
-5. Process plugins can reuse results of other process plugins through "require" option. Those results are not copies, but always the same set of original data items.
+2. Datums are usual structs with fields.
+3. Process plugins use datums as a data source (input plugins fields) and as destination for saving data (data and iter fields).
+4. Process plugins don't make copies of input plugin data, they always work with the same set of datums (through pointers), but different process plugins use different data fields for saving data.
+5. Process plugins can reuse results of other process plugins through "require" option. Those results are not copies, but always the same set of original datums.
 6. Process plugins should explicitly include data (include option) for sending data with output plugin.
 7. Output plugin sends data to destinations.
 
 
-#### Data item structure:
+#### Datum structure:
 
 ```go
-type DataItem struct {
+type Datum struct {
 	FLOW       string           // Flow name.
 	PLUGIN     string           // Input plugin name (rss, twitter, telegram etc.).
 	SOURCE     string           // Input plugin source (feed url, twitter channel, telegram chat etc.).
@@ -32,6 +32,8 @@ type DataItem struct {
 	RSS        Rss              // RSS plugin structure.
 	TELEGRAM   Telegram         // Telegram plugin structure.
 	TWITTER    Twitter          // Twitter plugin structure.
+
+    WARNINGS   []string         // Contains plugins' warnings.
 }
 ```
 
