@@ -135,8 +135,8 @@ type Data struct {
 
 ```go
 type Iter struct {
-	INDEX int
-	VALUE string
+  INDEX int
+  VALUE string
 }
 ```
 
