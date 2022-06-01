@@ -188,7 +188,7 @@ type Data struct {
 	ARRAYO []string
 	ARRAYP []string
 
-	TEXT0  string
+	TEXT0  string 
 	TEXT1  string
 	TEXT2  string
 	TEXT3  string
@@ -204,6 +204,16 @@ type Data struct {
 	TEXT13 string
 	TEXT14 string
 	TEXT15 string
+	TEXT16 string
+	TEXT17 string
+	TEXT18 string
+	TEXT19 string
+	TEXT20 string
+	TEXT21 string
+	TEXT22 string
+	TEXT23 string
+	TEXT24 string
+	TEXT25 string
 
 	TEXTA string
 	TEXTB string
@@ -221,6 +231,16 @@ type Data struct {
 	TEXTN string
 	TEXTO string
 	TEXTP string
+	TEXTQ string
+	TEXTR string
+	TEXTS string
+	TEXTT string
+	TEXTU string
+	TEXTV string
+	TEXTW string
+	TEXTX string
+	TEXTY string
+	TEXTZ string
 }
 
 type Iter struct {

@@ -75,23 +75,33 @@ type Data struct {
   ARRAYO []string
   ARRAYP []string
 
-  TEXT0 string
-  TEXT1 string
-  TEXT2 string
-  TEXT3 string
-  TEXT4 string
-  TEXT5 string
-  TEXT6 string
-  TEXT7 string
-  TEXT8 string
-  TEXT9 string
+  TEXT0  string
+  TEXT1  string
+  TEXT2  string
+  TEXT3  string
+  TEXT4  string
+  TEXT5  string
+  TEXT6  string
+  TEXT7  string
+  TEXT8  string
+  TEXT9  string
   TEXT10 string
   TEXT11 string
   TEXT12 string
   TEXT13 string
   TEXT14 string
   TEXT15 string
-
+  TEXT16 string
+  TEXT17 string
+  TEXT18 string
+  TEXT19 string
+  TEXT20 string
+  TEXT21 string
+  TEXT22 string
+  TEXT23 string
+  TEXT24 string
+  TEXT25 string
+  
   TEXTA string
   TEXTB string
   TEXTC string
@@ -108,6 +118,16 @@ type Data struct {
   TEXTN string
   TEXTO string
   TEXTP string
+  TEXTQ string
+  TEXTR string
+  TEXTS string
+  TEXTT string
+  TEXTU string
+  TEXTV string
+  TEXTW string
+  TEXTX string
+  TEXTY string
+  TEXTZ string
 }
 ```
 
