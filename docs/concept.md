@@ -33,7 +33,7 @@ type Datum struct {
 	TELEGRAM   Telegram         // Telegram plugin structure.
 	TWITTER    Twitter          // Twitter plugin structure.
 
-    WARNINGS   []string         // Contains plugins' warnings.
+        WARNINGS   []string         // Contains plugins' warnings.
 }
 ```
 
