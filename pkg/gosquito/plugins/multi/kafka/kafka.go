@@ -27,6 +27,7 @@ const (
 	DEFAULT_CONFLUENT_AVRO = false
 	DEFAULT_LOG_LEVEL      = 0
 	DEFAULT_MATCH_TTL      = "1d"
+    DEFAULT_OFFSET         = "earliest"
 	DEFAULT_SCHEMA_BASE    = `
 {
   "type": "record",
@@ -787,6 +788,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				plugin.OptionOffset = v
 			}
 		}
+        setOffset(DEFAULT_OFFSET)
 		setOffset(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.offset", template)))
 		setOffset((*pluginConfig.PluginParams)["offset"])
 		core.ShowPluginParam(plugin.LogFields, "offset", plugin.OptionOffset)
@@ -999,7 +1001,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if plugin.PluginType == "input" && plugin.OptionOffset != "" {
+	if plugin.PluginType == "input" {
 		if plugin.OptionOffset != "earliest" && plugin.OptionOffset != "latest" && plugin.OptionOffset != "none" {
 			return &Plugin{}, fmt.Errorf(ERROR_OFFSET_UNKNOWN.Error(), plugin.OptionOffset)
 		}
