@@ -215,8 +215,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	// Iterate over data items (articles, tweets etc.).
 	for _, item := range data {
 		for index, input := range p.OptionInput {
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+			ri, _ := core.ReflectDatumField(item, input)
+			ro, _ := core.ReflectDatumField(item, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.String:
@@ -940,7 +940,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 		}
 
-		if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 			return &Plugin{}, err
 		}
 	}

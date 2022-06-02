@@ -94,10 +94,10 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
-			ri, _ := core.ReflectDataField(item, input)
+			ri, _ := core.ReflectDatumField(item, input)
 
 			if len(p.OptionOutput) > 0 {
-				ro, _ = core.ReflectDataField(item, p.OptionOutput[index])
+				ro, _ = core.ReflectDatumField(item, p.OptionOutput[index])
 			}
 
 			// This plugin supports "string" and "[]string" data fields for matching.
@@ -289,7 +289,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
 		}
 
-		if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+		if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 			return &Plugin{}, err
 		}
 

@@ -70,11 +70,11 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	for _, item := range data {
 		inputs := make([]string, 0)
 
-		ro, _ := core.ReflectDataField(item, p.OptionOutput[0])
+		ro, _ := core.ReflectDatumField(item, p.OptionOutput[0])
 
 		// Expand all inputs into single slice.
 		for _, input := range p.OptionInput {
-			inputs = append(inputs, core.ExtractDataFieldIntoArray(item, input)...)
+			inputs = append(inputs, core.ExtractDatumFieldIntoArray(item, input)...)
 		}
 
 		inputsUnique := core.UniqueSliceValues(&inputs)
@@ -148,7 +148,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
 				plugin.OptionOutput = v
 			}

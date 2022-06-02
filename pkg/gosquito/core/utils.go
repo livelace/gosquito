@@ -132,7 +132,7 @@ func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) [
 	return temp
 }
 
-func ExtractDataFieldIntoArray(data *Datum, field interface{}) []string {
+func ExtractDatumFieldIntoArray(data *Datum, field interface{}) []string {
 	temp := make([]string, 0)
 
 	// "field" might be just a regular string (not data field)
@@ -148,7 +148,7 @@ func ExtractDataFieldIntoArray(data *Datum, field interface{}) []string {
 	f := func(v string) []string {
 		t := make([]string, 0)
 
-		rv, err := ReflectDataField(data, v)
+		rv, err := ReflectDatumField(data, v)
 
 		if err != nil {
 			t = append(t, fmt.Sprintf("%v", v))
@@ -195,7 +195,7 @@ func ExtractDataFieldIntoArray(data *Datum, field interface{}) []string {
 	return temp
 }
 
-func ExtractDataFieldIntoString(data *Datum, field interface{}) string {
+func ExtractDatumFieldIntoString(data *Datum, field interface{}) string {
 	temp := ""
 
 	// "field" might be just a regular string (not data field)
@@ -211,7 +211,7 @@ func ExtractDataFieldIntoString(data *Datum, field interface{}) string {
 	f := func(v string) string {
 		t := ""
 
-		rv, err := ReflectDataField(data, v)
+		rv, err := ReflectDatumField(data, v)
 
 		if err != nil {
 			t += fmt.Sprintf(" %v", v)
@@ -440,9 +440,9 @@ func GetVarFromEnv(v string) string {
 	return v
 }
 
-func GetDataFieldType(field interface{}) (reflect.Kind, error) {
+func GetDatumFieldType(field interface{}) (reflect.Kind, error) {
 	if f, ok := field.(string); ok {
-		rv, err := ReflectDataField(&Datum{}, f)
+		rv, err := ReflectDatumField(&Datum{}, f)
 
 		if err != nil {
 			return 0, fmt.Errorf(ERROR_DATA_FIELD_UNKNOWN.Error(), field)
@@ -608,11 +608,11 @@ func IsDir(path string) bool {
 	return info.IsDir()
 }
 
-func IsDataFieldsSlice(fields *[]string) error {
+func IsDatumFieldsSlice(fields *[]string) error {
 	temp := make([]string, 0)
 
 	for _, field := range *fields {
-		rv, err := ReflectDataField(&Datum{}, field)
+		rv, err := ReflectDatumField(&Datum{}, field)
 
 		if err != nil || rv.Kind() != reflect.Slice {
 			temp = append(temp, field)
@@ -626,12 +626,12 @@ func IsDataFieldsSlice(fields *[]string) error {
 	}
 }
 
-func IsDataFieldsTypesEqual(a *[]string, b *[]string) error {
+func IsDatumFieldsTypesEqual(a *[]string, b *[]string) error {
 	temp := make([]string, 0)
 
 	for i := 0; i < len(*a); i++ {
-		ra, ea := ReflectDataField(&Datum{}, (*a)[i])
-		rb, eb := ReflectDataField(&Datum{}, (*b)[i])
+		ra, ea := ReflectDatumField(&Datum{}, (*a)[i])
+		rb, eb := ReflectDatumField(&Datum{}, (*b)[i])
 
 		if ea != nil || eb != nil || ra.Kind() != rb.Kind() {
 			temp = append(temp, (*a)[i])
@@ -1089,18 +1089,18 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	return err
 }
 
-func ReflectDataField(item *Datum, i interface{}) (reflect.Value, error) {
+func ReflectDatumField(item *Datum, i interface{}) (reflect.Value, error) {
 	var temp reflect.Value
 
-	// Data field key must be string.
+	// Datum field key must be string.
 	field, ok := i.(string)
 	if !ok {
 		return temp, fmt.Errorf(ERROR_DATA_FIELD_KEY.Error(), i)
 	}
 
-	// Data fields might be:
-	// 1. <Data>.<FirstLevel>: Data.Time
-	// 2. <Data>.<FirstLevel>.<SecondLevel>: Data.RSS.TITLE
+	// Datum fields might be:
+	// 1. <Datum>.<FirstLevel>: Datum.Time
+	// 2. <Datum>.<FirstLevel>.<SecondLevel>: Datum.RSS.TITLE
 	// Everything else is wrong.
 	f := strings.ToUpper(field)
 	p := strings.Split(f, ".")

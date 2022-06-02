@@ -124,7 +124,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 		// Files.
 		files := make([]string, 0)
 		for _, v := range p.OptionFiles {
-			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
+			files = append(files, core.ExtractDatumFieldIntoArray(item, v)...)
 		}
 
 		// Message text.
@@ -154,7 +154,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				return err
 			}
 
-			titleLink := core.ExtractDataFieldIntoString(item, p.OptionTitleLink)
+			titleLink := core.ExtractDatumFieldIntoString(item, p.OptionTitleLink)
 
 			attachments.Color = color
 			attachments.Pretext = pretext

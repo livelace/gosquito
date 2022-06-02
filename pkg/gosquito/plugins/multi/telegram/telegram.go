@@ -51,6 +51,7 @@ const (
 	DEFAULT_PROXY_SERVER     = "127.0.0.1"
 	DEFAULT_PROXY_TYPE       = "socks"
 	DEFAULT_SEND_ALBUM       = true
+	DEFAULT_SEND_DELAY       = "1s"
 	DEFAULT_SEND_TIMEOUT     = "1h"
 	DEFAULT_SESSION_TTL      = 366
 	DEFAULT_STATUS_ENABLE    = true
@@ -992,6 +993,7 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 				}
 			}
 			sendMessageAlbum(p, chatId, content)
+            time.Sleep(p.OptionSendDelay * time.Second)
 		}
 
 	} else if len(files) > 0 {
@@ -1006,6 +1008,7 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 			case "video":
 				sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file))
 			}
+            time.Sleep(p.OptionSendDelay * time.Second)
 		}
 	}
 }
@@ -1048,6 +1051,7 @@ func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) {
 		core.LogOutputPlugin(p.LogFields, "send",
 			fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
 	}
+    time.Sleep(p.OptionSendDelay * time.Second)
 }
 
 func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageContent) {
@@ -1130,64 +1134,64 @@ func showStatus(p *Plugin) {
 					var info string
 
 					if p.PluginType == "input" {
-					    m := []string{
-					    	"database size: %v,",
-					    	"files amount: %v,",
-					    	"files size: %v,",
-					    	"geo: %v,",
-					    	"ip: %v,",
-					    	"last active: %v,",
-					    	"login date: %v,",
-					    	"me id: %v,",
-					    	"me name: %v,",
-					    	"network received: %v,",
-					    	"network sent: %v,",
-					    	"pool size: %v,",
-					    	"proxy: %v,",
-					    	"saved chats: %v,",
-					    	"saved users: %v",
-					    }
+						m := []string{
+							"database size: %v,",
+							"files amount: %v,",
+							"files size: %v,",
+							"geo: %v,",
+							"ip: %v,",
+							"last active: %v,",
+							"login date: %v,",
+							"me id: %v,",
+							"me name: %v,",
+							"network received: %v,",
+							"network sent: %v,",
+							"pool size: %v,",
+							"proxy: %v,",
+							"saved chats: %v,",
+							"saved users: %v",
+						}
 
-					    info = fmt.Sprintf(strings.Join(m, " "),
-					    	core.BytesToSize(storage.DatabaseSize), storage.FileCount,
-					    	core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-					    	s.Ip, time.Unix(int64(s.LastActiveDate), 0),
-					    	time.Unix(int64(s.LogInDate), 0),
-					    	user.Id, user.Username,
-					    	networkReceived, networkSent,
-						len(p.InputDatumListener.Updates),
-					    	p.OptionProxyEnable,
-					    	countChats(p), countUsers(p),
-					    )
+						info = fmt.Sprintf(strings.Join(m, " "),
+							core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
+							s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+							time.Unix(int64(s.LogInDate), 0),
+							user.Id, user.Username,
+							networkReceived, networkSent,
+							len(p.InputDatumListener.Updates),
+							p.OptionProxyEnable,
+							countChats(p), countUsers(p),
+						)
 
 					} else {
-					    m := []string{
-					    	"database size: %v,",
-					    	"files amount: %v,",
-					    	"files size: %v,",
-					    	"geo: %v,",
-					    	"ip: %v,",
-					    	"last active: %v,",
-					    	"login date: %v,",
-					    	"me id: %v,",
-					    	"me name: %v,",
-					    	"network received: %v,",
-					    	"network sent: %v,",
-					    	"proxy: %v,",
-					    	"saved chats: %v,",
-					    	"saved users: %v",
-					    }
+						m := []string{
+							"database size: %v,",
+							"files amount: %v,",
+							"files size: %v,",
+							"geo: %v,",
+							"ip: %v,",
+							"last active: %v,",
+							"login date: %v,",
+							"me id: %v,",
+							"me name: %v,",
+							"network received: %v,",
+							"network sent: %v,",
+							"proxy: %v,",
+							"saved chats: %v,",
+							"saved users: %v",
+						}
 
-					    info = fmt.Sprintf(strings.Join(m, " "),
-					    	core.BytesToSize(storage.DatabaseSize), storage.FileCount,
-					    	core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-					    	s.Ip, time.Unix(int64(s.LastActiveDate), 0),
-					    	time.Unix(int64(s.LogInDate), 0),
-					    	user.Id, user.Username,
-					    	networkReceived, networkSent,
-					    	p.OptionProxyEnable,
-					    	countChats(p), countUsers(p),
-					    )
+						info = fmt.Sprintf(strings.Join(m, " "),
+							core.BytesToSize(storage.DatabaseSize), storage.FileCount,
+							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
+							s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+							time.Unix(int64(s.LogInDate), 0),
+							user.Id, user.Username,
+							networkReceived, networkSent,
+							p.OptionProxyEnable,
+							countChats(p), countUsers(p),
+						)
 					}
 
 					core.LogInputPlugin(p.LogFields, "status", info)
@@ -1444,6 +1448,7 @@ type Plugin struct {
 	OptionProxyType             string
 	OptionProxyUsername         string
 	OptionSendAlbum             bool
+	OptionSendDelay             time.Duration
 	OptionSendTimeout           int
 	OptionSessionTTL            int
 	OptionStatusEnable          bool
@@ -1681,19 +1686,19 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			}
 
 			// Send audio files.
-			audio := core.ExtractDataFieldIntoArray(item, p.OptionFileAudio)
+			audio := core.ExtractDatumFieldIntoArray(item, p.OptionFileAudio)
 			sendFiles(p, chatId, "audio", fileCaption, audio)
 
 			// Send document files.
-			document := core.ExtractDataFieldIntoArray(item, p.OptionFileDocument)
+			document := core.ExtractDatumFieldIntoArray(item, p.OptionFileDocument)
 			sendFiles(p, chatId, "document", fileCaption, document)
 
 			// Send photo files.
-			photo := core.ExtractDataFieldIntoArray(item, p.OptionFilePhoto)
+			photo := core.ExtractDatumFieldIntoArray(item, p.OptionFilePhoto)
 			sendFiles(p, chatId, "photo", fileCaption, photo)
 
 			// Send video files.
-			video := core.ExtractDataFieldIntoArray(item, p.OptionFileVideo)
+			video := core.ExtractDatumFieldIntoArray(item, p.OptionFileVideo)
 			sendFiles(p, chatId, "video", fileCaption, video)
 		}
 	}
@@ -1804,6 +1809,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["message_preview"] = -1
 		availableParams["output"] = 1
 		availableParams["send_album"] = -1
+		availableParams["send_delay"] = -1
 		availableParams["send_timeout"] = -1
 		break
 	}
@@ -2309,6 +2315,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setSendAlbum((*pluginConfig.PluginParams)["send_album"])
 		core.ShowPluginParam(plugin.LogFields, "send_album", plugin.OptionSendAlbum)
 
+		// send_delay.
+		setSendDelay := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["send_delay"] = 0
+				plugin.OptionSendDelay = time.Duration(v) * time.Second
+			}
+		}
+		setSendDelay(DEFAULT_SEND_DELAY)
+		setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+		setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+		core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
+
 		// send_timeout.
 		setSendTimeout := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
@@ -2629,7 +2647,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		chatData := getChat(&plugin, chatName)
 
-        // Join only to unknown chats (api limits).
+		// Join only to unknown chats (api limits).
 		if chatData.CHATID == "" {
 			chatIdRegexp := regexp.MustCompile(`^[0-9]+$`)
 
@@ -2645,8 +2663,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
-			
-            err = sqlUpdateChat(&plugin, chatId, chatName)
+
+			err = sqlUpdateChat(&plugin, chatId, chatName)
 			if err != nil {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
@@ -2705,7 +2723,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if plugin.OptionChatSave {
 		go saveChat(&plugin)
 	}
-	
+
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
 	}

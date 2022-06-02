@@ -229,8 +229,8 @@ func (p *Plugin) Process(datums []*core.Datum) ([]*core.Datum, error) {
 
 		for index, input := range p.OptionInput {
 			var err error
-			ri, _ := core.ReflectDataField(datum, input)
-			ro, _ := core.ReflectDataField(datum, p.OptionOutput[index])
+			ri, _ := core.ReflectDatumField(datum, input)
+			ro, _ := core.ReflectDatumField(datum, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.String:
@@ -496,7 +496,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	}
 
-	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+	if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 	}
 

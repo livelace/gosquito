@@ -76,7 +76,7 @@ func genSchema(p *Plugin, schema *map[string]interface{}) (string, error) {
 	for _, field := range schemaFields {
 		fieldValue := (*schema)[field]
 
-		if fieldType, err := core.GetDataFieldType(fieldValue); err == nil {
+		if fieldType, err := core.GetDatumFieldType(fieldValue); err == nil {
 			var schemaItem string
 
 			switch fieldType {
@@ -343,7 +343,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 			// Map message data into item fields.
 			for fieldName, fieldValue := range p.SchemaNative {
 				ri := reflect.ValueOf(messageMap[fieldName])
-				ro, _ := core.ReflectDataField(&item, fieldValue)
+				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
 				// Populate dataItem with field data.
 				switch ri.Kind() {
@@ -517,7 +517,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 			for k, v := range p.SchemaNative {
 				// Try to detect/expand data fields and/or use value as string.
-				if rv, err := core.ReflectDataField(item, v); err == nil {
+				if rv, err := core.ReflectDatumField(item, v); err == nil {
 					switch rv.Kind() {
 					case reflect.String:
 						schema[k] = rv.Interface()

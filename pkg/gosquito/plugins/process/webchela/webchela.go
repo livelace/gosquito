@@ -367,7 +367,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		itemURLMeta[itemIndex] = make([]int, len(p.OptionInput))
 
 		for inputIndex, inputField := range p.OptionInput {
-			ri, _ := core.ReflectDataField(itemData, inputField)
+			ri, _ := core.ReflectDatumField(itemData, inputField)
 
 			// 1. Set amount of URLs for specific data item and input.
 			// 2. Append URLs to flat slice.
@@ -491,7 +491,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				grabbed = true
 			}
 
-			ro, _ := core.ReflectDataField(data[itemIndex], p.OptionOutput[index])
+			ro, _ := core.ReflectDatumField(data[itemIndex], p.OptionOutput[index])
 
 			switch ro.Kind() {
 			case reflect.String:
@@ -903,7 +903,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	}
 
-	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+	if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 	}
 

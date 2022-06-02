@@ -79,8 +79,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		for index, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always check fields during plugin init.
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+			ri, _ := core.ReflectDatumField(item, input)
+			ro, _ := core.ReflectDatumField(item, p.OptionOutput[index])
 
 			for i := 0; i < ri.Len(); i++ {
 				dir := getDirName(ri.Index(i).String(), p.OptionDepth)
@@ -143,7 +143,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
 				plugin.OptionInput = v
 			}
@@ -155,7 +155,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
 				plugin.OptionOutput = v
 			}

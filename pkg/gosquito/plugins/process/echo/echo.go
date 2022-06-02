@@ -81,7 +81,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 		for _, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
-			ri, err := core.ReflectDataField(item, input)
+			ri, err := core.ReflectDatumField(item, input)
 
 			if err == nil {
 				switch ri.Kind() {

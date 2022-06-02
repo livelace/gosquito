@@ -150,7 +150,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 		// files.
 		files := make([]string, 0)
 		for _, v := range p.OptionFiles {
-			files = append(files, core.ExtractDataFieldIntoArray(item, v)...)
+			files = append(files, core.ExtractDatumFieldIntoArray(item, v)...)
 		}
 
 		// attachments.
@@ -179,7 +179,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				return err
 			}
 
-			titleLink := core.ExtractDataFieldIntoString(item, p.OptionTitleLink)
+			titleLink := core.ExtractDatumFieldIntoString(item, p.OptionTitleLink)
 
 			props["attachments"] = []interface{}{
 				map[string]string{

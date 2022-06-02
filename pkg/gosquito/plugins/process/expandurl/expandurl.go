@@ -145,8 +145,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		for index, input := range p.OptionInput {
 			// Reflect "input" plugin data fields.
 			// Error ignored because we always checks fields during plugin init.
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+			ri, _ := core.ReflectDatumField(item, input)
+			ro, _ := core.ReflectDatumField(item, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.Slice:
@@ -245,7 +245,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["input"] = 0
 				plugin.OptionInput = v
 			}
@@ -258,7 +258,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
 				plugin.OptionOutput = v
 			}
@@ -320,7 +320,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 	}
 
-	if err := core.IsDataFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+	if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
 	}
 

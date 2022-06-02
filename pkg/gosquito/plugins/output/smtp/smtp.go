@@ -141,7 +141,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 			// Add attachments.
 			if len(p.OptionAttachments) > 0 {
-				attachments := core.ExtractDataFieldIntoArray(item, p.OptionAttachments)
+				attachments := core.ExtractDatumFieldIntoArray(item, p.OptionAttachments)
 
 				for _, v := range attachments {
 					email.AddAttachment(v, path.Base(v))
@@ -151,7 +151,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			// Add headers.
 			if len(p.OptionHeaders) > 0 {
 				for k, v := range p.OptionHeaders {
-					s := core.ExtractDataFieldIntoString(item, v)
+					s := core.ExtractDatumFieldIntoString(item, v)
 					email.AddHeader(k, s)
 				}
 			}

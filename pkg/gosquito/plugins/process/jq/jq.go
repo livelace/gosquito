@@ -110,8 +110,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		found := make([]bool, len(p.OptionInput))
 
 		for index, input := range p.OptionInput {
-			ri, _ := core.ReflectDataField(item, input)
-			ro, _ := core.ReflectDataField(item, p.OptionOutput[index])
+			ri, _ := core.ReflectDatumField(item, input)
+			ro, _ := core.ReflectDatumField(item, p.OptionOutput[index])
 
 			switch ri.Kind() {
 			case reflect.String:
@@ -246,7 +246,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
-			if err := core.IsDataFieldsSlice(&v); err == nil {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
 				availableParams["output"] = 0
 				plugin.OptionOutput = v
 			}
