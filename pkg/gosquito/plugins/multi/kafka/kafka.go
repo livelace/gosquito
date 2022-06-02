@@ -345,7 +345,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ri := reflect.ValueOf(messageMap[fieldName])
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
-				// Populate dataItem with field data.
+                // TODO: hack, prevent panics.
+                if ri.Kind() != ro.Kind() {
+                    continue
+                }
+
+				// Populate datum with field data.
 				switch ri.Kind() {
 				case reflect.String:
 					ro.SetString(ri.String())
