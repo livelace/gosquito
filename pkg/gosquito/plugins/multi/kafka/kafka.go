@@ -347,6 +347,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 
                 // TODO: hack, prevent panics.
                 if ri.Kind() != ro.Kind() {
+                    fmt.Printf("ZZZZZZZZZZZZ: %v != %v\n", fieldName, fieldValue)
                     continue
                 }
 
