@@ -93,3 +93,4 @@ graph TD;
 15. core: top content ratio.
 16. core: flow schedule.
 17. kafka: warn about connection problems.
+19. core: log level for flow.
