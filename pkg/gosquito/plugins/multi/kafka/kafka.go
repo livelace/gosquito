@@ -346,9 +346,9 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
 				if ri.Kind() != ro.Kind() {
-					core.LogInputPlugin(p.LogFields, "schema",
-						fmt.Sprintf("datum field type mismatch, skip field: %v, %v != %v", 
-                            fieldName, ri.Kind(), ro.Kind()))
+					//core.LogInputPlugin(p.LogFields, "schema",
+					//	fmt.Sprintf("datum field type mismatch, skip field: %v, %v != %v", 
+                    //        fieldName, ri.Kind(), ro.Kind()))
 					continue
 				}
 
