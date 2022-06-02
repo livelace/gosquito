@@ -348,7 +348,8 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
                 // TODO: hack, prevent panics.
                 if ri.Kind() != ro.Kind() {
                     core.LogInputPlugin(p.LogFields, "schema", 
-                        fmt.Errorf("schema id: %d, datum field mismatch: %v != %v", schemaId, fieldName, fieldValue))
+                        fmt.Errorf("schema id: %d, datum field mismatch, skip field: %v != %v", 
+                            schemaId, fieldName, fieldValue))
                     continue
                 }
 
