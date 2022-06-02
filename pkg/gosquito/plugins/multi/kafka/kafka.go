@@ -27,7 +27,7 @@ const (
 	DEFAULT_CONFLUENT_AVRO = false
 	DEFAULT_LOG_LEVEL      = 0
 	DEFAULT_MATCH_TTL      = "1d"
-    DEFAULT_OFFSET         = "earliest"
+	DEFAULT_OFFSET         = "earliest"
 	DEFAULT_SCHEMA_BASE    = `
 {
   "type": "record",
@@ -316,7 +316,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 			sourceFailStat[*message.TopicPartition.Topic] += 1
 
 			if isConfluentAvro {
-                core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("schema id: %d, skip message: %v", schemaId, err))
+				core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("schema id: %d, skip message: %v", schemaId, err))
 			} else {
 				core.LogInputPlugin(p.LogFields, "decode", fmt.Errorf("skip message: %v", err))
 			}
@@ -345,13 +345,13 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ri := reflect.ValueOf(messageMap[fieldName])
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
-                // TODO: hack, prevent panics.
-                if ri.Kind() != ro.Kind() {
-                    core.LogInputPlugin(p.LogFields, "schema", 
-                        fmt.Errorf("schema id: %d, datum field mismatch, skip field: %v != %v", 
-                            schemaId, fieldName, fieldValue))
-                    continue
-                }
+				// TODO: hack, prevent panics.
+				if ri.Kind() != ro.Kind() {
+					core.LogInputPlugin(p.LogFields, "schema",
+						fmt.Errorf("datum field mismatch, skip field: %v != %v", 
+                            fieldName, fieldValue))
+					continue
+				}
 
 				// Populate datum with field data.
 				switch ri.Kind() {
@@ -775,7 +775,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchSignature(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.match_signature", template)))
 		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
-        core.SliceStringToUpper(&plugin.OptionMatchSignature)
+		core.SliceStringToUpper(&plugin.OptionMatchSignature)
 
 		// match_ttl.
 		setMatchTTL := func(p interface{}) {
@@ -796,7 +796,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				plugin.OptionOffset = v
 			}
 		}
-        setOffset(DEFAULT_OFFSET)
+		setOffset(DEFAULT_OFFSET)
 		setOffset(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.offset", template)))
 		setOffset((*pluginConfig.PluginParams)["offset"])
 		core.ShowPluginParam(plugin.LogFields, "offset", plugin.OptionOffset)
