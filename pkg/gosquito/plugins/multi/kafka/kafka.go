@@ -345,11 +345,10 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ri := reflect.ValueOf(messageMap[fieldName])
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
-				// TODO: hack, prevent panics.
 				if ri.Kind() != ro.Kind() {
 					core.LogInputPlugin(p.LogFields, "schema",
-						fmt.Errorf("datum field mismatch, skip field: %v != %v", 
-                            fieldName, fieldValue))
+						fmt.Errorf("datum field type mismatch, skip field: %v, %v != %v", 
+                            fieldName, ri.Kind(), ro.Kind()))
 					continue
 				}
 
