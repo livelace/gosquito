@@ -345,7 +345,19 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ri := reflect.ValueOf(messageMap[fieldName])
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
-				if ri.Kind() != ro.Kind() {
+                // Handle absence schema's key in message data.
+				if _, ok := messageMap[fieldName]; !ok {
+                    switch ro.Kind() {
+                    case reflect.String:
+                        ro.SetString("")
+                    case reflect.Slice:
+                        ro.Set(reflect.Append(ro, reflect.ValueOf("")))
+                    }
+                    continue
+				}
+			
+                // Handle in/out type mismatch.
+                if ri.Kind() != ro.Kind() {
 					//core.LogInputPlugin(p.LogFields, "schema",
 					//	fmt.Sprintf("datum field type mismatch, skip field: %v, %v != %v", 
                     //        fieldName, ri.Kind(), ro.Kind()))
