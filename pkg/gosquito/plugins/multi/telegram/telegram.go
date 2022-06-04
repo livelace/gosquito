@@ -486,6 +486,129 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 	return d
 }
 
+func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessAudio {
+		audio := messageContent.(*client.MessageAudio).Audio
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
+
+		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
+			return false
+		}
+
+        if (p.OptionFetchAll || p.OptionFetchAudio) && checkFileSize(p, datum, audio.FileName, audio.Audio.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, audio.Audio.Remote.Id, audio.FileName)
+        }
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessPhoto {
+		photo := messageContent.(*client.MessagePhoto).Photo
+		photoFile := photo.Sizes[len(photo.Sizes)-1]
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
+
+		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
+		}
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessDocument {
+		document := messageContent.(*client.MessageDocument).Document
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
+
+		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
+			return false
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchDocument) && checkFileSize(p, datum, document.FileName, document.Document.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, document.Document.Remote.Id, document.FileName)
+		}
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessText {
+		formattedText := messageContent.(*client.MessageText).Text
+		datum.TELEGRAM.MESSAGEMIME = "text/plain"
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+
+		for _, entity := range formattedText.Entities {
+			switch entity.Type.(type) {
+			case *client.TextEntityTypeTextUrl:
+				datum.TELEGRAM.MESSAGETEXTURL =
+					append(datum.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+			}
+		}
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessVideo {
+		video := messageContent.(*client.MessageVideo).Video
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
+
+		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
+			return false
+		}
+
+		if (p.OptionFetchAll || p.OptionFetchVideo) && checkFileSize(p, datum, video.FileName, video.Video.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, video.Video.Remote.Id, video.FileName)
+		}
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessVideoNote {
+		note := messageContent.(*client.MessageVideoNote).VideoNote
+		datum.TELEGRAM.MESSAGETEXT = ""
+
+		if (p.OptionFetchAll || p.OptionFetchVideoNote) && checkFileSize(p, datum, "video_note", note.Video.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, note.Video.Remote.Id, "")
+		}
+
+        return true
+	}
+
+    return false
+}
+
+func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
+	if p.OptionProcessAll || p.OptionProcessVoiceNote {
+		note := messageContent.(*client.MessageVoiceNote).VoiceNote
+		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
+
+		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
+		    return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
+		}
+
+        return true
+	}
+
+    return false
+}
+
 func initChatsDb(p *Plugin) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", p.OptionChatDatabase)
 	_, err = db.Exec(SQL_CHATS_SCHEMA)
@@ -740,25 +863,25 @@ func inputDatum(p *Plugin) {
 
 					switch messageContent.(type) {
 					case *client.MessageAudio:
-						validMessage = parseMessageAudio(p, &datum, messageContent)
+						validMessage = handleMessageAudio(p, &datum, messageContent)
 
 					case *client.MessageDocument:
-						validMessage = parseMessageDocument(p, &datum, messageContent)
+						validMessage = handleMessageDocument(p, &datum, messageContent)
 
 					case *client.MessagePhoto:
-						validMessage = parseMessagePhoto(p, &datum, messageContent)
+						validMessage = handleMessagePhoto(p, &datum, messageContent)
 
 					case *client.MessageText:
-						validMessage = parseMessageText(p, &datum, messageContent)
+						validMessage = handleMessageText(p, &datum, messageContent)
 
 					case *client.MessageVideo:
-						validMessage = parseMessageVideo(p, &datum, messageContent)
+						validMessage = handleMessageVideo(p, &datum, messageContent)
 
 					case *client.MessageVideoNote:
-						validMessage = parseMessageVideoNote(p, &datum, messageContent)
+						validMessage = handleMessageVideoNote(p, &datum, messageContent)
 
 					case *client.MessageVoiceNote:
-						validMessage = parseMessageVoiceNote(p, &datum, messageContent)
+						validMessage = handleMessageVoiceNote(p, &datum, messageContent)
 					}
 
 					if validMessage {
@@ -807,129 +930,6 @@ func outputMessage(p *Plugin) {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-}
-
-func parseMessageAudio(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessAudio {
-		audio := messageContent.(*client.MessageAudio).Audio
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
-
-		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
-			return false
-		}
-
-        if (p.OptionFetchAll || p.OptionFetchAudio) && checkFileSize(p, datum, audio.FileName, audio.Audio.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, audio.Audio.Remote.Id, audio.FileName)
-        }
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessPhoto {
-		photo := messageContent.(*client.MessagePhoto).Photo
-		photoFile := photo.Sizes[len(photo.Sizes)-1]
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
-
-		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
-		}
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessageDocument(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessDocument {
-		document := messageContent.(*client.MessageDocument).Document
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-
-		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
-			return false
-		}
-
-		if (p.OptionFetchAll || p.OptionFetchDocument) && checkFileSize(p, datum, document.FileName, document.Document.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, document.Document.Remote.Id, document.FileName)
-		}
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessText {
-		formattedText := messageContent.(*client.MessageText).Text
-		datum.TELEGRAM.MESSAGEMIME = "text/plain"
-		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-
-		for _, entity := range formattedText.Entities {
-			switch entity.Type.(type) {
-			case *client.TextEntityTypeTextUrl:
-				datum.TELEGRAM.MESSAGETEXTURL =
-					append(datum.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-			}
-		}
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessVideo {
-		video := messageContent.(*client.MessageVideo).Video
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
-
-		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
-			return false
-		}
-
-		if (p.OptionFetchAll || p.OptionFetchVideo) && checkFileSize(p, datum, video.FileName, video.Video.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, video.Video.Remote.Id, video.FileName)
-		}
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessVideoNote {
-		note := messageContent.(*client.MessageVideoNote).VideoNote
-		datum.TELEGRAM.MESSAGETEXT = ""
-
-		if (p.OptionFetchAll || p.OptionFetchVideoNote) && checkFileSize(p, datum, "video_note", note.Video.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, note.Video.Remote.Id, "")
-		}
-
-        return true
-	}
-
-    return false
-}
-
-func parseMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
-	if p.OptionProcessAll || p.OptionProcessVoiceNote {
-		note := messageContent.(*client.MessageVoiceNote).VoiceNote
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
-
-		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
-		}
-
-        return true
-	}
-
-    return false
 }
 
 func saveChat(p *Plugin) {
