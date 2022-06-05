@@ -91,7 +91,7 @@ type Telegram struct {
 | log_level            | -        | int    | -    | +        | 0                         | 90                                              | [TDLib Log Level](https://core.telegram.org/tdlib/docs/classtd_1_1td__api_1_1set_log_verbosity_level.html) |
 | match_signature      | -        | array  | -    | +        | "[]"                      | ["telegram.messagetext", "telegram.messageurl"] | Match new messages by signature.                                                                           |
 | match_ttl            | -        | string | -    | +        | "1d"                      | "24h"                                           | TTL (Time To Live) for matched signatures.                                                                 |
-| message_edited       | -        | bool   | -    | +        | false                     | true                                            | Include edited messages.       |
+| message_edited       | -        | bool   | -    | +        | false                     | true                                            | Include edited messages.                                                                                   |
 | message_type_fetch   | -        | array  | -    | +        | "[]"                      | ["audio", "document"]                           | Fetch files only for specific message types (audio, document, photo, video, video_note, voice_note).       |
 | message_type_process | -        | array  | -    | +        | "[]"                      | ["audio", "document"]                           | Process only specific message types (audio, document, photo, text, video, video_note, voice_note).         |
 | pool_size            | -        | int    | -    | +        | 100000                    | 10000                                           | Spool arriving updates.                                                                                    |
@@ -107,7 +107,7 @@ type Telegram struct {
 | storage_optimize     | -        | bool   | -    | +        | true                      | false                                           | Enable/disable storage optimization (clean old data).                                                      |
 | storage_period       | -        | string | -    | +        | "1h"                      | "24h"                                           | Storage optimization interval.                                                                             |
 | user_database        | -        | string | -    | +        | <PLUGIN_DIR>/users.sqlite | "/path/to/users.db"                             | Path to internal users database.                                                                           |
-| user_save            | -        | bool   | -    | +        | true                      | false                                           | Enable/disable passive user logging.                                                                       |
+| user_save            | -        | bool   | -    | +        | false                     | true                                            | Enable/disable passive user logging.                                                                       |
 
 
 ### Flow sample:

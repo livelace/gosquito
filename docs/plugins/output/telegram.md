@@ -38,7 +38,7 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 | proxy_password   | -        | string | +    | -        | ""                        | "a1eXPass"                    | Proxy password.                                                                                            |
 | proxy_type       | -        | string | -    | +        | "socks"                   | "http"                        | Use original file names with random generated suffix.                                                      |
 | send_album       | -        | bool   | -    | +        | true                      | false                         | Group files into an album (2-10 files).                                                                    |
-| send_delay       | -        | string | -    | +        | "1s"                      | "30s"                         | Delay between sending.                                                                                  |
+| send_delay       | -        | string | -    | +        | "1s"                      | "30s"                         | Delay between sending.                                                                                     |
 | send_timeout     | -        | string | -    | +        | "1h"                      | "24h"                         | Maximum time for sending.                                                                                  |
 | session_ttl      | -        | int    | -    | +        | 366                       | 90                            | Session TTL (days).                                                                                        |
 | status_enable    | -        | bool   | -    | +        | true                      | false                         | Enable/disable session status.                                                                             |
@@ -46,7 +46,7 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 | storage_optimize | -        | bool   | -    | +        | true                      | false                         | Enable/disable storage optimization (clean old data).                                                      |
 | storage_period   | -        | string | -    | +        | "1h"                      | "24h"                         | Storage optimization interval.                                                                             |
 | user_database    | -        | string | -    | +        | <PLUGIN_DIR>/users.sqlite | "/path/to/users.db"           | Path to internal users database.                                                                           |
-| user_save        | -        | bool   | -    | +        | true                      | false                         | Enable/disable passive user logging.                                                                       |
+| user_save        | -        | bool   | -    | +        | false                     | true                          | Enable/disable passive user logging.                                                                       |
 
 
 ### Flow sample:

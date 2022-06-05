@@ -266,7 +266,7 @@ type Rss struct {
 
 type Telegram struct {
 	CHATID               string
-	CHATNAME             string
+	CHATTARGET           string
 	CHATTYPE             string
 	CHATTITLE            string
 	CHATCLIENTDATA       string
@@ -276,7 +276,8 @@ type Telegram struct {
 	CHATMEMBERONLINE     string
 	CHATMESSAGETTL       string
 	CHATUNREADCOUNT      string
-	CHATTIMESTAMP        string
+	CHATFIRSTSEEN        string
+	CHATLASTSEEN         string
 
 	MESSAGEID        string
 	MESSAGEMEDIA     []string
@@ -305,7 +306,8 @@ type Telegram struct {
 	USERSUPPORT       string
 	USERVERIFIED      string
 	USERRESTRICTION   string
-	USERTIMESTAMP     string
+	USERFIRSTSEEN     string
+	USERLASTSEEN      string
 }
 
 type TelegramSendingStatus struct {

@@ -59,12 +59,12 @@ const (
 	DEFAULT_STORAGE_OPTIMIZE = true
 	DEFAULT_STORAGE_PERIOD   = "1h"
 	DEFAULT_USER_DB          = "users.sqlite"
-	DEFAULT_USER_SAVE        = true
+	DEFAULT_USER_SAVE        = false
 
 	MAX_INSTANCE_PER_APP = 1
 
 	SQL_FIND_CHAT = `
-      SELECT * FROM chats WHERE name=?
+      SELECT * FROM chats WHERE target=?
     `
 
 	SQL_COUNT_CHAT = `
@@ -80,33 +80,33 @@ const (
     `
 
 	SQL_UPDATE_CHAT = `
-      INSERT INTO chats (id, name, type, title, 
+      INSERT INTO chats (id, target, type, title, 
         client_data, has_protected_content,
         last_inbox_id, last_outbox_id, message_ttl,
-        unread_count, timestamp
+        unread_count, first_seen, last_seen
       ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
-        name=?, type=?, title=?, 
+        type=?, title=?, 
         client_data=?, has_protected_content=?,
         last_inbox_id=?, last_outbox_id=?, message_ttl=?,
-        unread_count=?, timestamp=?
+        unread_count=?, last_seen=?
     `
 
 	SQL_UPDATE_USER = `
-      INSERT INTO users (id, version, username, type, lang, 
+      INSERT INTO users (id, version, name, type, lang, 
         first_name, last_name, phone_number, status, 
         is_accessible, is_contact, is_fake, is_mutual_contact, 
         is_scam, is_support, is_verified, restriction_reason, 
-        timestamp
+        first_seen, last_seen
       ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
 
 	SQL_CHATS_SCHEMA = `
       CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
+        target TEXT NOT NULL,
         type TEXT NOT NULL,
         title TEXT,
         client_data TEXT,
@@ -115,8 +115,8 @@ const (
         last_outbox_id INTEGER NOT NULL,
         message_ttl INTEGER NOT NULL,
         unread_count INTEGER NOT NULL,
-        timestamp TEXT NOT NULL,
-        UNIQUE(id, name)
+        first_seen TEXT NOT NULL,
+        last_seen TEXT NOT NULL
       )
     `
 
@@ -124,7 +124,7 @@ const (
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER NOT NULL,
         version INTEGER NOT NULL,
-        username TEXT,
+        name TEXT,
         type TEXT NOT NULL,
         lang TEXT,
         first_name TEXT,
@@ -134,13 +134,13 @@ const (
         is_accessible INTEGER NOT NULL,
         is_contact INTEGER NOT NULL,
         is_fake INTEGER NOT NULL,
-
         is_mutual_contact INTEGER NOT NULL,
         is_scam INTEGER NOT NULL,
         is_support INTEGER NOT NULL,
         is_verified INTEGER NOT NULL,
         restriction_reason TEXT,
-        timestamp TEXT NOT NULL,
+        first_seen TEXT NOT NULL,
+        last_seen TEXT NOT NULL,
         UNIQUE(id, version)
       )
     `
@@ -234,9 +234,9 @@ func checkFileSize(p *Plugin, datum *core.Datum, fileName string, fileSize int32
 		return false
 	}
 
-    if int64(fileSize) < p.OptionFetchMaxSize {
-        return true
-    }
+	if int64(fileSize) < p.OptionFetchMaxSize {
+		return true
+	}
 
 	return false
 }
@@ -334,25 +334,25 @@ func downloadFileDetectMimeWriteMeta(p *Plugin, datum *core.Datum, fileId string
 	localFile, err := downloadFile(p, fileId, fileName)
 
 	if err == nil && p.OptionFetchMetadata {
-        // Mime detection is not strictly mandatory.
+		// Mime detection is not strictly mandatory.
 		if m, e := core.GetFileMimeType(localFile); e == nil {
 			datum.TELEGRAM.MESSAGEMIME = m.String()
 		}
 
-        // Return false if we cannot write metadata.
-        if e := writeMetadata(p, localFile, &datum.TELEGRAM); e == nil {
-            return true
-        }
-        
-        return false
+		// Return false if we cannot write metadata.
+		if e := writeMetadata(p, localFile, &datum.TELEGRAM); e == nil {
+			return true
+		}
+
+		return false
 
 	} else if err == nil {
 		datum.TELEGRAM.MESSAGEMEDIA = append(datum.TELEGRAM.MESSAGEMEDIA, localFile)
-        return true
+		return true
 
 	} else {
-        return false
-    }
+		return false
+	}
 }
 
 func getAudioMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessageAudio {
@@ -383,16 +383,17 @@ func getVideoMessage(p *Plugin, caption *client.FormattedText, file string) *cli
 	}
 }
 
-func getChat(p *Plugin, chatName string) core.Telegram {
+func getChat(p *Plugin, chatTarget string) core.Telegram {
 	d := core.Telegram{}
 
 	stmt, _ := p.ChatDbClient.Prepare(SQL_FIND_CHAT)
 	defer stmt.Close()
-	stmt.QueryRow(chatName).Scan(&d.CHATID, &d.CHATNAME,
+	stmt.QueryRow(chatTarget).Scan(
+		&d.CHATID, &d.CHATTARGET,
 		&d.CHATTYPE, &d.CHATTITLE, &d.CHATCLIENTDATA,
 		&d.CHATPROTECTEDCONTENT, &d.CHATLASTINBOXID,
-		&d.CHATLASTOUTBOXID, &d.CHATMESSAGETTL, &d.CHATUNREADCOUNT,
-		&d.CHATTIMESTAMP,
+		&d.CHATLASTOUTBOXID, &d.CHATMESSAGETTL,
+		&d.CHATUNREADCOUNT, &d.CHATFIRSTSEEN, &d.CHATLASTSEEN,
 	)
 
 	return d
@@ -448,25 +449,25 @@ func getClient(p *Plugin) (*client.Client, error) {
 	}
 }
 
-func getPrivateChatId(p *Plugin, name string) (int64, error) {
-	chatInfo, chatInfoErr := p.TdlibClient.CheckChatInviteLink(&client.CheckChatInviteLinkRequest{InviteLink: name})
-	chat, err := p.TdlibClient.JoinChatByInviteLink(&client.JoinChatByInviteLinkRequest{InviteLink: name})
+func getPrivateChatId(p *Plugin, chatTarget string) (int64, error) {
+	chatInfo, chatInfoErr := p.TdlibClient.CheckChatInviteLink(&client.CheckChatInviteLinkRequest{InviteLink: chatTarget})
+	chat, err := p.TdlibClient.JoinChatByInviteLink(&client.JoinChatByInviteLinkRequest{InviteLink: chatTarget})
 
 	if err != nil && err.Error() == "400 USER_ALREADY_PARTICIPANT" && chatInfoErr == nil {
 		return chatInfo.ChatId, nil
 
 	} else if err != nil {
-		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), name, err)
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
 
 	} else {
 		return chat.Id, nil
 	}
 }
 
-func getPublicChatId(p *Plugin, name string) (int64, error) {
-	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: name})
+func getPublicChatId(p *Plugin, chatTarget string) (int64, error) {
+	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: chatTarget})
 	if err != nil {
-		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), name, err)
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
 	} else {
 		return chat.Id, nil
 	}
@@ -481,7 +482,7 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 		&d.USERTYPE, &d.USERLANG, &d.USERFIRSTNAME, &d.USERLASTNAME,
 		&d.USERPHONE, &d.USERSTATUS, &d.USERACCESSIBLE, &d.USERCONTACT,
 		&d.USERFAKE, &d.USERMUTUALCONTACT, &d.USERSCAM, &d.USERSUPPORT,
-		&d.USERVERIFIED, &d.USERRESTRICTION, &d.USERTIMESTAMP)
+		&d.USERVERIFIED, &d.USERRESTRICTION, &d.USERFIRSTSEEN, &d.USERLASTSEEN)
 
 	return d
 }
@@ -495,14 +496,14 @@ func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.Mess
 			return false
 		}
 
-        if (p.OptionFetchAll || p.OptionFetchAudio) && checkFileSize(p, datum, audio.FileName, audio.Audio.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, audio.Audio.Remote.Id, audio.FileName)
-        }
+		if (p.OptionFetchAll || p.OptionFetchAudio) && checkFileSize(p, datum, audio.FileName, audio.Audio.Size) {
+			return downloadFileDetectMimeWriteMeta(p, datum, audio.Audio.Remote.Id, audio.FileName)
+		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -512,13 +513,13 @@ func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.Mess
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
 
 		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
+			return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -531,13 +532,13 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 		}
 
 		if (p.OptionFetchAll || p.OptionFetchDocument) && checkFileSize(p, datum, document.FileName, document.Document.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, document.Document.Remote.Id, document.FileName)
+			return downloadFileDetectMimeWriteMeta(p, datum, document.Document.Remote.Id, document.FileName)
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -554,10 +555,10 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 			}
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -570,13 +571,13 @@ func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.Mess
 		}
 
 		if (p.OptionFetchAll || p.OptionFetchVideo) && checkFileSize(p, datum, video.FileName, video.Video.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, video.Video.Remote.Id, video.FileName)
+			return downloadFileDetectMimeWriteMeta(p, datum, video.Video.Remote.Id, video.FileName)
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -585,13 +586,13 @@ func handleMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.
 		datum.TELEGRAM.MESSAGETEXT = ""
 
 		if (p.OptionFetchAll || p.OptionFetchVideoNote) && checkFileSize(p, datum, "video_note", note.Video.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, note.Video.Remote.Id, "")
+			return downloadFileDetectMimeWriteMeta(p, datum, note.Video.Remote.Id, "")
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -600,13 +601,13 @@ func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
 
 		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
-		    return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
+			return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
 		}
 
-        return true
+		return true
 	}
 
-    return false
+	return false
 }
 
 func initChatsDb(p *Plugin) (*sql.DB, error) {
@@ -654,14 +655,14 @@ func inputAds(p *Plugin) {
 					p.InputDatumChannel <- &core.Datum{
 						FLOW:       p.Flow.FlowName,
 						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATNAME,
+						SOURCE:     chatData.CHATTARGET,
 						TIME:       messageTime,
 						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 						UUID:       u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
-							CHATNAME:             chatData.CHATNAME,
+							CHATTARGET:           chatData.CHATTARGET,
 							CHATTYPE:             chatData.CHATTYPE,
 							CHATTITLE:            chatData.CHATTITLE,
 							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
@@ -670,7 +671,8 @@ func inputAds(p *Plugin) {
 							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
 							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
 							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
+							CHATFIRSTSEEN:        chatData.CHATFIRSTSEEN,
+							CHATLASTSEEN:         chatData.CHATLASTSEEN,
 
 							MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
 							MESSAGEMEDIA:     make([]string, 0),
@@ -698,7 +700,8 @@ func inputAds(p *Plugin) {
 							USERSUPPORT:       "",
 							USERVERIFIED:      "",
 							USERRESTRICTION:   "",
-							USERTIMESTAMP:     "",
+							USERFIRSTSEEN:     "",
+							USERLASTSEEN:      "",
 						},
 
 						WARNINGS: make([]string, 0),
@@ -810,14 +813,14 @@ func inputDatum(p *Plugin) {
 					datum = core.Datum{
 						FLOW:       p.Flow.FlowName,
 						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATNAME,
+						SOURCE:     chatData.CHATTARGET,
 						TIME:       messageTime,
 						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 						UUID:       u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
-							CHATNAME:             chatData.CHATNAME,
+							CHATTARGET:           chatData.CHATTARGET,
 							CHATTYPE:             chatData.CHATTYPE,
 							CHATTITLE:            chatData.CHATTITLE,
 							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
@@ -827,7 +830,8 @@ func inputDatum(p *Plugin) {
 							CHATMEMBERONLINE:     chatData.CHATMEMBERONLINE,
 							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
 							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-							CHATTIMESTAMP:        chatData.CHATTIMESTAMP,
+							CHATFIRSTSEEN:        chatData.CHATFIRSTSEEN,
+							CHATLASTSEEN:         chatData.CHATLASTSEEN,
 
 							MESSAGEID:        fmt.Sprintf("%v", messageId),
 							MESSAGEMEDIA:     make([]string, 0),
@@ -855,7 +859,8 @@ func inputDatum(p *Plugin) {
 							USERSUPPORT:       userData.USERSUPPORT,
 							USERVERIFIED:      userData.USERVERIFIED,
 							USERRESTRICTION:   userData.USERRESTRICTION,
-							USERTIMESTAMP:     userData.USERTIMESTAMP,
+							USERFIRSTSEEN:     userData.USERFIRSTSEEN,
+							USERLASTSEEN:      userData.USERLASTSEEN,
 						},
 
 						WARNINGS: make([]string, 0),
@@ -899,10 +904,10 @@ func inputDatum(p *Plugin) {
 	}
 }
 
-func joinToChat(p *Plugin, chatId int64, chatName string) error {
+func joinToChat(p *Plugin, chatId int64, chatTarget string) error {
 	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatName, err)
+		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatTarget, err)
 	}
 	return nil
 }
@@ -1019,7 +1024,7 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 				}
 			}
 			sendMessageAlbum(p, chatId, content)
-            time.Sleep(p.OptionSendDelay * time.Second)
+			time.Sleep(p.OptionSendDelay * time.Second)
 		}
 
 	} else if len(files) > 0 {
@@ -1034,7 +1039,7 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 			case "video":
 				sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file))
 			}
-            time.Sleep(p.OptionSendDelay * time.Second)
+			time.Sleep(p.OptionSendDelay * time.Second)
 		}
 	}
 }
@@ -1077,7 +1082,7 @@ func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) {
 		core.LogOutputPlugin(p.LogFields, "send",
 			fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
 	}
-    time.Sleep(p.OptionSendDelay * time.Second)
+	time.Sleep(p.OptionSendDelay * time.Second)
 }
 
 func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageContent) {
@@ -1243,43 +1248,38 @@ func storageOptimizer(p *Plugin) {
 	}
 }
 
-func sqlUpdateChat(p *Plugin, chatId int64, chatName string) error {
+func sqlUpdateChat(p *Plugin, chatId int64, chatTarget string) error {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
 	tx, err := p.ChatDbClient.Begin()
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatName, err)
+		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatTarget, err)
 	}
 
 	chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatName, err)
-	}
-
-	// Use chat title if chat name is not specified.
-	if chatName == "" {
-		chatName = chat.Title
+		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
 	}
 
 	stmt, err := p.ChatDbClient.Prepare(SQL_UPDATE_CHAT)
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatName, err)
+		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatTarget, err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(chat.Id,
-		chatName, chat.Type.ChatTypeType(),
+		chatTarget, chat.Type.ChatTypeType(),
 		chat.Title, chat.ClientData, chat.HasProtectedContent,
 		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
-		chat.MessageTtl, chat.UnreadCount, currentTime,
+		chat.MessageTtl, chat.UnreadCount, currentTime, currentTime,
 
-		chatName, chat.Type.ChatTypeType(),
+		chat.Type.ChatTypeType(),
 		chat.Title, chat.ClientData, chat.HasProtectedContent,
 		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
 		chat.MessageTtl, chat.UnreadCount, currentTime,
 	)
 
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), chatName, err)
+		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), chatTarget, err)
 	}
 
 	return tx.Commit()
@@ -1287,15 +1287,21 @@ func sqlUpdateChat(p *Plugin, chatId int64, chatName string) error {
 
 func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
-	oldUser := getUser(p, user.Id)
 	userVersion := 0
-
+	
 	isNew := false
 	isChanged := false
+
+    firstSeen := fmt.Sprintf("%v", currentTime)
+    lastSeen := fmt.Sprintf("%v", currentTime)
+    
+    oldUser := getUser(p, user.Id)
 
 	if oldUser.USERID == "" {
 		isNew = true
 	} else {
+        firstSeen = oldUser.USERFIRSTSEEN
+
 		if user.Username != oldUser.USERNAME || user.Type.UserTypeType() != oldUser.USERTYPE ||
 			user.LanguageCode != oldUser.USERLANG || user.FirstName != oldUser.USERFIRSTNAME ||
 			user.LastName != oldUser.USERLASTNAME || user.PhoneNumber != oldUser.USERPHONE {
@@ -1353,7 +1359,7 @@ func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 			user.Status.UserStatusType(), user.HaveAccess,
 			user.IsContact, user.IsFake, user.IsMutualContact,
 			user.IsScam, user.IsSupport, user.IsVerified,
-			user.RestrictionReason, currentTime,
+			user.RestrictionReason, firstSeen, lastSeen,
 		)
 
 		if err != nil {
@@ -1406,8 +1412,8 @@ type Plugin struct {
 	TdlibClient *client.Client
 	TdlibParams *client.TdlibParameters
 
-	ChatByIdDataCache map[int64]*core.Telegram
-	ChatByNameIdCache map[string]int64
+	ChatByIdDataCache   map[int64]*core.Telegram
+	ChatByTargetIdCache map[string]int64
 
 	OptionAdsEnable             bool
 	OptionAdsPeriod             int64
@@ -1691,7 +1697,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 	for _, item := range data {
 		for _, chatName := range p.OptionOutput {
-			chatId := p.ChatByNameIdCache[chatName]
+			chatId := p.ChatByTargetIdCache[chatName]
 
 			// Construct file caption.
 			var fileCaption client.FormattedText
@@ -2665,24 +2671,24 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Update and join to chats.
 	plugin.ChatByIdDataCache = make(map[int64]*core.Telegram, 0)
-	plugin.ChatByNameIdCache = make(map[string]int64, 0)
+	plugin.ChatByTargetIdCache = make(map[string]int64, 0)
 
-	for _, chatName := range plugin.OptionTargetChat {
+	for _, chatTarget := range plugin.OptionTargetChat {
 		var chatId int64
 		var err error
 
-		chatData := getChat(&plugin, chatName)
+		chatData := getChat(&plugin, chatTarget)
 
 		// Join only to unknown chats (api limits).
 		if chatData.CHATID == "" {
 			chatIdRegexp := regexp.MustCompile(`^[0-9]+$`)
 
-			if chatIdRegexp.Match([]byte(chatName)) {
-				chatId, err = strconv.ParseInt(chatName, 10, 64)
-			} else if strings.Contains(chatName, "t.me/+") {
-				chatId, err = getPrivateChatId(&plugin, chatName)
+			if chatIdRegexp.Match([]byte(chatTarget)) {
+				chatId, err = strconv.ParseInt(chatTarget, 10, 64)
+			} else if strings.Contains(chatTarget, "t.me/+") {
+				chatId, err = getPrivateChatId(&plugin, chatTarget)
 			} else {
-				chatId, err = getPublicChatId(&plugin, chatName)
+				chatId, err = getPublicChatId(&plugin, chatTarget)
 			}
 
 			if err != nil {
@@ -2690,26 +2696,26 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				continue
 			}
 
-			err = sqlUpdateChat(&plugin, chatId, chatName)
+			err = sqlUpdateChat(&plugin, chatId, chatTarget)
 			if err != nil {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
 
-			err = joinToChat(&plugin, chatId, chatName)
+			err = joinToChat(&plugin, chatId, chatTarget)
 			if err != nil {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
 
 			// Get updated chat again.
-			chatData = getChat(&plugin, chatName)
+			chatData = getChat(&plugin, chatTarget)
 		} else {
 			chatId, _ = strconv.ParseInt(chatData.CHATID, 10, 64)
 		}
 
 		plugin.ChatByIdDataCache[chatId] = &chatData
-		plugin.ChatByNameIdCache[chatName] = chatId
+		plugin.ChatByTargetIdCache[chatTarget] = chatId
 	}
 
 	// Quit if there are no chats for join.
