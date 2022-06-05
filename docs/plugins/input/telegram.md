@@ -9,7 +9,7 @@ This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Teleg
 ```go
 type Telegram struct {
 	CHATID               string
-	CHATNAME             string
+	CHATSOURCE           string
 	CHATTYPE             string
 	CHATTITLE            string
 	CHATCLIENTDATA       string
