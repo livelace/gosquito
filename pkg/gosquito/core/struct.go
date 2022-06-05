@@ -266,7 +266,7 @@ type Rss struct {
 
 type Telegram struct {
 	CHATID               string
-	CHATTARGET           string
+	CHATSOURCE           string
 	CHATTYPE             string
 	CHATTITLE            string
 	CHATCLIENTDATA       string

@@ -64,7 +64,7 @@ const (
 	MAX_INSTANCE_PER_APP = 1
 
 	SQL_FIND_CHAT = `
-      SELECT * FROM chats WHERE target=?
+      SELECT * FROM chats WHERE source=?
     `
 
 	SQL_COUNT_CHAT = `
@@ -80,7 +80,7 @@ const (
     `
 
 	SQL_UPDATE_CHAT = `
-      INSERT INTO chats (id, target, type, title, 
+      INSERT INTO chats (id, source, type, title, 
         client_data, has_protected_content,
         last_inbox_id, last_outbox_id, message_ttl,
         unread_count, first_seen, last_seen
@@ -106,7 +106,7 @@ const (
 	SQL_CHATS_SCHEMA = `
       CREATE TABLE IF NOT EXISTS chats (
         id INTEGER PRIMARY KEY,
-        target TEXT NOT NULL,
+        source TEXT NOT NULL,
         type TEXT NOT NULL,
         title TEXT,
         client_data TEXT,
@@ -383,13 +383,13 @@ func getVideoMessage(p *Plugin, caption *client.FormattedText, file string) *cli
 	}
 }
 
-func getChat(p *Plugin, chatTarget string) core.Telegram {
+func getChat(p *Plugin, chatSource string) core.Telegram {
 	d := core.Telegram{}
 
 	stmt, _ := p.ChatDbClient.Prepare(SQL_FIND_CHAT)
 	defer stmt.Close()
-	stmt.QueryRow(chatTarget).Scan(
-		&d.CHATID, &d.CHATTARGET,
+	stmt.QueryRow(chatSource).Scan(
+		&d.CHATID, &d.CHATSOURCE,
 		&d.CHATTYPE, &d.CHATTITLE, &d.CHATCLIENTDATA,
 		&d.CHATPROTECTEDCONTENT, &d.CHATLASTINBOXID,
 		&d.CHATLASTOUTBOXID, &d.CHATMESSAGETTL,
@@ -449,25 +449,25 @@ func getClient(p *Plugin) (*client.Client, error) {
 	}
 }
 
-func getPrivateChatId(p *Plugin, chatTarget string) (int64, error) {
-	chatInfo, chatInfoErr := p.TdlibClient.CheckChatInviteLink(&client.CheckChatInviteLinkRequest{InviteLink: chatTarget})
-	chat, err := p.TdlibClient.JoinChatByInviteLink(&client.JoinChatByInviteLinkRequest{InviteLink: chatTarget})
+func getPrivateChatId(p *Plugin, chatSource string) (int64, error) {
+	chatInfo, chatInfoErr := p.TdlibClient.CheckChatInviteLink(&client.CheckChatInviteLinkRequest{InviteLink: chatSource})
+	chat, err := p.TdlibClient.JoinChatByInviteLink(&client.JoinChatByInviteLinkRequest{InviteLink: chatSource})
 
 	if err != nil && err.Error() == "400 USER_ALREADY_PARTICIPANT" && chatInfoErr == nil {
 		return chatInfo.ChatId, nil
 
 	} else if err != nil {
-		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatSource, err)
 
 	} else {
 		return chat.Id, nil
 	}
 }
 
-func getPublicChatId(p *Plugin, chatTarget string) (int64, error) {
-	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: chatTarget})
+func getPublicChatId(p *Plugin, chatSource string) (int64, error) {
+	chat, err := p.TdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{Username: chatSource})
 	if err != nil {
-		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
+		return 0, fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatSource, err)
 	} else {
 		return chat.Id, nil
 	}
@@ -655,14 +655,14 @@ func inputAds(p *Plugin) {
 					p.InputDatumChannel <- &core.Datum{
 						FLOW:       p.Flow.FlowName,
 						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATTARGET,
+						SOURCE:     chatData.CHATSOURCE,
 						TIME:       messageTime,
 						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 						UUID:       u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
-							CHATTARGET:           chatData.CHATTARGET,
+							CHATSOURCE:           chatData.CHATSOURCE,
 							CHATTYPE:             chatData.CHATTYPE,
 							CHATTITLE:            chatData.CHATTITLE,
 							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
@@ -813,14 +813,14 @@ func inputDatum(p *Plugin) {
 					datum = core.Datum{
 						FLOW:       p.Flow.FlowName,
 						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATTARGET,
+						SOURCE:     chatData.CHATSOURCE,
 						TIME:       messageTime,
 						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
 						UUID:       u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
-							CHATTARGET:           chatData.CHATTARGET,
+							CHATSOURCE:           chatData.CHATSOURCE,
 							CHATTYPE:             chatData.CHATTYPE,
 							CHATTITLE:            chatData.CHATTITLE,
 							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
@@ -904,10 +904,10 @@ func inputDatum(p *Plugin) {
 	}
 }
 
-func joinToChat(p *Plugin, chatId int64, chatTarget string) error {
+func joinToChat(p *Plugin, chatId int64, chatSource string) error {
 	_, err := p.TdlibClient.JoinChat(&client.JoinChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatTarget, err)
+		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatSource, err)
 	}
 	return nil
 }
@@ -1248,26 +1248,26 @@ func storageOptimizer(p *Plugin) {
 	}
 }
 
-func sqlUpdateChat(p *Plugin, chatId int64, chatTarget string) error {
+func sqlUpdateChat(p *Plugin, chatId int64, chatSource string) error {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
 	tx, err := p.ChatDbClient.Begin()
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatTarget, err)
+		return fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), chatSource, err)
 	}
 
 	chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
 	if err != nil {
-		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatTarget, err)
+		return fmt.Errorf(ERROR_CHAT_GET_ERROR.Error(), chatSource, err)
 	}
 
 	stmt, err := p.ChatDbClient.Prepare(SQL_UPDATE_CHAT)
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatTarget, err)
+		return fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), chatSource, err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec(chat.Id,
-		chatTarget, chat.Type.ChatTypeType(),
+		chatSource, chat.Type.ChatTypeType(),
 		chat.Title, chat.ClientData, chat.HasProtectedContent,
 		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
 		chat.MessageTtl, chat.UnreadCount, currentTime, currentTime,
@@ -1279,7 +1279,7 @@ func sqlUpdateChat(p *Plugin, chatId int64, chatTarget string) error {
 	)
 
 	if err != nil {
-		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), chatTarget, err)
+		return fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), chatSource, err)
 	}
 
 	return tx.Commit()
@@ -1413,7 +1413,7 @@ type Plugin struct {
 	TdlibParams *client.TdlibParameters
 
 	ChatByIdDataCache   map[int64]*core.Telegram
-	ChatByTargetIdCache map[string]int64
+	ChatBySourceIdCache map[string]int64
 
 	OptionAdsEnable             bool
 	OptionAdsPeriod             int64
@@ -1483,11 +1483,11 @@ type Plugin struct {
 	OptionSendDelay             time.Duration
 	OptionSendTimeout           int
 	OptionSessionTTL            int
+	OptionSourceChat            []string
 	OptionStatusEnable          bool
 	OptionStatusPeriod          int64
 	OptionStorageOptimize       bool
 	OptionStoragePeriod         int64
-	OptionTargetChat            []string
 	OptionTimeFormat            string
 	OptionTimeZone              *time.Location
 	OptionTimeout               int
@@ -1697,7 +1697,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 	for _, item := range data {
 		for _, chatName := range p.OptionOutput {
-			chatId := p.ChatByTargetIdCache[chatName]
+			chatId := p.ChatBySourceIdCache[chatName]
 
 			// Construct file caption.
 			var fileCaption client.FormattedText
@@ -2107,7 +2107,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setInput((*pluginConfig.PluginParams)["input"])
 		core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
 
-		plugin.OptionTargetChat = plugin.OptionInput
+		plugin.OptionSourceChat = plugin.OptionInput
 
 		// match_signature.
 		setMatchSignature := func(p interface{}) {
@@ -2333,7 +2333,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOutput((*pluginConfig.PluginParams)["output"])
 		core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
-		plugin.OptionTargetChat = plugin.OptionOutput
+		plugin.OptionSourceChat = plugin.OptionOutput
 
 		// send_album.
 		setSendAlbum := func(p interface{}) {
@@ -2671,24 +2671,24 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Update and join to chats.
 	plugin.ChatByIdDataCache = make(map[int64]*core.Telegram, 0)
-	plugin.ChatByTargetIdCache = make(map[string]int64, 0)
+	plugin.ChatBySourceIdCache = make(map[string]int64, 0)
 
-	for _, chatTarget := range plugin.OptionTargetChat {
+	for _, chatSource := range plugin.OptionSourceChat {
 		var chatId int64
 		var err error
 
-		chatData := getChat(&plugin, chatTarget)
+		chatData := getChat(&plugin, chatSource)
 
 		// Join only to unknown chats (api limits).
 		if chatData.CHATID == "" {
 			chatIdRegexp := regexp.MustCompile(`^[0-9]+$`)
 
-			if chatIdRegexp.Match([]byte(chatTarget)) {
-				chatId, err = strconv.ParseInt(chatTarget, 10, 64)
-			} else if strings.Contains(chatTarget, "t.me/+") {
-				chatId, err = getPrivateChatId(&plugin, chatTarget)
+			if chatIdRegexp.Match([]byte(chatSource)) {
+				chatId, err = strconv.ParseInt(chatSource, 10, 64)
+			} else if strings.Contains(chatSource, "t.me/+") {
+				chatId, err = getPrivateChatId(&plugin, chatSource)
 			} else {
-				chatId, err = getPublicChatId(&plugin, chatTarget)
+				chatId, err = getPublicChatId(&plugin, chatSource)
 			}
 
 			if err != nil {
@@ -2696,26 +2696,26 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				continue
 			}
 
-			err = sqlUpdateChat(&plugin, chatId, chatTarget)
+			err = sqlUpdateChat(&plugin, chatId, chatSource)
 			if err != nil {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
 
-			err = joinToChat(&plugin, chatId, chatTarget)
+			err = joinToChat(&plugin, chatId, chatSource)
 			if err != nil {
 				core.LogInputPlugin(plugin.LogFields, "chat", err)
 				continue
 			}
 
 			// Get updated chat again.
-			chatData = getChat(&plugin, chatTarget)
+			chatData = getChat(&plugin, chatSource)
 		} else {
 			chatId, _ = strconv.ParseInt(chatData.CHATID, 10, 64)
 		}
 
 		plugin.ChatByIdDataCache[chatId] = &chatData
-		plugin.ChatByTargetIdCache[chatTarget] = chatId
+		plugin.ChatBySourceIdCache[chatSource] = chatId
 	}
 
 	// Quit if there are no chats for join.
