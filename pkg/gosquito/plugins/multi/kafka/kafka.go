@@ -1033,9 +1033,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	switch plugin.PluginType {
 	case "input":
-		if plugin.OptionOffset != "" {
-			kafkaConfig["auto.offset.reset"] = plugin.OptionOffset
-		}
+		kafkaConfig["auto.offset.reset"] = plugin.OptionOffset
 		kafkaConfig["group.id"] = plugin.OptionGroupId
 		break
 	case "output":
