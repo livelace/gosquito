@@ -3,7 +3,7 @@
 
 ***gosquito*** ("go" + "mosquito") is a pluggable tool for data
 gathering, data processing and data transmitting to various destinations. 
-Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See [docs](docs/README.md) and [real examples](https://github.com/livelace/gosquito-public) for additional info.
+Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See [docs](docs/README.md) and [examples](https://github.com/livelace/gosquito-public) for additional info.
 
 
 ```mermaid
