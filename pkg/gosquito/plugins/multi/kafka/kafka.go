@@ -378,52 +378,56 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					switch v {
 					case "DATA.TEXTA":
 						itemSignature += item.DATA.TEXTA
-						break
 					case "DATA.TEXTB":
 						itemSignature += item.DATA.TEXTB
-						break
 					case "DATA.TEXTC":
 						itemSignature += item.DATA.TEXTC
-						break
 					case "DATA.TEXTD":
 						itemSignature += item.DATA.TEXTD
-						break
 					case "DATA.TEXTE":
 						itemSignature += item.DATA.TEXTE
-						break
 					case "DATA.TEXTF":
 						itemSignature += item.DATA.TEXTF
-						break
 					case "DATA.TEXTG":
 						itemSignature += item.DATA.TEXTG
-						break
 					case "DATA.TEXTH":
 						itemSignature += item.DATA.TEXTH
-						break
 					case "DATA.TEXTI":
 						itemSignature += item.DATA.TEXTI
-						break
 					case "DATA.TEXTJ":
 						itemSignature += item.DATA.TEXTJ
-						break
 					case "DATA.TEXTK":
 						itemSignature += item.DATA.TEXTK
-						break
 					case "DATA.TEXTL":
 						itemSignature += item.DATA.TEXTL
-						break
 					case "DATA.TEXTM":
 						itemSignature += item.DATA.TEXTM
-						break
 					case "DATA.TEXTN":
 						itemSignature += item.DATA.TEXTN
-						break
 					case "DATA.TEXTO":
 						itemSignature += item.DATA.TEXTO
-						break
 					case "DATA.TEXTP":
 						itemSignature += item.DATA.TEXTP
-						break
+					case "DATA.TEXTQ":
+						itemSignature += item.DATA.TEXTQ
+					case "DATA.TEXTR":
+						itemSignature += item.DATA.TEXTR
+					case "DATA.TEXTS":
+						itemSignature += item.DATA.TEXTS
+					case "DATA.TEXTT":
+						itemSignature += item.DATA.TEXTT
+					case "DATA.TEXTU":
+						itemSignature += item.DATA.TEXTU
+					case "DATA.TEXTV":
+						itemSignature += item.DATA.TEXTV
+					case "DATA.TEXTW":
+						itemSignature += item.DATA.TEXTW
+					case "DATA.TEXTX":
+						itemSignature += item.DATA.TEXTX
+					case "DATA.TEXTY":
+						itemSignature += item.DATA.TEXTY
+					case "DATA.TEXTZ":
+						itemSignature += item.DATA.TEXTZ
 					}
 				}
 

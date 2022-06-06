@@ -225,16 +225,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					switch v {
 					case "RSS.CONTENT":
 						itemSignature += item.Content
-						break
 					case "RSS.DESCRIPTION":
 						itemSignature += item.Description
-						break
 					case "RSS.LINK":
 						itemSignature += item.Link
-						break
 					case "RSS.TITLE":
 						itemSignature += item.Title
-						break
 					}
 				}
 

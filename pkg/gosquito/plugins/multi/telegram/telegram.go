@@ -1590,13 +1590,10 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				switch v {
 				case "TELEGRAM.MESSAGESENDERID":
 					itemSignature += item.TELEGRAM.MESSAGESENDERID
-					break
 				case "TELEGRAM.MESSAGETEXT":
 					itemSignature += item.TELEGRAM.MESSAGETEXT
-					break
 				case "TELEGRAM.MESSAGEURL":
 					itemSignature += item.TELEGRAM.MESSAGEURL
-					break
 				}
 			}
 
@@ -2120,10 +2117,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchSignature((*pluginConfig.PluginParams)["match_signature"])
 		core.ShowPluginParam(plugin.LogFields, "match_signature", plugin.OptionMatchSignature)
 		core.SliceStringToUpper(&plugin.OptionMatchSignature)
-
-		for i := 0; i < len(plugin.OptionMatchSignature); i++ {
-			plugin.OptionMatchSignature[i] = strings.ToLower(plugin.OptionMatchSignature[i])
-		}
 
 		// match_ttl.
 		setMatchTTL := func(p interface{}) {

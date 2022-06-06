@@ -332,7 +332,6 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					switch v {
 					case "RESTY.BODY":
 						itemSignature += itemBody
-						break
 					}
 				}
 

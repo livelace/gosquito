@@ -23,7 +23,7 @@ type Data struct {
 
     TEXTA*  string
     ...
-    TEXTP*  string
+    TEXTZ*  string
 }
 ```
 

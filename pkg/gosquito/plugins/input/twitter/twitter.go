@@ -238,7 +238,6 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					switch v {
 					case "TWITTER.TEXT":
 						itemSignature += item.Text
-						break
 					}
 				}
 
