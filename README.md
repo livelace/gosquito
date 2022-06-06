@@ -77,7 +77,6 @@ graph TD;
 ### ToDo:
 
 0. prometheus: last message received timestamp.
-1. credentials: add vault support.
 2. prometheus: extend metrics with invalid flows.
 3. core: cron mode.
 4. regexp/ml: storage of interests.
