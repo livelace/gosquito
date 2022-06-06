@@ -98,11 +98,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		os.Exit(1)
 	}
 
-	// -----------------------------------------------------------------------------------------------------------------
-	// Need for Telegram instance amount restrictions.
-	// Only one Telegram plugin instance available right now (since tdlib 1.7.0).
-	//telegramPluginTotal := 0
-
 	// Each file produces only one "flow" configuration.
 	for _, file := range files {
 		// ---------------------------------------------------------------------------------------------------------
@@ -323,14 +318,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
-			//if telegramPluginTotal < telegramMulti.MAX_INSTANCE_PER_APP {
-			//	inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
-			//	telegramPluginTotal += 1
-			//} else {
-			//	logInputOutputPluginError(flowBody.Flow.Input.Plugin, "input", core.LOG_PLUGIN_INIT,
-			//		fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramPluginTotal))
-			//	continue
-			//}
             inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
 		case "twitter":
 			inputPlugin, err = twitterIn.Init(&inputPluginConfig)
@@ -469,14 +456,6 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
 			case "telegram":
-				//if telegramPluginTotal < telegramMulti.MAX_INSTANCE_PER_APP {
-				//	outputPlugin, err = telegramMulti.Init(&outputPluginConfig)
-				//	telegramPluginTotal += 1
-				//} else {
-				//	logInputOutputPluginError(flowBody.Flow.Output.Plugin, "output", core.LOG_PLUGIN_INIT,
-				//		fmt.Errorf(core.ERROR_PLUGIN_MAX_INSTANCE.Error(), telegramPluginTotal))
-				//	continue
-				//}
                 outputPlugin, err = telegramMulti.Init(&outputPluginConfig)
 			default:
 				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, flowBody.Flow.Output.Plugin)
