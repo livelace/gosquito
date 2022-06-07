@@ -281,7 +281,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 			sourceLastTime = time.Unix(0, 0)
 		}
 
-		// DataItem template for query formatting.
+		// Datum template for query formatting.
 		itemTpl := &core.Datum{
 			FLOW:       p.Flow.FlowName,
 			PLUGIN:     p.PluginName,

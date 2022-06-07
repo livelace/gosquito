@@ -141,8 +141,8 @@ const (
 # GOMAXPROCS.
 #proc_num                = <cpu_cores>
 
-# Time settings for DataItem.Timeformat (DataItem.Time keeps original source time unchanged). 
-# It needs for representing DataItem datetime in user-defined format.
+# Time settings for Datum.Timeformat (Datum.Time keeps original source time unchanged). 
+# It needs for representing Datum datetime in user-defined format.
 #time_format             = "15:04 02.01.2006"
 #time_zone               = "UTC"
 

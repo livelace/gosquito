@@ -12,13 +12,13 @@
 
 ### Plugin parameters:
 
-| Param       | Required |  Type  | Cred | Template | Text Template | Default |        Example        | Description                                                                                                        |
+| Param       | Required | Type   | Cred | Template | Text Template | Default | Example               | Description                                                                                                        |
 |:------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:---------------------:|:-------------------------------------------------------------------------------------------------------------------|
-| attachments |    -     |  map   |  -   |    +     |       -       |  map[]  |      see example      | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)                                     |
-| files       |    -     | array  |  -   |    +     |       -       |   ""    |    ["data.array0"]    | List of [DataItem](../../concept.md) fields with files paths.                                                      |
-| message     |    -     | string |  -   |    +     |       +       |   ""    |  "{{ .DATA.TEXT0 }}"  | Message text.                                                                                                      |
-| **output**  |    +     | array  |  -   |    +     |       -       |   []    | ["news", "@livelace"] | List of channels/users.                                                                                            |
-| **token**   |    +     | string |  +   |    -     |       -       |   ""    |     "xoxp-1-2-3"      | [Slack Internal App Token](https://slack.com/intl/en-ru/help/articles/215770388-Create-and-regenerate-API-tokens). |
+| attachments | -        | map    | -    | +        | -             | map[]   | see example           | [Slack Message Attachments](https://api.slack.com/messaging/composing/layouts)                                     |
+| files       | -        | array  | -    | +        | -             | ""      | ["data.array0"]       | List of [Datum](../../concept.md) fields with files paths.                                                         |
+| message     | -        | string | -    | +        | +             | ""      | "{{ .DATA.TEXT0 }}"   | Message text.                                                                                                      |
+| **output**  | +        | array  | -    | +        | -             | []      | ["news", "@livelace"] | List of channels/users.                                                                                            |
+| **token**   | +        | string | +    | -        | -             | ""      | "xoxp-1-2-3"          | [Slack Internal App Token](https://slack.com/intl/en-ru/help/articles/215770388-Create-and-regenerate-API-tokens). |
 
 
 ### Attachments parameters:

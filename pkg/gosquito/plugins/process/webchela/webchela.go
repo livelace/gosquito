@@ -355,11 +355,11 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 	// Extract URLs from data items into single flat slice.
 	// This is needed for batch slicing (process URLs in sized blocks/batches).
-	// Example: every "DataItem" has filled ["data.array0", "data.array1"] with URLs,
-	// we extract all URLs from all "DataItems" into one flat slice: [url0, url1 ... urlN].
-	// To recognize boundaries between DataItems in slice we save "metadata".
+	// Example: every "Datum" has filled ["data.array0", "data.array1"] with URLs,
+	// we extract all URLs from all "Datums" into one flat slice: [url0, url1 ... urlN].
+	// To recognize boundaries between Datums in slice we save "metadata".
 	// Example metadata: [0] = [20, 300].
-	// that means: [DataItem 0] = [data.array0 = 20 urls, data.array1 = 300 urls].
+	// that means: [Datum 0] = [data.array0 = 20 urls, data.array1 = 300 urls].
 	allURL := make([]string, 0)
 	itemURLMeta := make(map[int][]int, 0)
 
@@ -478,7 +478,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		return temp, nil
 	}
 
-	// Fill corresponding DataItem with output data.
+	// Fill corresponding Datum with output data.
 	outputOffset := 0
 
 	for itemIndex := 0; itemIndex < len(itemURLMeta); itemIndex++ {

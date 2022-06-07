@@ -12,16 +12,16 @@
 
 ### Plugin parameters:
 
-| Param        | Required |  Type  | Cred | Template | Text Template | Default |          Example           | Description                                                                                      |
+| Param        | Required | Type   | Cred | Template | Text Template | Default | Example                    | Description                                                                                      |
 |:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:--------------------------:|:-------------------------------------------------------------------------------------------------|
-| attachments  |    -     |  map   |  -   |    +     |       -       |  map[]  |        see example         | [Mattermost Message Attachments](https://docs.mattermost.com/developer/message-attachments.html) |
-| files        |    -     | array  |  -   |    +     |       -       |   ""    |      ["data.array0"]       | List of [DataItem](../../concept.md) fields with files paths.                                    |
-| message      |    -     | string |  -   |    +     |       +       |   ""    |     "{{.DATA.TEXT0}}"      | Message text.                                                                                    |
-| **output**   |    +     | array  |  -   |    +     |       -       |   []    |   ["news", "@livelace"]    | List of channels/users.                                                                          |
-| **password** |    +     | string |  +   |    -     |       -       |   ""    |             ""             | Mattermost password.                                                                             |
-| **team**     |    +     | string |  +   |    -     |       -       |   ""    |        "superteam"         | Mattermost team.                                                                                 |
-| **url**      |    +     | string |  +   |    -     |       -       |   ""    | "https://host.example.com" | Mattermost URL.                                                                                  |
-| **username** |    +     | string |  +   |    -     |       -       |   ""    |             ""             | Mattermost user.                                                                                 |
+| attachments  | -        | map    | -    | +        | -             | map[]   | see example                | [Mattermost Message Attachments](https://docs.mattermost.com/developer/message-attachments.html) |
+| files        | -        | array  | -    | +        | -             | ""      | ["data.array0"]            | List of [Datum](../../concept.md) fields with files paths.                                       |
+| message      | -        | string | -    | +        | +             | ""      | "{{.DATA.TEXT0}}"          | Message text.                                                                                    |
+| **output**   | +        | array  | -    | +        | -             | []      | ["news", "@livelace"]      | List of channels/users.                                                                          |
+| **password** | +        | string | +    | -        | -             | ""      | ""                         | Mattermost password.                                                                             |
+| **team**     | +        | string | +    | -        | -             | ""      | "superteam"                | Mattermost team.                                                                                 |
+| **url**      | +        | string | +    | -        | -             | ""      | "https://host.example.com" | Mattermost URL.                                                                                  |
+| **username** | +        | string | +    | -        | -             | ""      | ""                         | Mattermost user.                                                                                 |
 
 
 ### Attachments parameters:

@@ -14,14 +14,14 @@ inside data.
 
 ### Plugin parameters:
 
-| Param       | Required | Type  | Template | Default |     Example      | Description                                                                    |
-|:------------|:--------:|:-----:|:--------:|:-------:|:----------------:|:-------------------------------------------------------------------------------|
-| **input**   |    +     | array |    -     |   []    | ["twitter.text"] | List of [DataItem](../../concept.md) fields with data.                         |
-| match_case  |    -     | array |    -     |  true   |      false       | Case sensitive/insensitive.                                                    |
-| **output**  |    +     | array |    -     |   []    |  ["data.text0"]  | List of target [DataItem](../../concept.md) fields.                            |
-| **regexp**  |    +     | array |    +     |   []    |     ["war"]      | List of config templates/raw regexps for replacing.                            |
-| **replace** |    +     | array |    -     |   []    |    ["peace"]     | List of replacements.                                                          |
-| replace_all |    -     | bool  |    -     |  false  |       true       | Patterns must be replaced in all selected [DataItem](../../concept.md) fields. |
+| Param       | Required | Type  | Template | Default | Example          | Description                                                                 |
+|:------------|:--------:|:-----:|:--------:|:-------:|:----------------:|:----------------------------------------------------------------------------|
+| **input**   | +        | array | -        | []      | ["twitter.text"] | List of [Datum](../../concept.md) fields with data.                         |
+| match_case  | -        | array | -        | true    | false            | Case sensitive/insensitive.                                                 |
+| **output**  | +        | array | -        | []      | ["data.text0"]   | List of target [Datum](../../concept.md) fields.                            |
+| **regexp**  | +        | array | +        | []      | ["war"]          | List of config templates/raw regexps for replacing.                         |
+| **replace** | +        | array | -        | []      | ["peace"]        | List of replacements.                                                       |
+| replace_all | -        | bool  | -        | false   | true             | Patterns must be replaced in all selected [Datum](../../concept.md) fields. |
 
 ### Flow sample:
 

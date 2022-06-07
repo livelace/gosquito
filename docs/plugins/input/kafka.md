@@ -5,7 +5,7 @@
 ### Data structure:
 
 There is no static structure of inbound Kafka messages. Schema may specefied by user or fetched from schema registry.
-Schema's fields are just copied to DataItem fields:
+Schema's fields are just copied to Datum fields:
 
 ```go
 type Data struct {
@@ -64,7 +64,7 @@ type Data struct {
 | match_ttl               | -        | string | +        | "1d"                    | "24h"                        | TTL (Time To Live) for matched signatures.                                                                                                                                                                          |
 | offset                  | -        | string | +        | "earliest"              | "latest"                     | Offset to start consuming from.                                                                                                                                                                                     |
 | **schema**              | *        | map    | +        | map[]                   | see example                  | Dynamic schema for Kafka messages.                                                                                                                                                                                  |
-| schema_record_name      | -        | string | +        | "DataItem"              | "event"                      | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                  |
+| schema_record_name      | -        | string | +        | "Datum"              | "event"                      | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                  |
 | schema_record_namespace | -        | string | +        | "ru.livelace.gosquito"  | "com.example"                | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                                                                                             |
 | schema_registry         | -        | string | +        | "http://127.0.0.1:8081" | "https://host.example.com"   | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                                                                                          |
 

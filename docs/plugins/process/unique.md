@@ -13,10 +13,10 @@
 
 ### Plugin parameters:
 
-| Param      | Required | Type  | Default |             Example             | Description                                                                      |
-|:-----------|:--------:|:-----:|:-------:|:-------------------------------:|:---------------------------------------------------------------------------------|
-| **input**  |    +     | array |   []    | ["twitter.urls", "data.array0"] | List of [DataItem](../../concept.md) fields with data.                           |
-| **output** |    +     | array |   []    |         ["data.array1"]         | List of target [DataItem](../../concept.md) fields. Must be array, single value. |
+| Param      | Required | Type  | Default | Example                         | Description                                                                   |
+|:-----------|:--------:|:-----:|:-------:|:-------------------------------:|:------------------------------------------------------------------------------|
+| **input**  | +        | array | []      | ["twitter.urls", "data.array0"] | List of [Datum](../../concept.md) fields with data.                           |
+| **output** | +        | array | []      | ["data.array1"]                 | List of target [Datum](../../concept.md) fields. Must be array, single value. |
 
 ### Flow sample:
 

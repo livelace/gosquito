@@ -18,10 +18,10 @@
 | auth         | -        | string | -    | +        | -             | ""                | "basic"                      | Auth method (basic, bearer).                           |
 | bearer_token | -        | string | +    | -        | -             | ""                | "qwerty"                     | Bearer token.                                          |
 | body         | -        | string | -    | +        | +             | ""                | "{"foo": "bar"}"             | Request body.                                          |
-| **input**    | +        | array  | -    | +        | -             | "[]"              | ["data.array0"]              | List of [DataItem](../../concept.md) fields with data. |
+| **input**    | +        | array  | -    | +        | -             | "[]"              | ["data.array0"]              | List of [Datum](../../concept.md) fields with data. |
 | headers      | -        | map[]  | -    | +        | +             | map[]             | see example                  | Dynamic list of request headers.                       |
 | method       | -        | string | -    | +        | -             | "GET"             | "POST"                       | Request method (GET, POST).                            |
-| **output**   | +        | array  | -    | +        | -             | "[]"              | ["data.array1"]              | List of target [DataItem](../../concept.md) fields.    |
+| **output**   | +        | array  | -    | +        | -             | "[]"              | ["data.array1"]              | List of target [Datum](../../concept.md) fields.    |
 | params       | -        | map[]  | -    | +        | +             | map[]             | see example                  | Dynamic list of request query parameters.              |
 | password     | -        | string | +    | -        | -             | ""                | ""                           | Basic auth password.                                   |
 | proxy        | -        | string | -    | +        | -             | ""                | "http://127.0.0.1:8080"      | Proxy settings.                                        |

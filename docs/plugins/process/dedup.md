@@ -1,15 +1,15 @@
 ### Description:
 
-**dedup** process plugin is intended for deduplication [DataItem](../../concept.md) sets.  
+**dedup** process plugin is intended for deduplication [Datum](../../concept.md) sets.  
 
-Deduplication is performed over [DataItem](../../concept.md) UUID.
+Deduplication is performed over [Datum](../../concept.md) UUID.
 
 
 ### Generic parameters:
 
 | Param   | Required | Type | Default | Example |
 |:--------|:--------:|:----:|:-------:|:-------:|
-| include |    -     | bool |  true   |  false  |
+| include | -        | bool | true    | false   |
 
 
 ### Plugin parameters:
