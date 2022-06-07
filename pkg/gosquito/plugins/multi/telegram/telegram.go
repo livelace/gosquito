@@ -653,12 +653,15 @@ func inputAds(p *Plugin) {
 
 					// Send data to channel.
 					p.InputDatumChannel <- &core.Datum{
-						FLOW:       p.Flow.FlowName,
-						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATSOURCE,
-						TIME:       messageTime,
-						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-						UUID:       u,
+						FLOW:        p.Flow.FlowName,
+						PLUGIN:      p.PluginName,
+						SOURCE:      chatData.CHATSOURCE,
+						TIME:        messageTime,
+						TIMEFORMAT:  messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						TIMEFORMATA: messageTime.In(p.OptionTimeZoneA).Format(p.OptionTimeFormatA),
+						TIMEFORMATB: messageTime.In(p.OptionTimeZoneB).Format(p.OptionTimeFormatB),
+						TIMEFORMATC: messageTime.In(p.OptionTimeZoneC).Format(p.OptionTimeFormatC),
+						UUID:        u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
@@ -811,12 +814,15 @@ func inputDatum(p *Plugin) {
 					var u, _ = uuid.NewRandom()
 
 					datum = core.Datum{
-						FLOW:       p.Flow.FlowName,
-						PLUGIN:     p.PluginName,
-						SOURCE:     chatData.CHATSOURCE,
-						TIME:       messageTime,
-						TIMEFORMAT: messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-						UUID:       u,
+						FLOW:        p.Flow.FlowName,
+						PLUGIN:      p.PluginName,
+						SOURCE:      chatData.CHATSOURCE,
+						TIME:        messageTime,
+						TIMEFORMAT:  messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+						TIMEFORMATA: messageTime.In(p.OptionTimeZoneA).Format(p.OptionTimeFormatA),
+						TIMEFORMATB: messageTime.In(p.OptionTimeZoneB).Format(p.OptionTimeFormatB),
+						TIMEFORMATC: messageTime.In(p.OptionTimeZoneC).Format(p.OptionTimeFormatC),
+						UUID:        u,
 
 						TELEGRAM: core.Telegram{
 							CHATID:               chatData.CHATID,
@@ -1288,19 +1294,19 @@ func sqlUpdateChat(p *Plugin, chatId int64, chatSource string) error {
 func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
 	userVersion := 0
-	
+
 	isNew := false
 	isChanged := false
 
-    firstSeen := fmt.Sprintf("%v", currentTime)
-    lastSeen := fmt.Sprintf("%v", currentTime)
-    
-    oldUser := getUser(p, user.Id)
+	firstSeen := fmt.Sprintf("%v", currentTime)
+	lastSeen := fmt.Sprintf("%v", currentTime)
+
+	oldUser := getUser(p, user.Id)
 
 	if oldUser.USERID == "" {
 		isNew = true
 	} else {
-        firstSeen = oldUser.USERFIRSTSEEN
+		firstSeen = oldUser.USERFIRSTSEEN
 
 		if user.Username != oldUser.USERNAME || user.Type.UserTypeType() != oldUser.USERTYPE ||
 			user.LanguageCode != oldUser.USERLANG || user.FirstName != oldUser.USERFIRSTNAME ||
@@ -1489,7 +1495,13 @@ type Plugin struct {
 	OptionStorageOptimize       bool
 	OptionStoragePeriod         int64
 	OptionTimeFormat            string
+	OptionTimeFormatA           string
+	OptionTimeFormatB           string
+	OptionTimeFormatC           string
 	OptionTimeZone              *time.Location
+	OptionTimeZoneA             *time.Location
+	OptionTimeZoneB             *time.Location
+	OptionTimeZoneC             *time.Location
 	OptionTimeout               int
 	OptionUserDatabase          string
 	OptionUserSave              bool
@@ -1777,11 +1789,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"cred":        -1,
-		"template":    -1,
-		"timeout":     -1,
-		"time_format": -1,
-		"time_zone":   -1,
+		"cred":          -1,
+		"template":      -1,
+		"timeout":       -1,
+		"time_format":   -1,
+		"time_format_a": -1,
+		"time_format_b": -1,
+		"time_format_c": -1,
+		"time_zone":     -1,
+		"time_zone_a":   -1,
+		"time_zone_b":   -1,
+		"time_zone_c":   -1,
 
 		"api_hash":         1,
 		"api_id":           1,
@@ -1827,7 +1845,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["message_type_fetch"] = -1
 		availableParams["message_type_process"] = -1
 		availableParams["pool_size"] = -1
-		break
 	case "output":
 		availableParams["file_audio"] = -1
 		availableParams["file_caption"] = -1
@@ -2533,19 +2550,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStoragePeriod((*pluginConfig.PluginParams)["storage_period"])
 	core.ShowPluginParam(plugin.LogFields, "storage_period", plugin.OptionStoragePeriod)
 
-	// TODO: Do we really need timeout for telegram event model ?
-	// timeout.
-	setTimeout := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["timeout"] = 0
-			plugin.OptionTimeout = v
-		}
-	}
-	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
-	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
-	setTimeout((*pluginConfig.PluginParams)["timeout"])
-	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
-
 	// time_format.
 	setTimeFormat := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -2558,6 +2562,42 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeFormat((*pluginConfig.PluginParams)["time_format"])
 	core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
 
+	// time_format_a.
+	setTimeFormatA := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["time_format_a"] = 0
+			plugin.OptionTimeFormatA = v
+		}
+	}
+	setTimeFormatA(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormatA(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_a", template)))
+	setTimeFormatA((*pluginConfig.PluginParams)["time_format_a"])
+	core.ShowPluginParam(plugin.LogFields, "time_format_a", plugin.OptionTimeFormatA)
+
+	// time_format_b.
+	setTimeFormatB := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["time_format_b"] = 0
+			plugin.OptionTimeFormatB = v
+		}
+	}
+	setTimeFormatB(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormatB(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_b", template)))
+	setTimeFormatB((*pluginConfig.PluginParams)["time_format_b"])
+	core.ShowPluginParam(plugin.LogFields, "time_format_b", plugin.OptionTimeFormatB)
+
+	// time_format_c.
+	setTimeFormatC := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["time_format_c"] = 0
+			plugin.OptionTimeFormatC = v
+		}
+	}
+	setTimeFormatC(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+	setTimeFormatC(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_c", template)))
+	setTimeFormatC((*pluginConfig.PluginParams)["time_format_c"])
+	core.ShowPluginParam(plugin.LogFields, "time_format_c", plugin.OptionTimeFormatC)
+
 	// time_zone.
 	setTimeZone := func(p interface{}) {
 		if v, b := core.IsTimeZone(p); b {
@@ -2569,6 +2609,55 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZone(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone", template)))
 	setTimeZone((*pluginConfig.PluginParams)["time_zone"])
 	core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
+
+	// time_zone_a.
+	setTimeZoneA := func(p interface{}) {
+		if v, b := core.IsTimeZone(p); b {
+			availableParams["time_zone_a"] = 0
+			plugin.OptionTimeZoneA = v
+		}
+	}
+	setTimeZoneA(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZoneA(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_a", template)))
+	setTimeZoneA((*pluginConfig.PluginParams)["time_zone_a"])
+	core.ShowPluginParam(plugin.LogFields, "time_zone_a", plugin.OptionTimeZoneA)
+
+	// time_zone_b.
+	setTimeZoneB := func(p interface{}) {
+		if v, b := core.IsTimeZone(p); b {
+			availableParams["time_zone_b"] = 0
+			plugin.OptionTimeZoneB = v
+		}
+	}
+	setTimeZoneB(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZoneB(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_b", template)))
+	setTimeZoneB((*pluginConfig.PluginParams)["time_zone_b"])
+	core.ShowPluginParam(plugin.LogFields, "time_zone_b", plugin.OptionTimeZoneB)
+
+	// time_zone_c.
+	setTimeZoneC := func(p interface{}) {
+		if v, b := core.IsTimeZone(p); b {
+			availableParams["time_zone_c"] = 0
+			plugin.OptionTimeZoneC = v
+		}
+	}
+	setTimeZoneC(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+	setTimeZoneC(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_c", template)))
+	setTimeZoneC((*pluginConfig.PluginParams)["time_zone_c"])
+	core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
+
+	// TODO: Do we really need timeout for telegram event model ?
+	// timeout.
+	setTimeout := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["timeout"] = 0
+			plugin.OptionTimeout = v
+		}
+	}
+	setTimeout(pluginConfig.AppConfig.GetInt(core.VIPER_DEFAULT_PLUGIN_TIMEOUT))
+	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
+	setTimeout((*pluginConfig.PluginParams)["timeout"])
+	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
 
 	// user_database.
 	setUserDatabase := func(p interface{}) {

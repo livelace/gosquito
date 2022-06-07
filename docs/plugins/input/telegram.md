@@ -63,9 +63,15 @@ type Telegram struct {
 | expire_interval       | -        | string | +        | "7d"                  |
 | force                 | -        | bool   | +        | false                 |
 | force_count           | -        | int    | +        | 100                   |
-| timeout               | -        | int    | +        | 60                    |
 | time_format           | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_a         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_b         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_c         | -        | string | +        | "15:04:05 02.01.2006" |
 | time_zone             | -        | string | +        | "UTC"                 |
+| time_zone_a           | -        | string | +        | "UTC"                 |
+| time_zone_b           | -        | string | +        | "UTC"                 |
+| time_zone_c           | -        | string | +        | "UTC"                 |
+| timeout               | -        | int    | +        | 60                    |
 
 
 ### Plugin parameters:

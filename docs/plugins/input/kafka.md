@@ -31,17 +31,23 @@ type Data struct {
 
 ### Generic parameters:
 
-| Param                 | Required |  Type  | Template |        Default        |
+| Param                 | Required | Type   | Template | Default               |
 |:----------------------|:--------:|:------:|:--------:|:---------------------:|
-| expire_action         |    -     | array  |    +     |          []           |
-| expire_action_delay   |    -     | string |    +     |         "1d"          |
-| expire_action_timeout |    -     |  int   |    +     |          30           |
-| expire_interval       |    -     | string |    +     |         "7d"          |
-| force                 |    -     |  bool  |    +     |         false         |
-| force_count           |    -     |  int   |    +     |          100          |
-| timeout               |    -     |  int   |    +     |          60           |
-| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
-| time_zone             |    -     | string |    +     |         "UTC"         |
+| expire_action         | -        | array  | +        | []                    |
+| expire_action_delay   | -        | string | +        | "1d"                  |
+| expire_action_timeout | -        | int    | +        | 30                    |
+| expire_interval       | -        | string | +        | "7d"                  |
+| force                 | -        | bool   | +        | false                 |
+| force_count           | -        | int    | +        | 100                   |
+| time_format           | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_a         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_b         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_c         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_zone             | -        | string | +        | "UTC"                 |
+| time_zone_a           | -        | string | +        | "UTC"                 |
+| time_zone_b           | -        | string | +        | "UTC"                 |
+| time_zone_c           | -        | string | +        | "UTC"                 |
+| timeout               | -        | int    | +        | 60                    |
 
 ### Generic parameters:
 
@@ -64,7 +70,7 @@ type Data struct {
 | match_ttl               | -        | string | +        | "1d"                    | "24h"                        | TTL (Time To Live) for matched signatures.                                                                                                                                                                          |
 | offset                  | -        | string | +        | "earliest"              | "latest"                     | Offset to start consuming from.                                                                                                                                                                                     |
 | **schema**              | *        | map    | +        | map[]                   | see example                  | Dynamic schema for Kafka messages.                                                                                                                                                                                  |
-| schema_record_name      | -        | string | +        | "Datum"              | "event"                      | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                  |
+| schema_record_name      | -        | string | +        | "Datum"                 | "event"                      | [Avro record name](http://avro.apache.org/docs/current/spec.html).                                                                                                                                                  |
 | schema_record_namespace | -        | string | +        | "ru.livelace.gosquito"  | "com.example"                | [Avro record namespace](http://avro.apache.org/docs/current/spec.html).                                                                                                                                             |
 | schema_registry         | -        | string | +        | "http://127.0.0.1:8081" | "https://host.example.com"   | [Confluent schema registry](https://docs.confluent.io/current/schema-registry/index.html).                                                                                                                          |
 

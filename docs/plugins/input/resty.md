@@ -17,15 +17,21 @@ type Resty struct {
 
 ### Generic parameters:
 
-| Param                 | Required |  Type  | Template |        Default        |
+| Param                 | Required | Type   | Template | Default               |
 |:----------------------|:--------:|:------:|:--------:|:---------------------:|
-| expire_action         |    -     | array  |    +     |          []           |
-| expire_action_delay   |    -     | string |    +     |         "1d"          |
-| expire_action_timeout |    -     |  int   |    +     |          30           |
-| expire_interval       |    -     | string |    +     |         "7d"          |
-| timeout               |    -     |  int   |    +     |          60           |
-| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
-| time_zone             |    -     | string |    +     |         "UTC"         |
+| expire_action         | -        | array  | +        | []                    |
+| expire_action_delay   | -        | string | +        | "1d"                  |
+| expire_action_timeout | -        | int    | +        | 30                    |
+| expire_interval       | -        | string | +        | "7d"                  |
+| time_format           | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_a         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_b         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_format_c         | -        | string | +        | "15:04:05 02.01.2006" |
+| time_zone             | -        | string | +        | "UTC"                 |
+| time_zone_a           | -        | string | +        | "UTC"                 |
+| time_zone_b           | -        | string | +        | "UTC"                 |
+| time_zone_c           | -        | string | +        | "UTC"                 |
+| timeout               | -        | int    | +        | 60                    |
 
 
 ### Plugin parameters:

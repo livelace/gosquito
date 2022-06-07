@@ -202,7 +202,13 @@ type Plugin struct {
 	OptionSchemaRegistry        string
 	OptionSchemaSubjectStrategy string
 	OptionTimeFormat            string
+	OptionTimeFormatA           string
+	OptionTimeFormatB           string
+	OptionTimeFormatC           string
 	OptionTimeZone              *time.Location
+	OptionTimeZoneA             *time.Location
+	OptionTimeZoneB             *time.Location
+	OptionTimeZoneC             *time.Location
 	OptionTimeout               int
 }
 
@@ -332,12 +338,15 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 			var u, _ = uuid.NewRandom()
 
 			item := core.Datum{
-				FLOW:       p.Flow.FlowName,
-				PLUGIN:     p.PluginName,
-				SOURCE:     *message.TopicPartition.Topic,
-				TIME:       currentTime,
-				TIMEFORMAT: currentTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-				UUID:       u,
+				FLOW:        p.Flow.FlowName,
+				PLUGIN:      p.PluginName,
+				SOURCE:      *message.TopicPartition.Topic,
+				TIME:        currentTime,
+				TIMEFORMAT:  currentTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+				TIMEFORMATA: currentTime.In(p.OptionTimeZoneA).Format(p.OptionTimeFormatA),
+				TIMEFORMATB: currentTime.In(p.OptionTimeZoneB).Format(p.OptionTimeFormatB),
+				TIMEFORMATC: currentTime.In(p.OptionTimeZoneC).Format(p.OptionTimeFormatC),
+				UUID:        u,
 			}
 
 			// Map message data into item fields.
@@ -345,20 +354,20 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				ri := reflect.ValueOf(messageMap[fieldName])
 				ro, _ := core.ReflectDatumField(&item, fieldValue)
 
-                // Handle absence schema's key in message data.
-                // Handle in/out type mismatch.
-                // Fill with empty data.
-                // BTW. Output is always right!
+				// Handle absence schema's key in message data.
+				// Handle in/out type mismatch.
+				// Fill with empty data.
+				// BTW. Output is always right!
 				if _, ok := messageMap[fieldName]; !ok || ri.Kind() != ro.Kind() {
-                    switch ro.Kind() {
-                    case reflect.String:
-                        ro.SetString("")
-                    case reflect.Slice:
-                        ro.Set(reflect.Append(ro, reflect.ValueOf("")))
-                    }
-                    continue
+					switch ro.Kind() {
+					case reflect.String:
+						ro.SetString("")
+					case reflect.Slice:
+						ro.Set(reflect.Append(ro, reflect.ValueOf("")))
+					}
+					continue
 				}
-			
+
 				// Populate datum with field data.
 				switch ri.Kind() {
 				case reflect.String:
@@ -657,14 +666,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["match_ttl"] = -1
 		availableParams["offset"] = -1
 		availableParams["time_format"] = -1
+		availableParams["time_format_a"] = -1
+		availableParams["time_format_b"] = -1
+		availableParams["time_format_c"] = -1
 		availableParams["time_zone"] = -1
-		break
+		availableParams["time_zone_a"] = -1
+		availableParams["time_zone_b"] = -1
+		availableParams["time_zone_c"] = -1
 	case "output":
 		availableParams["compress"] = -1
 		availableParams["output"] = 1
 		availableParams["message_key"] = -1
 		availableParams["schema_subject_strategy"] = -1
-		break
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -823,6 +836,42 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setTimeFormat((*pluginConfig.PluginParams)["time_format"])
 		core.ShowPluginParam(plugin.LogFields, "time_format", plugin.OptionTimeFormat)
 
+		// time_format_a.
+		setTimeFormatA := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["time_format_a"] = 0
+				plugin.OptionTimeFormatA = v
+			}
+		}
+		setTimeFormatA(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+		setTimeFormatA(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_a", template)))
+		setTimeFormatA((*pluginConfig.PluginParams)["time_format_a"])
+		core.ShowPluginParam(plugin.LogFields, "time_format_a", plugin.OptionTimeFormatA)
+
+		// time_format_b.
+		setTimeFormatB := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["time_format_b"] = 0
+				plugin.OptionTimeFormatB = v
+			}
+		}
+		setTimeFormatB(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+		setTimeFormatB(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_b", template)))
+		setTimeFormatB((*pluginConfig.PluginParams)["time_format_b"])
+		core.ShowPluginParam(plugin.LogFields, "time_format_b", plugin.OptionTimeFormatB)
+
+		// time_format_c.
+		setTimeFormatC := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["time_format_c"] = 0
+				plugin.OptionTimeFormatC = v
+			}
+		}
+		setTimeFormatC(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_FORMAT))
+		setTimeFormatC(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_format_c", template)))
+		setTimeFormatC((*pluginConfig.PluginParams)["time_format_c"])
+		core.ShowPluginParam(plugin.LogFields, "time_format_c", plugin.OptionTimeFormatC)
+
 		// time_zone.
 		setTimeZone := func(p interface{}) {
 			if v, b := core.IsTimeZone(p); b {
@@ -835,7 +884,41 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setTimeZone((*pluginConfig.PluginParams)["time_zone"])
 		core.ShowPluginParam(plugin.LogFields, "time_zone", plugin.OptionTimeZone)
 
-		break
+		// time_zone_a.
+		setTimeZoneA := func(p interface{}) {
+			if v, b := core.IsTimeZone(p); b {
+				availableParams["time_zone_a"] = 0
+				plugin.OptionTimeZoneA = v
+			}
+		}
+		setTimeZoneA(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+		setTimeZoneA(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_a", template)))
+		setTimeZoneA((*pluginConfig.PluginParams)["time_zone_a"])
+		core.ShowPluginParam(plugin.LogFields, "time_zone_a", plugin.OptionTimeZoneA)
+
+		// time_zone_b.
+		setTimeZoneB := func(p interface{}) {
+			if v, b := core.IsTimeZone(p); b {
+				availableParams["time_zone_b"] = 0
+				plugin.OptionTimeZoneB = v
+			}
+		}
+		setTimeZoneB(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+		setTimeZoneB(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_b", template)))
+		setTimeZoneB((*pluginConfig.PluginParams)["time_zone_b"])
+		core.ShowPluginParam(plugin.LogFields, "time_zone_b", plugin.OptionTimeZoneB)
+
+		// time_zone_c.
+		setTimeZoneC := func(p interface{}) {
+			if v, b := core.IsTimeZone(p); b {
+				availableParams["time_zone_c"] = 0
+				plugin.OptionTimeZoneC = v
+			}
+		}
+		setTimeZoneC(pluginConfig.AppConfig.GetString(core.VIPER_DEFAULT_TIME_ZONE))
+		setTimeZoneC(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_c", template)))
+		setTimeZoneC((*pluginConfig.PluginParams)["time_zone_c"])
+		core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
 
 	case "output":
 		// compress.
@@ -872,8 +955,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setSchemaSubjectStrategy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.schema_subject_strategy", template)))
 		setSchemaSubjectStrategy((*pluginConfig.PluginParams)["schema_subject_strategy"])
 		core.ShowPluginParam(plugin.LogFields, "schema_subject_strategy", plugin.OptionSchemaSubjectStrategy)
-
-		break
 	}
 
 	// brokers.

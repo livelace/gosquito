@@ -311,9 +311,9 @@ type Telegram struct {
 }
 
 type TelegramSendingStatus struct {
-    MessageId int64
-    ErrorCode int32
-    ErrorMessage string
+	MessageId    int64
+	ErrorCode    int32
+	ErrorMessage string
 }
 
 type Twitter struct {
@@ -325,13 +325,19 @@ type Twitter struct {
 }
 
 type Datum struct {
-	FLOW       string
-	PLUGIN     string
-	SOURCE     string
-	TIME       time.Time
-	TIMEFORMAT string
-	TIMEZONE   *time.Location
-	UUID       uuid.UUID
+	FLOW        string
+	PLUGIN      string
+	SOURCE      string
+	TIME        time.Time
+	TIMEFORMAT  string
+	TIMEFORMATA string
+	TIMEFORMATB string
+	TIMEFORMATC string
+	TIMEZONE    *time.Location
+	TIMEZONEA   *time.Location
+	TIMEZONEB   *time.Location
+	TIMEZONEC   *time.Location
+	UUID        uuid.UUID
 
 	DATA Data
 	ITER Iter

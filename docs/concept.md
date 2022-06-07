@@ -17,23 +17,29 @@ gosquito is a relatively lightweight tool for fetching/preprocessing data at the
 
 ```go
 type Datum struct {
-  FLOW       string           // Flow name.
-  PLUGIN     string           // Input plugin name (rss, twitter, telegram etc.).
-  SOURCE     string           // Input plugin source (feed url, twitter channel, telegram chat etc.).
-  TIME       time.Time        // Time of article, tweet, message.
-  TIMEFORMAT string           // User defined time format (common field).
-  TIMEZONE   time.Location    // User defined timezone (common field).
-  UUID       uuid.UUID        // "Unique" id of data item.
+  FLOW        string           // Flow name.
+  PLUGIN      string           // Input plugin name (rss, twitter, telegram etc.).
+  SOURCE      string           // Input plugin source (feed url, twitter channel, telegram chat etc.).
+  TIME        time.Time        // Time of article, tweet, message.
+  TIMEFORMAT  string           // User defined time format (common field).
+  TIMEFORMATA string           // Additional user defined time format (common field).
+  TIMEFORMATB string           // Additional user defined time format (common field).
+  TIMEFORMATC string           // Additional user defined time format (common field).
+  TIMEZONE    time.Location    // User defined timezone (common field).
+  TIMEZONEA   time.Location    // Additional user defined timezone (common field).
+  TIMEZONEB   time.Location    // Additional user defined timezone (common field).
+  TIMEZONEC   time.Location    // Additional user defined timezone (common field).
+  UUID        uuid.UUID        // "Unique" id of data item.
   
-  DATA       Data             // Temporary structure for keeping static data.
-  ITER       Iter             // Temporary structure for keeping iterated data.
+  DATA       Data              // Temporary structure for keeping static data.
+  ITER       Iter              // Temporary structure for keeping iterated data.
   
-  RESTY      Resty            // Resty plugin structure.
-  RSS        Rss              // RSS plugin structure.
-  TELEGRAM   Telegram         // Telegram plugin structure.
-  TWITTER    Twitter          // Twitter plugin structure.
+  RESTY      Resty             // Resty plugin structure.
+  RSS        Rss               // RSS plugin structure.
+  TELEGRAM   Telegram          // Telegram plugin structure.
+  TWITTER    Twitter           // Twitter plugin structure.
   
-  WARNINGS   []string         // Contains plugins' warnings.
+  WARNINGS   []string          // Contains plugins' warnings.
 }
 ```
 
