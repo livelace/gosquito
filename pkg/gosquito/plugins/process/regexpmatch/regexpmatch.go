@@ -11,27 +11,34 @@ import (
 const (
 	PLUGIN_NAME = "regexpmatch"
 
-	DEFAULT_MATCH_ALL  = false
-	DEFAULT_MATCH_CASE = true
-	DEFAULT_MATCH_NOT  = false
+	DEFAULT_MATCH_ALL   = false
+	DEFAULT_MATCH_CASE  = true
+	DEFAULT_MATCH_COUNT = 1
+	DEFAULT_MATCH_NOT   = false
 )
 
-func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool) bool {
+func matchRegexes(p *Plugin, regexps []*regexp.Regexp, text string, isNot bool) bool {
+    counter := 0
+
 	for _, re := range regexps {
-		if re.MatchString(text) && !isNot {
-			return true
+		if re.MatchString(text) {
+			counter += 1
 		}
 
-		if re.MatchString(text) && isNot {
-			return false
-		}
+        if counter > p.OptionMatchCount {
+            break
+        }
 	}
 
-    if !isNot {
-        return false
+	if !isNot && counter >= p.OptionMatchCount {
+		return true
+	}
+
+    if isNot && counter <= p.OptionMatchCount {
+        return true
     }
 
-	return true
+	return false
 }
 
 type Plugin struct {
@@ -44,14 +51,15 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionInclude   bool
-	OptionInput     []string
-	OptionMatchAll  bool
-	OptionMatchCase bool
-	OptionMatchNot  bool
-	OptionOutput    []string
-	OptionRegexp    [][]*regexp.Regexp
-	OptionRequire   []int
+	OptionInclude    bool
+	OptionInput      []string
+	OptionMatchAll   bool
+	OptionMatchCase  bool
+	OptionMatchCount int
+	OptionMatchNot   bool
+	OptionOutput     []string
+	OptionRegexp     [][]*regexp.Regexp
+	OptionRequire    []int
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -82,7 +90,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
@@ -180,12 +188,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include": -1,
 		"require": -1,
 
-		"input":      1,
-		"match_all":  -1,
-		"match_case": -1,
-		"match_not":  -1,
-		"output":     -1,
-		"regexp":     1,
+		"input":       1,
+		"match_all":   -1,
+		"match_case":  -1,
+		"match_count": -1,
+		"match_not":   -1,
+		"output":      -1,
+		"regexp":      1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -233,6 +242,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchCase(DEFAULT_MATCH_CASE)
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
 	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
+
+	// match_count.
+	setMatchCount := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["match_count"] = 0
+			plugin.OptionMatchCount = v
+		}
+	}
+	setMatchCount(DEFAULT_MATCH_COUNT)
+	setMatchCount((*pluginConfig.PluginParams)["match_count"])
+	core.ShowPluginParam(plugin.LogFields, "match_count", plugin.OptionMatchCount)
 
 	// match_not.
 	setMatchNot := func(p interface{}) {
