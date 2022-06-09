@@ -17,7 +17,7 @@ const (
 	DEFAULT_MATCH_NOT   = false
 )
 
-func matchRegexes(p *Plugin, regexps []*regexp.Regexp, text string, isNot bool) bool {
+func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool, amount int) bool {
     counter := 0
 
 	for _, re := range regexps {
@@ -25,16 +25,16 @@ func matchRegexes(p *Plugin, regexps []*regexp.Regexp, text string, isNot bool) 
 			counter += 1
 		}
 
-        if counter > p.OptionMatchCount {
+        if counter > amount {
             break
         }
 	}
 
-	if !isNot && counter >= p.OptionMatchCount {
+	if !isNot && counter >= amount {
 		return true
 	}
 
-    if isNot && counter <= p.OptionMatchCount {
+    if isNot && counter <= amount {
         return true
     }
 
@@ -115,7 +115,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			// This plugin supports "string" and "[]string" data fields for matching.
 			switch ri.Kind() {
 			case reflect.String:
-				if matchRegexes(p.OptionRegexp[index], ri.String(), p.OptionMatchNot) {
+				if matchRegexes(p.OptionRegexp[index], ri.String(), p.OptionMatchNot, p.OptionMatchCount) {
 					matched[index] = true
 					if len(p.OptionOutput) > 0 {
 						ro.SetString(ri.String())
@@ -125,7 +125,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				somethingWasMatched := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if matchRegexes(p.OptionRegexp[index], ri.Index(i).String(), p.OptionMatchNot) {
+					if matchRegexes(p.OptionRegexp[index], ri.Index(i).String(), p.OptionMatchNot, p.OptionMatchCount) {
 						somethingWasMatched = true
 						if len(p.OptionOutput) > 0 {
 							ro.Set(reflect.Append(ro, ri.Index(i)))
