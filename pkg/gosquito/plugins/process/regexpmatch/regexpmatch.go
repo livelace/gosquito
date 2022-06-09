@@ -17,7 +17,7 @@ const (
 	DEFAULT_MATCH_NOT   = false
 )
 
-func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool, amount int) bool {
+func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool, matchCount int) bool {
     counter := 0
 
 	for _, re := range regexps {
@@ -25,19 +25,19 @@ func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool, amount int)
 			counter += 1
 		}
 
-        if counter > amount {
+        if counter > matchCount {
             break
         }
 	}
 
-	if !isNot && counter >= amount {
+	if !isNot && counter >= matchCount {
 		return true
 	}
 
-    if isNot && counter <= amount {
+    if isNot && counter <= matchCount {
         return true
     }
-
+    
 	return false
 }
 
@@ -243,17 +243,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
 	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
 
-	// match_count.
-	setMatchCount := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["match_count"] = 0
-			plugin.OptionMatchCount = v
-		}
-	}
-	setMatchCount(DEFAULT_MATCH_COUNT)
-	setMatchCount((*pluginConfig.PluginParams)["match_count"])
-	core.ShowPluginParam(plugin.LogFields, "match_count", plugin.OptionMatchCount)
-
 	// match_not.
 	setMatchNot := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -264,6 +253,21 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchNot(DEFAULT_MATCH_NOT)
 	setMatchNot((*pluginConfig.PluginParams)["match_not"])
 	core.ShowPluginParam(plugin.LogFields, "match_not", plugin.OptionMatchNot)
+	
+    // match_count.
+	setMatchCount := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["match_count"] = 0
+			plugin.OptionMatchCount = v
+		}
+	}
+	setMatchCount(DEFAULT_MATCH_COUNT)
+	setMatchCount((*pluginConfig.PluginParams)["match_count"])
+	core.ShowPluginParam(plugin.LogFields, "match_count", plugin.OptionMatchCount)
+
+    if plugin.OptionMatchNot {
+        plugin.OptionMatchCount += 1
+    }
 
 	// output.
 	setOutput := func(p interface{}) {
