@@ -34,7 +34,7 @@ func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool, matchCount 
 		return true
 	}
 
-    if isNot && counter <= matchCount {
+    if isNot && counter <= matchCount-1 {
         return true
     }
     
@@ -243,18 +243,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchCase((*pluginConfig.PluginParams)["match_case"])
 	core.ShowPluginParam(plugin.LogFields, "match_case", plugin.OptionMatchCase)
 
-	// match_not.
-	setMatchNot := func(p interface{}) {
-		if v, b := core.IsBool(p); b {
-			availableParams["match_not"] = 0
-			plugin.OptionMatchNot = v
-		}
-	}
-	setMatchNot(DEFAULT_MATCH_NOT)
-	setMatchNot((*pluginConfig.PluginParams)["match_not"])
-	core.ShowPluginParam(plugin.LogFields, "match_not", plugin.OptionMatchNot)
-	
-    // match_count.
+	// match_count.
 	setMatchCount := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["match_count"] = 0
@@ -265,9 +254,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchCount((*pluginConfig.PluginParams)["match_count"])
 	core.ShowPluginParam(plugin.LogFields, "match_count", plugin.OptionMatchCount)
 
-    if plugin.OptionMatchNot {
-        plugin.OptionMatchCount += 1
-    }
+	// match_not.
+	setMatchNot := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["match_not"] = 0
+			plugin.OptionMatchNot = v
+		}
+	}
+	setMatchNot(DEFAULT_MATCH_NOT)
+	setMatchNot((*pluginConfig.PluginParams)["match_not"])
+	core.ShowPluginParam(plugin.LogFields, "match_not", plugin.OptionMatchNot)
 
 	// output.
 	setOutput := func(p interface{}) {
