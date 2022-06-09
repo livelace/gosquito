@@ -22,12 +22,16 @@ func matchRegexes(regexps []*regexp.Regexp, text string, isNot bool) bool {
 			return true
 		}
 
-		if !re.MatchString(text) && isNot {
-			return true
+		if re.MatchString(text) && isNot {
+			return false
 		}
 	}
 
-	return false
+    if !isNot {
+        return false
+    }
+
+	return true
 }
 
 type Plugin struct {
