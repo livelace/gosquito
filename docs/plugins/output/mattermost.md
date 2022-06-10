@@ -19,6 +19,7 @@
 | message      | -        | string | -    | +        | +             | ""      | "{{.DATA.TEXT0}}"          | Message text.                                                                                    |
 | **output**   | +        | array  | -    | +        | -             | []      | ["news", "@livelace"]      | List of channels/users.                                                                          |
 | **password** | +        | string | +    | -        | -             | ""      | ""                         | Mattermost password.                                                                             |
+| send_delay   | -        | string | -    | +        | -             | "1s"    | "100ms"                    | Delay between sending.                                                                           |
 | **team**     | +        | string | +    | -        | -             | ""      | "superteam"                | Mattermost team.                                                                                 |
 | **url**      | +        | string | +    | -        | -             | ""      | "https://host.example.com" | Mattermost URL.                                                                                  |
 | **username** | +        | string | +    | -        | -             | ""      | ""                         | Mattermost user.                                                                                 |

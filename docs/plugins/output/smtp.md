@@ -23,6 +23,7 @@
 | **output**     | +        | array  | -    | +        | -             | []      | ["user1@example.com"]  | List of recipients.                                        |
 | password       | -        | string | +    | -        | -             | ""      | ""                     | SMTP password.                                             |
 | port           | -        | int    | -    | +        | -             | 25      | 465                    | SMTP port.                                                 |
+| send_delay     | -        | string | -    | +        | -             | "1s"    | "100ms"                | Delay between sending.                                     |
 | **server**     | +        | string | -    | +        | -             | ""      | "mail.example.com"     | SMTP server.                                               |
 | ssl            | -        | bool   | -    | +        | -             | false   | true                   | Use SSL for connection.                                    |
 | ssl_verify     | -        | bool   | -    | +        | -             | true    | false                  | Verify server certificate.                                 |
