@@ -8,23 +8,25 @@ import (
 	"github.com/slack-go/slack"
 	"path/filepath"
 	tmpl "text/template"
+	"time"
 )
 
 const (
 	PLUGIN_NAME = "slack"
 
 	DEFAULT_ATTACHMENTS_COLOR = "#00C100"
+	DEFAULT_SEND_DELAY        = "1s"
 	DEFAULT_TIMEOUT           = 3
 )
 
 var (
-	ERROR_CHANNEL_NOT_FOUND    = errors.New("channel not found: %s")
+	ERROR_CHANNEL_NOT_FOUND    = errors.New("channel not found: %v")
 	ERROR_OUTPUT_NOT_SET       = errors.New("channels and users are not set")
-	ERROR_USER_NOT_FOUND       = errors.New("user not found: %s")
-	ERROR_SEND_FAIL            = errors.New("sending finished with errors")
 	ERROR_SEND_MESSAGE_CHANNEL = errors.New("cannot send message to channel: %v")
-	ERROR_SEND_MESSAGE_USER    = errors.New("cannot send message to user: %v")
+	ERROR_SEND_MESSAGE_USER    = errors.New("cannot send message to user: %v, %v")
+	ERROR_UPLOAD_FILE          = errors.New("cannot upload file to channel: %v, %v, %v")
 	ERROR_USER_CONNECT         = errors.New("cannot establish connection to user: %v")
+	ERROR_USER_NOT_FOUND       = errors.New("user not found: %v")
 )
 
 func uploadFile(p *Plugin, channel string, file string) error {
@@ -42,20 +44,16 @@ func uploadFile(p *Plugin, channel string, file string) error {
 	return err
 }
 
-func uploadFiles(p *Plugin, channel string, files *[]string) {
+func uploadFiles(p *Plugin, channel string, files *[]string) error {
+	var err error
 	for _, file := range *files {
-		if err := uploadFile(p, channel, file); err != nil {
-			log.WithFields(log.Fields{
-				"hash":   p.Flow.FlowHash,
-				"flow":   p.Flow.FlowName,
-				"file":   p.Flow.FlowFile,
-				"plugin": p.PluginName,
-				"type":   p.PluginType,
-				"error":  fmt.Sprintf("cannot upload file to channel: %s, %s, %v", channel, file, err),
-			}).Error(core.LOG_PLUGIN_DATA)
-			continue
+		if err = uploadFile(p, channel, file); err != nil {
+			core.LogOutputPlugin(p.LogFields, "file",
+				fmt.Errorf(ERROR_UPLOAD_FILE.Error(), channel, file, err))
 		}
+		time.Sleep(p.OptionSendDelay)
 	}
+	return err
 }
 
 type Plugin struct {
@@ -77,6 +75,7 @@ type Plugin struct {
 	OptionOutput          []string
 	OptionPretext         string
 	OptionPretextTemplate *tmpl.Template
+	OptionSendDelay       time.Duration
 	OptionText            string
 	OptionTextTemplate    *tmpl.Template
 	OptionTimeout         int
@@ -115,12 +114,11 @@ func (p *Plugin) GetOutput() []string {
 }
 
 func (p *Plugin) Send(data []*core.Datum) error {
-  p.LogFields["run"] = p.Flow.GetRunID()
-	sendFail := false
+	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := false
 
 	// Process and send data.
 	for _, item := range data {
-
 		// Files.
 		files := make([]string, 0)
 		for _, v := range p.OptionFiles {
@@ -165,6 +163,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 		// Send to channels.
 		for _, channel := range p.OptionChannels {
+			// Send message.
 			_, _, err := p.SlackClient.PostMessage(
 				channel,
 				slack.MsgOptionAsUser(true),
@@ -173,23 +172,30 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			)
 
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
-				continue
+				sendStatus = true
+				core.LogOutputPlugin(p.LogFields, channel,
+					fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
 			}
 
-			uploadFiles(p, channel, &files)
+			time.Sleep(p.OptionSendDelay)
+
+			// Upload files as much as possible.
+			if err := uploadFiles(p, channel, &files); err != nil {
+				sendStatus = false
+			}
 		}
 
 		// Send to users.
 		for _, user := range p.OptionUsers {
+			// Open chat to user.
 			ch, _, _, err := p.SlackClient.OpenConversation(&slack.OpenConversationParameters{Users: []string{user}})
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
-				continue
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, user,
+					fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
 			}
 
+			// Send message.
 			_, _, err = p.SlackClient.PostMessage(
 				ch.ID,
 				slack.MsgOptionAsUser(true),
@@ -198,18 +204,23 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			)
 
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
-				continue
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, "user",
+					fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), user, err))
 			}
 
-			uploadFiles(p, ch.ID, &files)
+			time.Sleep(p.OptionSendDelay)
+
+			// Upload files as much as possible.
+			if err := uploadFiles(p, ch.ID, &files); err != nil {
+				sendStatus = false
+			}
 		}
 	}
 
 	// Inform about sending failures.
-	if sendFail {
-		return ERROR_SEND_FAIL
+	if !sendStatus {
+		return core.ERROR_SEND_FAIL
 	}
 
 	return nil
@@ -243,10 +254,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"template": -1,
 		"timeout":  -1,
 
-		"files":   -1,
-		"message": -1,
-		"output":  1,
-		"token":   1,
+		"files":      -1,
+		"message":    -1,
+		"output":     1,
+		"send_delay": -1,
+		"token":      1,
 
 		"attachments": -1,
 		"color":       -1,
@@ -261,8 +273,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
-    
-    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+
+	vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
 	if err != nil {
 		return &plugin, err
 	}
@@ -375,6 +387,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if err != nil {
 		return &Plugin{}, err
 	}
+
+	// send_delay.
+	setSendDelay := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["send_delay"] = 0
+			plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
+		}
+	}
+	setSendDelay(DEFAULT_SEND_DELAY)
+	setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+	setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+	core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
 
 	// text.
 	setText := func(p interface{}) {

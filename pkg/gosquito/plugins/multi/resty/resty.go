@@ -20,6 +20,7 @@ const (
 	DEFAULT_MATCH_TTL  = "1d"
 	DEFAULT_METHOD     = "GET"
 	DEFAULT_REDIRECT   = true
+	DEFAULT_SEND_DELAY = "1ms"
 	DEFAULT_SSL_VERIFY = true
 )
 
@@ -101,6 +102,7 @@ type Plugin struct {
 	OptionProxy               string
 	OptionRedirect            bool
 	OptionRequire             []int
+    OptionSendDelay           time.Duration
 	OptionSSLVerify           bool
 	OptionTarget              string
 	OptionTimeFormat          string
@@ -258,10 +260,10 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 }
 
 func (p *Plugin) Receive() ([]*core.Datum, error) {
+	p.LogFields["run"] = p.Flow.GetRunID()
 	currentTime := time.Now().UTC()
 	failedSources := make([]string, 0)
 	temp := make([]*core.Datum, 0)
-	p.LogFields["run"] = p.Flow.GetRunID()
 
 	// Load flow sources' states.
 	flowStates, err := p.LoadState()
@@ -413,12 +415,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay/1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -459,11 +461,12 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 }
 
 func (p *Plugin) Send(data []*core.Datum) error {
-	var resp *resty.Response
-	var err error
+	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := true
+	
+    var resp *resty.Response
 
 	for _, output := range p.OptionOutput {
-
 		// Iterate over data items (articles, tweets etc.).
 		for _, item := range data {
 			// Format body.
@@ -490,22 +493,26 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			switch p.OptionMethod {
 			case "GET":
 				resp, err = p.RestyClient.R().SetBody(body).Get(output)
-				break
 			case "POST":
 				resp, err = p.RestyClient.R().SetBody(body).Post(output)
-				break
 			}
 
 			if err == nil && !(resp.StatusCode() < 200 || resp.StatusCode() >= 300) {
 				core.LogOutputPlugin(p.LogFields, output,
 					fmt.Sprintf("%s %v", p.OptionMethod, resp.StatusCode()))
 			} else {
-				core.LogOutputPlugin(p.LogFields, output, fmt.Errorf("%s %v", p.OptionMethod, err))
+                sendStatus = false
+				core.LogOutputPlugin(p.LogFields, output, 
+                    fmt.Errorf("%s %v", p.OptionMethod, err))
 			}
 		}
 	}
+	
+    if !sendStatus {
+		return core.ERROR_SEND_FAIL
+	}
 
-	return err
+	return nil
 }
 
 func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
@@ -564,6 +571,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["input"] = 1
 		availableParams["match_signature"] = -1
 		availableParams["match_ttl"] = -1
+		availableParams["send_delay"] = -1
 		availableParams["time_format"] = -1
 		availableParams["time_format_a"] = -1
 		availableParams["time_format_b"] = -1
@@ -706,13 +714,25 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchTTL := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
 				availableParams["match_ttl"] = 0
-				plugin.OptionMatchTTL = time.Duration(v) * time.Second
+				plugin.OptionMatchTTL = time.Duration(v) * time.Millisecond
 			}
 		}
 		setMatchTTL(DEFAULT_MATCH_TTL)
 		setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
 		setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 		core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
+
+		// send_delay.
+		setSendDelay := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["send_delay"] = 0
+				plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
+			}
+		}
+		setSendDelay(DEFAULT_SEND_DELAY)
+		setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+		setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+		core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
 
 		// time_format.
 		setTimeFormat := func(p interface{}) {

@@ -539,15 +539,16 @@ func HashString(s *string) string {
 	return fmt.Sprintf("%x", sha1.Sum([]byte(*s)))
 }
 
-func IntervalToSeconds(s string) (int64, error) {
-	su := strings.ToUpper(s)
-	r := []rune(su)
-	re := regexp.MustCompile("^[0-9]+[SMHD]$")
+func IntervalToMilliseconds(s string) (int64, error) {
+    digitsPattern := regexp.MustCompile("[0-9]+")
+	formatPattern := regexp.MustCompile("^[0-9]+[SMHD]+$")
+	
+    su := strings.ToUpper(s)
 
-	if !re.MatchString(su) {
+    if !formatPattern.MatchString(strings.ToUpper(s)) {
 		return 0, fmt.Errorf("%s: %s", ERROR_INTERVAL_FORMAT_UNKNOWN, s)
 	} else {
-		v, _ := strconv.ParseInt(string(r[:len(r)-1]), 10, 64)
+		v, _ := strconv.ParseInt(string(digitsPattern.Find([]byte(s))), 10, 64)
 
 		// cannot be zero, cast to 1.
 		if v == 0 {
@@ -555,14 +556,16 @@ func IntervalToSeconds(s string) (int64, error) {
 		}
 
 		switch {
-		case strings.HasSuffix(su, "S"):
+		case strings.HasSuffix(su, "MS"):
 			return v, nil
+		case strings.HasSuffix(su, "S"):
+			return v * 1000, nil
 		case strings.HasSuffix(su, "M"):
-			return v * 60, nil
+			return v * 60 * 1000, nil
 		case strings.HasSuffix(su, "H"):
-			return v * 60 * 60, nil
+			return v * 60 * 60 * 1000, nil
 		case strings.HasSuffix(su, "D"):
-			return v * 60 * 60 * 24, nil
+			return v * 24 * 60 * 60 * 1000, nil
 		default:
 			return 0, fmt.Errorf("%s: %s", ERROR_INTERVAL_FORMAT_UNKNOWN, s)
 		}
@@ -682,12 +685,12 @@ func IsInt(i interface{}) (int, bool) {
 
 func IsInterval(i interface{}) (int64, bool) {
 	if v, b := IsString(i); b {
-		seconds, err := IntervalToSeconds(v)
+		ms, err := IntervalToMilliseconds(v)
 
 		if err != nil {
 			return 0, false
 		} else {
-			return seconds, true
+			return ms, true
 		}
 
 	} else {

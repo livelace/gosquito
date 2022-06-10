@@ -301,7 +301,7 @@ func downloadFile(p *Plugin, remoteId string, originalFileName string) (string, 
 
 		// 1. Read files IDs from file channel.
 		// 2. Return error if timeout is happened.
-		for i := 0; i < p.OptionFetchTimeout; i++ {
+		for i := 0; i < p.OptionFetchTimeout/1000; i++ {
 			if len(p.InputFileChannel) > 0 {
 				for id := range p.InputFileChannel {
 					if id == downloadFile.Id {
@@ -713,7 +713,7 @@ func inputAds(p *Plugin) {
 			}
 		}
 
-		time.Sleep(time.Duration(p.OptionAdsPeriod) * time.Second)
+		time.Sleep(p.OptionAdsPeriod)
 	}
 }
 
@@ -963,8 +963,9 @@ func saveChat(p *Plugin) {
 			if chatId != 0 {
 				sqlUpdateChat(p, chatId, "")
 			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -982,27 +983,33 @@ func saveUser(p *Plugin) {
 				if err == nil {
 					if isNew {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("new: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
+							fmt.Sprintf("new: %v, version: %v, username: %v", 
+                                v.User.Id, version, v.User.Username))
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("old: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
+							fmt.Sprintf("old: %v, version: %v, username: %v", 
+                                v.User.Id, version, v.User.Username))
 					}
 
 					if isChanged {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("changed: %v, version: %v, username: %v", v.User.Id, version, v.User.Username))
+							fmt.Sprintf("changed: %v, version: %v, username: %v", 
+                                v.User.Id, version, v.User.Username))
 					}
 				} else {
 					core.LogInputPlugin(p.LogFields, "user",
 						fmt.Errorf(ERROR_USER_UPDATE_ERROR.Error(), err))
 				}
 			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.FormattedText, files []string) {
+func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.FormattedText, files []string) bool {
+	sendStatus := true
+
 	if len(files) > 1 && p.OptionSendAlbum {
 		// Splite files into albums.
 		var albums [][]string
@@ -1029,28 +1036,39 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 					content = append(content, getVideoMessage(p, &fileCaption, file))
 				}
 			}
-			sendMessageAlbum(p, chatId, content)
-			time.Sleep(p.OptionSendDelay * time.Second)
+			if !sendMessageAlbum(p, chatId, content) {
+				sendStatus = false
+			}
+			time.Sleep(p.OptionSendDelay)
 		}
 
 	} else if len(files) > 0 {
 		for _, file := range files {
 			switch fileType {
 			case "audio":
-				sendMessage(p, chatId, getAudioMessage(p, &fileCaption, file))
+                if !sendMessage(p, chatId, getAudioMessage(p, &fileCaption, file)) {
+                    sendStatus = false
+                }
 			case "document":
-				sendMessage(p, chatId, getDocumentMessage(p, &fileCaption, file))
+                if !sendMessage(p, chatId, getDocumentMessage(p, &fileCaption, file)) {
+                    sendStatus = false
+                }
 			case "photo":
-				sendMessage(p, chatId, getPhotoMessage(p, &fileCaption, file))
+                if !sendMessage(p, chatId, getPhotoMessage(p, &fileCaption, file)) {
+                    sendStatus = false
+                }
 			case "video":
-				sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file))
+                if !sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file)) {
+                    sendStatus = false
+                }
 			}
-			time.Sleep(p.OptionSendDelay * time.Second)
+			time.Sleep(p.OptionSendDelay)
 		}
 	}
+    return sendStatus
 }
 
-func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) {
+func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) bool {
 	message, err := p.TdlibClient.SendMessage(&client.SendMessageRequest{
 		ChatId:           chatId,
 		MessageThreadId:  0,
@@ -1064,34 +1082,40 @@ func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) {
 	})
 
 	if err == nil {
-		for i := 0; i < p.OptionSendTimeout; i++ {
+		for i := 0; i < p.OptionSendTimeout/1000; i++ {
 			if len(p.OutputMessageChannel) > 0 {
 				status := <-p.OutputMessageChannel
 
 				if status.MessageId == message.Id && status.ErrorCode == 0 {
 					core.LogOutputPlugin(p.LogFields, "send",
 						fmt.Sprintf(INFO_SEND_MESSAGE_SUCCESS, status.MessageId))
-					return
+					return true
 				}
 
 				if status.MessageId == message.Id && status.ErrorCode != 0 {
-					core.LogOutputPlugin(p.LogFields, "send",
-						fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), status.MessageId, status.ErrorMessage))
-					return
+					core.LogOutputPlugin(p.LogFields, "send", 
+                        fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), 
+                            status.MessageId, status.ErrorMessage))
+					return false
 				}
 			}
 			time.Sleep(1 * time.Second)
 		}
-		core.LogOutputPlugin(p.LogFields, "send",
-			fmt.Errorf(ERROR_SEND_MESSAGE_TIMEOUT.Error(), message.Id))
+
+		core.LogOutputPlugin(p.LogFields, "send", 
+            fmt.Errorf(ERROR_SEND_MESSAGE_TIMEOUT.Error(), message.Id))
+		return false
+
 	} else {
-		core.LogOutputPlugin(p.LogFields, "send",
-			fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
+		core.LogOutputPlugin(p.LogFields, "send", 
+            fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
+		return false
 	}
-	time.Sleep(p.OptionSendDelay * time.Second)
 }
 
-func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageContent) {
+func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageContent) bool {
+	sendStatus := true
+
 	messages, err := p.TdlibClient.SendMessageAlbum(&client.SendMessageAlbumRequest{
 		ChatId:           chatId,
 		MessageThreadId:  0,
@@ -1112,9 +1136,9 @@ func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageCont
 			messageIdMap[message.Id] = true
 		}
 
-		for i := 0; i < p.OptionSendTimeout; i++ {
+		for i := 0; i < p.OptionSendTimeout/1000; i++ {
 			if messageCounter == messages.TotalCount {
-				return
+				return sendStatus
 			}
 
 			if len(p.OutputMessageChannel) > 0 {
@@ -1127,8 +1151,10 @@ func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageCont
 
 				} else if messageIdMap[status.MessageId] && status.ErrorCode != 0 {
 					core.LogOutputPlugin(p.LogFields, "send",
-						fmt.Errorf(ERROR_SEND_ALBUM_MESSAGE_ERROR.Error(), status.MessageId, status.ErrorMessage))
+						fmt.Errorf(ERROR_SEND_ALBUM_MESSAGE_ERROR.Error(),
+							status.MessageId, status.ErrorMessage))
 					messageCounter += 1
+					sendStatus = false
 				}
 			}
 			time.Sleep(1 * time.Second)
@@ -1136,10 +1162,12 @@ func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageCont
 
 		core.LogOutputPlugin(p.LogFields, "send",
 			fmt.Errorf(ERROR_SEND_ALBUM_TIMEOUT.Error(), "album"))
+		return false
 
 	} else {
 		core.LogOutputPlugin(p.LogFields, "send",
 			fmt.Errorf(ERROR_SEND_ALBUM_ERROR.Error(), err))
+		return false
 	}
 }
 
@@ -1236,7 +1264,7 @@ func showStatus(p *Plugin) {
 			}
 		}
 
-		time.Sleep(time.Duration(p.OptionStatusPeriod) * time.Second)
+		time.Sleep(p.OptionStatusPeriod)
 	}
 }
 
@@ -1250,7 +1278,7 @@ func storageOptimizer(p *Plugin) {
 			core.LogInputPlugin(p.LogFields, "storage", fmt.Errorf("error: %v", err))
 		}
 
-		time.Sleep(time.Duration(p.OptionStoragePeriod) * time.Second)
+		time.Sleep(p.OptionStoragePeriod)
 	}
 }
 
@@ -1422,7 +1450,7 @@ type Plugin struct {
 	ChatBySourceIdCache map[string]int64
 
 	OptionAdsEnable             bool
-	OptionAdsPeriod             int64
+	OptionAdsPeriod             time.Duration
 	OptionApiHash               string
 	OptionApiId                 int32
 	OptionAppVersion            string
@@ -1491,9 +1519,9 @@ type Plugin struct {
 	OptionSessionTTL            int
 	OptionSourceChat            []string
 	OptionStatusEnable          bool
-	OptionStatusPeriod          int64
+	OptionStatusPeriod          time.Duration
 	OptionStorageOptimize       bool
-	OptionStoragePeriod         int64
+	OptionStoragePeriod         time.Duration
 	OptionTimeFormat            string
 	OptionTimeFormatA           string
 	OptionTimeFormatB           string
@@ -1661,12 +1689,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay/1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -1703,6 +1731,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 
 func (p *Plugin) Send(data []*core.Datum) error {
 	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := true
 
 	for _, item := range data {
 		for _, chatName := range p.OptionOutput {
@@ -1714,6 +1743,8 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				fileCaption = client.FormattedText{
 					Text: c,
 				}
+			} else if err != nil {
+                
 			}
 
 			// Construct text message.
@@ -1723,25 +1754,40 @@ func (p *Plugin) Send(data []*core.Datum) error {
 					DisableWebPagePreview: p.OptionMessageDisablePreview,
 					Text:                  &client.FormattedText{Text: m},
 				}
-				sendMessage(p, chatId, content)
+				if !sendMessage(p, chatId, content) {
+					sendStatus = false
+				}
+				time.Sleep(p.OptionSendDelay)
 			}
 
 			// Send audio files.
 			audio := core.ExtractDatumFieldIntoArray(item, p.OptionFileAudio)
-			sendFiles(p, chatId, "audio", fileCaption, audio)
+			if !sendFiles(p, chatId, "audio", fileCaption, audio) {
+                sendStatus = false
+            }
 
 			// Send document files.
 			document := core.ExtractDatumFieldIntoArray(item, p.OptionFileDocument)
-			sendFiles(p, chatId, "document", fileCaption, document)
+			if !sendFiles(p, chatId, "document", fileCaption, document) {
+                sendStatus = false
+            }
 
 			// Send photo files.
 			photo := core.ExtractDatumFieldIntoArray(item, p.OptionFilePhoto)
-			sendFiles(p, chatId, "photo", fileCaption, photo)
+			if sendFiles(p, chatId, "photo", fileCaption, photo) {
+                sendStatus = false
+            }
 
 			// Send video files.
 			video := core.ExtractDatumFieldIntoArray(item, p.OptionFileVideo)
-			sendFiles(p, chatId, "video", fileCaption, video)
+			if sendFiles(p, chatId, "video", fileCaption, video) {
+                sendStatus = false
+            }
 		}
+	}
+
+	if !sendStatus {
+		return core.ERROR_SEND_FAIL
 	}
 
 	return nil
@@ -1936,7 +1982,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setAdsPeriod := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
 				availableParams["ads_period"] = 0
-				plugin.OptionAdsPeriod = v
+				plugin.OptionAdsPeriod = time.Duration(v) * time.Millisecond
 			}
 		}
 		setAdsPeriod(DEFAULT_ADS_PERIOD)
@@ -2361,7 +2407,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setSendDelay := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
 				availableParams["send_delay"] = 0
-				plugin.OptionSendDelay = time.Duration(v) * time.Second
+				plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
 			}
 		}
 		setSendDelay(DEFAULT_SEND_DELAY)
@@ -2518,7 +2564,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStatusPeriod := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["status_period"] = 0
-			plugin.OptionStatusPeriod = v
+			plugin.OptionStatusPeriod = time.Duration(v) * time.Millisecond
 		}
 	}
 	setStatusPeriod(DEFAULT_STATUS_PERIOD)
@@ -2542,7 +2588,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStoragePeriod := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["storage_period"] = 0
-			plugin.OptionStoragePeriod = v
+			plugin.OptionStoragePeriod = time.Duration(v) * time.Millisecond
 		}
 	}
 	setStoragePeriod(DEFAULT_STATUS_PERIOD)

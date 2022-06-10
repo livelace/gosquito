@@ -43,6 +43,7 @@ const (
 	DEFAULT_SCHEMA_RECORD_NAMESPACE = "ru.livelace.gosquito"
 	DEFAULT_SCHEMA_REGISTRY         = "http://127.0.0.1:8081"
 	DEFAULT_SCHEMA_SUBJECT_STRATEGY = "TopicRecordName"
+	DEFAULT_SEND_DELAY              = "1ms"
 	DEFAULT_TIMEOUT                 = 3
 )
 
@@ -51,6 +52,7 @@ var (
 	ERROR_SCHEMA_CREATE            = errors.New("schema create error: %s")
 	ERROR_SCHEMA_ERROR             = errors.New("schema error: %s")
 	ERROR_SCHEMA_NOT_SET           = errors.New("schema not set")
+	ERROR_SEND_ERROR               = errors.New("cannot send data: %v")
 	ERROR_SUBJECT_STRATEGY_UNKNOWN = errors.New("schema subject strategy unknown: %s")
 )
 
@@ -195,6 +197,7 @@ type Plugin struct {
 	OptionMatchTTL              time.Duration
 	OptionMessageKey            string
 	OptionOffset                string
+	OptionSendDelay             time.Duration
 	OptionOutput                []string
 	OptionSchema                string
 	OptionSchemaRecordName      string
@@ -491,12 +494,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 	currentTime := time.Now().UTC()
 
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay/1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -533,6 +536,7 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 
 func (p *Plugin) Send(data []*core.Datum) error {
 	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := true
 
 	// Generate and send messages for every provided topic.
 	for _, topic := range p.OptionOutput {
@@ -610,8 +614,16 @@ func (p *Plugin) Send(data []*core.Datum) error {
 		// Send messages to topic.
 		err := sendData(p, messages)
 		if err != nil {
-			return err
+			sendStatus = false
+			core.LogOutputPlugin(p.LogFields, "send", 
+                fmt.Errorf(ERROR_SEND_ERROR.Error(), err))
 		}
+
+		time.Sleep(p.OptionSendDelay)
+	}
+	
+    if !sendStatus {
+		return core.ERROR_SEND_FAIL
 	}
 
 	return nil
@@ -665,6 +677,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["match_signature"] = -1
 		availableParams["match_ttl"] = -1
 		availableParams["offset"] = -1
+		availableParams["send_delay"] = -1
 		availableParams["time_format"] = -1
 		availableParams["time_format_a"] = -1
 		availableParams["time_format_b"] = -1
@@ -804,7 +817,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMatchTTL := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
 				availableParams["match_ttl"] = 0
-				plugin.OptionMatchTTL = time.Duration(v) * time.Second
+				plugin.OptionMatchTTL = time.Duration(v) * time.Millisecond
 			}
 		}
 		setMatchTTL(DEFAULT_MATCH_TTL)
@@ -823,6 +836,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOffset(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.offset", template)))
 		setOffset((*pluginConfig.PluginParams)["offset"])
 		core.ShowPluginParam(plugin.LogFields, "offset", plugin.OptionOffset)
+
+		// send_delay.
+		setSendDelay := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["send_delay"] = 0
+				plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
+			}
+		}
+		setSendDelay(DEFAULT_SEND_DELAY)
+		setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+		setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+		core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
 
 		// time_format.
 		setTimeFormat := func(p interface{}) {

@@ -170,7 +170,7 @@ func RunApp() {
 			// Find flow candidates and save their execution counters.
 			if flow.GetInstance() < flow.FlowInstance {
 				// Save candidates counters.
-				if currentTime.Unix()-lastTime.Unix() > flow.FlowInterval {
+				if currentTime.Unix()-lastTime.Unix() > flow.FlowInterval / 1000 {
 					flowCandidates[flow] = flowCounter[flow.FlowUUID]
 				}
 			}

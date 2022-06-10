@@ -312,12 +312,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 
 	// Check if any source is expired.
 	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval {
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay / 1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -512,7 +512,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL := func(p interface{}) {
 		if v, b := core.IsInterval(p); b {
 			availableParams["match_ttl"] = 0
-			plugin.OptionMatchTTL = time.Duration(v) * time.Second
+			plugin.OptionMatchTTL = time.Duration(v) * time.Millisecond
 		}
 	}
 	setMatchTTL(DEFAULT_MATCH_TTL)
@@ -627,7 +627,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZoneC(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.time_zone_c", template)))
 	setTimeZoneC((*pluginConfig.PluginParams)["time_zone_c"])
 	core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
-	
+
     // timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {

@@ -30,8 +30,8 @@ var (
 	ERROR_PLUGIN_REQUIRED_PARAM        = errors.New("required parameter wrong or not set: %s")
 	ERROR_PLUGIN_SAVE_DATA             = errors.New("plugin save data error: %s")
 	ERROR_PLUGIN_UNKNOWN               = errors.New("plugin unknown")
-
-	ERROR_SIZE_FORMAT_UNKNOWN = errors.New("size format unknown")
-	ERROR_SIZE_MISMATCH       = errors.New("size mismatch")
-	ERROR_SYMLINK_ERROR       = errors.New("cannot create symlink: %s")
+	ERROR_SEND_FAIL                    = errors.New("sending finished with errors")
+	ERROR_SIZE_FORMAT_UNKNOWN          = errors.New("size format unknown")
+	ERROR_SIZE_MISMATCH                = errors.New("size mismatch")
+	ERROR_SYMLINK_ERROR                = errors.New("cannot create symlink: %s")
 )

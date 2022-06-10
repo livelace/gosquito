@@ -18,6 +18,7 @@ const (
 
 	DEFAULT_BODY_LENGTH    = 10000
 	DEFAULT_BODY_HTML      = true
+	DEFAULT_SEND_DELAY     = "1s"
 	DEFAULT_SMTP_PORT      = 25
 	DEFAULT_SSL_ENABLE     = false
 	DEFAULT_SSL_VERIFY     = true
@@ -25,8 +26,8 @@ const (
 )
 
 var (
-	ERROR_SMTP_CONNECT_ERROR = errors.New("smtp connect error: %s")
-	ERROR_SMTP_SEND_ERROR    = errors.New("smtp send error: %s")
+	ERROR_SMTP_CONNECT_ERROR = errors.New("smtp connect error: %v")
+	ERROR_SMTP_SEND_ERROR    = errors.New("smtp send error: %v")
 )
 
 type Plugin struct {
@@ -45,6 +46,7 @@ type Plugin struct {
 	OptionFrom            string
 	OptionHeaders         map[string]interface{}
 	OptionOutput          []string
+	OptionSendDelay       time.Duration
 	OptionServer          string
 	OptionSSL             bool
 	OptionSSLVerify       bool
@@ -85,6 +87,7 @@ func (p *Plugin) GetOutput() []string {
 
 func (p *Plugin) Send(data []*core.Datum) error {
 	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := true
 
 	// Connection settings.
 	server := mail.NewSMTPClient()
@@ -113,7 +116,6 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 	// Send data.
 	for _, item := range data {
-
 		for _, to := range p.OptionOutput {
 			b, err := core.ExtractTemplateIntoString(item, p.OptionBodyTemplate)
 			if err != nil {
@@ -159,9 +161,17 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			// Send letter.
 			err = email.Send(smtpClient)
 			if err != nil {
-				return fmt.Errorf(ERROR_SMTP_SEND_ERROR.Error(), err)
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, "send",
+					fmt.Errorf(ERROR_SMTP_SEND_ERROR.Error(), err))
 			}
+
+			time.Sleep(p.OptionSendDelay)
 		}
+	}
+
+	if !sendStatus {
+		return core.ERROR_SEND_FAIL
 	}
 
 	return nil
@@ -203,6 +213,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"headers":        -1,
 		"output":         1,
 		"port":           -1,
+		"send_delay":     -1,
 		"server":         1,
 		"ssl":            -1,
 		"ssl_verify":     -1,
@@ -346,6 +357,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setPort(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.port", template)))
 	setPort((*pluginConfig.PluginParams)["port"])
 	core.ShowPluginParam(plugin.LogFields, "port", plugin.OptionPort)
+
+	// send_delay.
+	setSendDelay := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["send_delay"] = 0
+			plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
+		}
+	}
+	setSendDelay(DEFAULT_SEND_DELAY)
+	setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+	setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+	core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
 
 	// server.
 	setServer := func(p interface{}) {

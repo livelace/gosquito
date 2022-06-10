@@ -19,13 +19,13 @@ const (
 	PLUGIN_NAME = "mattermost"
 
 	DEFAULT_ATTACHMENTS_COLOR = "#00C100"
+	DEFAULT_SEND_DELAY        = "1s"
 	DEFAULT_TIMEOUT           = 3
 )
 
 var (
 	ERROR_CHANNEL_NOT_FOUND    = errors.New("channel not found: %s")
 	ERROR_OUTPUT_NOT_SET       = errors.New("channels and users are not set")
-	ERROR_SEND_FAIL            = errors.New("sending finished with errors")
 	ERROR_SEND_MESSAGE_CHANNEL = errors.New("cannot send message to channel: %v")
 	ERROR_SEND_MESSAGE_USER    = errors.New("cannot send message to user: %v")
 	ERROR_UPLOAD_FILE_CHANNEL  = errors.New("cannot upload file to channel: %s, %v")
@@ -103,6 +103,7 @@ type Plugin struct {
 	OptionPassword        string
 	OptionPretext         string
 	OptionPretextTemplate *tmpl.Template
+	OptionSendDelay       time.Duration
 	OptionTeam            string
 	OptionText            string
 	OptionTextTemplate    *tmpl.Template
@@ -142,8 +143,8 @@ func (p *Plugin) GetOutput() []string {
 }
 
 func (p *Plugin) Send(data []*core.Datum) error {
-  p.LogFields["run"] = p.Flow.GetRunID()
-	sendFail := false
+	p.LogFields["run"] = p.Flow.GetRunID()
+	sendStatus := true
 
 	// Process and send data.
 	for _, item := range data {
@@ -194,8 +195,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 		// Send to channel.
 		for _, channel := range p.OptionChannels {
-			filesId := uploadFiles(p, channel, &files)
-
+            filesId := uploadFiles(p, channel, &files)
 			post := mattermost.Post{
 				UserId:    p.MattermostUser.Id,
 				ChannelId: channel,
@@ -206,23 +206,24 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 			_, _, err := p.MattermostApi.CreatePost(&post)
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, channel, fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
-				continue
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, channel,
+					fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
 			}
+            
+            time.Sleep(p.OptionSendDelay)
 		}
 
 		// Send to users.
 		for _, user := range p.OptionUsers {
-			ch, _, err := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
+            ch, _, err := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
-				continue
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, user, 
+                    fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
 			}
 
 			filesId := uploadFiles(p, ch.Id, &files)
-
 			post := mattermost.Post{
 				UserId:    p.MattermostUser.Id,
 				ChannelId: ch.Id,
@@ -233,15 +234,17 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 			_, _, err = p.MattermostApi.CreatePost(&post)
 			if err != nil {
-				sendFail = true
-				core.LogOutputPlugin(p.LogFields, user, fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
-				continue
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, user, 
+                    fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
 			}
+            
+            time.Sleep(p.OptionSendDelay)
 		}
 	}
 
-	if sendFail {
-		return ERROR_SEND_FAIL
+	if !sendStatus {
+		return core.ERROR_SEND_FAIL
 	}
 
 	return nil
@@ -275,13 +278,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"template": -1,
 		"timeout":  -1,
 
-		"files":    -1,
-		"message":  -1,
-		"output":   1,
-		"password": 1,
-		"team":     1,
-		"url":      1,
-		"username": 1,
+		"files":      -1,
+		"message":    -1,
+		"output":     1,
+		"password":   1,
+		"send_delay": 1,
+		"team":       1,
+		"url":        1,
+		"username":   1,
 
 		"attachments": -1,
 		"color":       -1,
@@ -296,8 +300,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	cred, _ := core.IsString((*pluginConfig.PluginParams)["cred"])
 	template, _ := core.IsString((*pluginConfig.PluginParams)["template"])
-    
-    vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
+
+	vault, err := core.GetVault(pluginConfig.AppConfig.GetStringMap(fmt.Sprintf("%s.vault", cred)))
 	if err != nil {
 		return &plugin, err
 	}
@@ -334,8 +338,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setURL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.url", cred)))
 	setURL((*pluginConfig.PluginParams)["url"])
 	core.ShowPluginParam(plugin.LogFields, "url", plugin.OptionURL)
-	
-    // username.
+
+	// username.
 	setUsername := func(p interface{}) {
 		if v, b := core.IsString(p); b {
 			availableParams["username"] = 0
@@ -441,6 +445,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if err != nil {
 		return &Plugin{}, err
 	}
+
+	// send_delay.
+	setSendDelay := func(p interface{}) {
+		if v, b := core.IsInterval(p); b {
+			availableParams["send_delay"] = 0
+			plugin.OptionSendDelay = time.Duration(v) * time.Millisecond
+		}
+	}
+	setSendDelay(DEFAULT_SEND_DELAY)
+	setSendDelay(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.send_delay", template)))
+	setSendDelay((*pluginConfig.PluginParams)["send_delay"])
+	core.ShowPluginParam(plugin.LogFields, "send_delay", plugin.OptionSendDelay)
 
 	// text.
 	setText := func(p interface{}) {
