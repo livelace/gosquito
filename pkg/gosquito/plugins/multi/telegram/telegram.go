@@ -1774,13 +1774,13 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 			// Send photo files.
 			photo := core.ExtractDatumFieldIntoArray(item, p.OptionFilePhoto)
-			if sendFiles(p, chatId, "photo", fileCaption, photo) {
+			if !sendFiles(p, chatId, "photo", fileCaption, photo) {
                 sendStatus = false
             }
 
 			// Send video files.
 			video := core.ExtractDatumFieldIntoArray(item, p.OptionFileVideo)
-			if sendFiles(p, chatId, "video", fileCaption, video) {
+			if !sendFiles(p, chatId, "video", fileCaption, video) {
                 sendStatus = false
             }
 		}
