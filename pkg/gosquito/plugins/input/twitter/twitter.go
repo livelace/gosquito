@@ -243,7 +243,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				for _, v := range p.OptionMatchSignature {
 					switch v {
 					case "TWITTER.TEXT":
-						itemSignature += item.Text
+						itemSignature += item.FullText
 					}
 				}
 
