@@ -24,9 +24,9 @@
 | password     | -        | string | +    | -        | -             | ""                | ""                              | Basic auth password.                      |
 | proxy        | -        | string | -    | +        | -             | ""                | "http://127.0.0.1:8080"         | Proxy settings.                           |
 | redirect     | -        | bool   | -    | +        | -             | true              | false                           | Follow redirects.                         |
-| send_delay   | -        | string | -    | +        | -             | "1ms"             | "1s"                         | Delay between sending.                    |
+| send_delay   | -        | string | -    | +        | -             | "1ms"             | "1s"                            | Delay between sending.                    |
 | ssl_verify   | -        | bool   | -    | +        | -             | true              | false                           | Verify server certificate.                |
-| user_agent   | -        | string | -    | +        | -             | "gosquito v4.1.0" | "webchela 1.0"                  | Custom User-Agent for feed access.        |
+| user_agent   | -        | string | -    | +        | -             | "gosquito v4.2.0" | "webchela 1.0"                  | Custom User-Agent for feed access.        |
 | username     | -        | string | +    | -        | -             | ""                | ""                              | Basic auth username.                      |
 
 
