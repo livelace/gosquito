@@ -24,7 +24,7 @@ const (
 
 	DEFAULT_BATCH_SIZE     = 1000
 	DEFAULT_COMPRESSION    = "none"
-	DEFAULT_CONFLUENT_AVRO = false
+	DEFAULT_CONFLUENT_AVRO = true
 	DEFAULT_LOG_LEVEL      = 0
 	DEFAULT_MATCH_TTL      = "1d"
 	DEFAULT_OFFSET         = "earliest"
