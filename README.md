@@ -93,3 +93,4 @@ graph TD;
 16. core: flow schedule.
 17. kafka: warn about connection problems.
 19. core: log level for flow.
+20. core: flow enable/disable regexp support.
