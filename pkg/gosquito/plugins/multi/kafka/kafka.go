@@ -39,7 +39,6 @@ const (
   ]
 }
 `
-	DEFAULT_SCHEMA_RECORD_NAME      = "Datum"
 	DEFAULT_SCHEMA_RECORD_NAMESPACE = "ru.livelace.gosquito"
 	DEFAULT_SCHEMA_REGISTRY         = "http://127.0.0.1:8081"
 	DEFAULT_SCHEMA_SUBJECT_STRATEGY = "TopicRecordName"
@@ -583,9 +582,11 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				case "TOPICNAME":
 					subject = topic
 				case "RECORDNAME":
-					subject = p.OptionSchemaRecordName
+					subject = fmt.Sprintf("%s.%s", 
+                        p.OptionSchemaRecordNamespace, p.OptionSchemaRecordName)
 				case "TOPICRECORDNAME":
-					subject = fmt.Sprintf("%s-%s", topic, p.OptionSchemaRecordName)
+					subject = fmt.Sprintf("%s-%s.%s", 
+                        topic, p.OptionSchemaRecordNamespace, p.OptionSchemaRecordName)
 				default:
 					subject = topic
 				}
