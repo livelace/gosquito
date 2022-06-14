@@ -102,7 +102,7 @@ type Plugin struct {
 	OptionProxy               string
 	OptionRedirect            bool
 	OptionRequire             []int
-    OptionSendDelay           time.Duration
+	OptionSendDelay           time.Duration
 	OptionSSLVerify           bool
 	OptionTarget              string
 	OptionTimeFormat          string
@@ -463,8 +463,8 @@ func (p *Plugin) SaveState(data map[string]time.Time) error {
 func (p *Plugin) Send(data []*core.Datum) error {
 	p.LogFields["run"] = p.Flow.GetRunID()
 	sendStatus := true
-	
-    var resp *resty.Response
+
+	var resp *resty.Response
 
 	for _, output := range p.OptionOutput {
 		// Iterate over data items (articles, tweets etc.).
@@ -501,14 +501,14 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				core.LogOutputPlugin(p.LogFields, output,
 					fmt.Sprintf("%s %v", p.OptionMethod, resp.StatusCode()))
 			} else {
-                sendStatus = false
-				core.LogOutputPlugin(p.LogFields, output, 
-                    fmt.Errorf("%s %v", p.OptionMethod, err))
+				sendStatus = false
+				core.LogOutputPlugin(p.LogFields, output,
+					fmt.Errorf("%s %v", p.OptionMethod, err))
 			}
 		}
 	}
-	
-    if !sendStatus {
+
+	if !sendStatus {
 		return core.ERROR_SEND_FAIL
 	}
 
@@ -546,8 +546,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// "0" - will be set if parameter is set somehow (defaults, template, config etc.).
 	availableParams := map[string]int{
 		"cred":     -1,
-		"include":  -1,
-		"require":  -1,
 		"template": -1,
 		"timeout":  -1,
 
@@ -582,8 +580,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["time_zone_c"] = -1
 		break
 	case "process":
+		availableParams["include"] = -1
 		availableParams["input"] = 1
 		availableParams["output"] = 1
+		availableParams["require"] = -1
 		availableParams["target"] = 1
 		break
 	case "output":
@@ -831,6 +831,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
 
 	case "process":
+		// include.
+		setInclude := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["include"] = 0
+				plugin.OptionInclude = v
+			}
+		}
+		setInclude(pluginConfig.AppConfig.GetBool(core.VIPER_DEFAULT_PLUGIN_INCLUDE))
+		setInclude(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.include", template)))
+		setInclude((*pluginConfig.PluginParams)["include"])
+		core.ShowPluginParam(plugin.LogFields, "include", plugin.OptionInclude)
+
 		// input.
 		setInput := func(p interface{}) {
 			if v, b := core.IsSliceOfString(p); b {
@@ -851,6 +863,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOutput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.output", template)))
 		setOutput((*pluginConfig.PluginParams)["output"])
 		core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
+
+		// require.
+		setRequire := func(p interface{}) {
+			if v, b := core.IsSliceOfInt(p); b {
+				availableParams["require"] = 0
+				plugin.OptionRequire = v
+
+			}
+		}
+		setRequire(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.require", template)))
+		setRequire((*pluginConfig.PluginParams)["require"])
+		core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
 		// target.
 		setTarget := func(p interface{}) {
