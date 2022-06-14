@@ -19,7 +19,7 @@ type Data struct {
 	
     TEXT0   string
     ...
-    TEXT15  string
+    TEXT25  string
 
     TEXTA*  string
     ...
