@@ -250,6 +250,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	availableParams := map[string]int{
 		"include": -1,
 		"require": -1,
+		"template": -1,
 
 		"input":           1,
 		"same_algo":       -1,
