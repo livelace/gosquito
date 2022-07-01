@@ -21,7 +21,7 @@
 | same_ratio_max  |    -     |  int   |    +     |      100      |        70        | Maximum similarity ratio per comparison (percents).                          |
 | same_ratio_min  |    -     |  int   |    +     |       1       |        50        | Minimum similarity ratio per comparison (percents).                          |
 | same_tokens_max |    -     |  int   |    +     |      100      |       1000       | Maximum amount of tokens for comparison.                                     |
-| same_tokens_min |    -     |  int   |    +     |      10       |       100        | Minimum amount of tokens for comparison.                                     |
+| same_tokens_min |    -     |  int   |    +     |       5       |       100        | Minimum amount of tokens for comparison.                                     |
 | same_ttl        |    -     | string |    +     |     "1h"      |      "24h"       | TTL (Time To Live) for saved states (tokens joint into a sentence/state).    |
 
 ### Flow sample:
@@ -33,10 +33,11 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: [
-        "https://iz.ru/xml/rss/all.xml",
-        "https://ria.ru/export/rss2/archive/index.xml",
-      ]
+      input:
+        [
+          "https://iz.ru/xml/rss/all.xml",
+          "https://ria.ru/export/rss2/archive/index.xml",
+        ]
 
   process:
     # rss title may be similar not more than 50% to each (same_share_min: 100) saved state.
