@@ -20,8 +20,8 @@
 | same_share_min  |    -     |  int   |    +     |       1       |        50        | Minimum similarity over all data (percents).                                 |
 | same_ratio_max  |    -     |  int   |    +     |      100      |        70        | Maximum similarity ratio per comparison (percents).                          |
 | same_ratio_min  |    -     |  int   |    +     |       1       |        50        | Minimum similarity ratio per comparison (percents).                          |
-| same_tokens_max |    -     |  int   |    +     |      100      |       1000       | Maximum amount of tokens for comparison.                                     |
-| same_tokens_min |    -     |  int   |    +     |       5       |       100        | Minimum amount of tokens for comparison.                                     |
+| same_tokens_max |    -     |  int   |    +     |      30       |       100        | Maximum amount of tokens for comparison.                                     |
+| same_tokens_min |    -     |  int   |    +     |       5       |        30        | Minimum amount of tokens for comparison.                                     |
 | same_ttl        |    -     | string |    +     |     "1h"      |      "24h"       | TTL (Time To Live) for saved states (tokens joint into a sentence/state).    |
 
 ### Flow sample:
