@@ -666,6 +666,27 @@ func IsFlowName(name string) bool {
 	return re.MatchString(name)
 }
 
+func IsFloat(i interface{}) (float32, bool) {
+	switch v := i.(type) {
+	case int:
+		if v > 0 {
+			return float32(v), true
+		}
+	case float64:
+		if v > 0 {
+			return float32(v), true
+		}
+	case string:
+		if strings.Contains(v, "env://") {
+			v = GetVarFromEnv(v)
+		}
+		if sf, err := strconv.ParseFloat(v, 64); err == nil && sf > 0 {
+			return float32(sf), true
+		}
+	}
+	return 0, false
+}
+
 func IsInt(i interface{}) (int, bool) {
 	switch v := i.(type) {
 	case int:

@@ -7,8 +7,8 @@
 
 | Param   | Required | Type  | Templates | Default | Example |
 |:--------|:--------:|:-----:|:---------:|:-------:|:-------:|
-| include |    -     | bool  |     -     |  true   |  false  |
-| require |    -     | array |     -     |   []    | [1, 2]  |
+| include | -        | bool  | -         | false   | true    |
+| require | -        | array | -         | []      | [1, 2]  |
 
 
 ### Plugin parameters:

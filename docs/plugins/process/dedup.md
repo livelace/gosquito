@@ -9,7 +9,7 @@ Deduplication is performed over [Datum](../../concept.md) UUID.
 
 | Param   | Required | Type | Default | Example |
 |:--------|:--------:|:----:|:-------:|:-------:|
-| include | -        | bool | true    | false   |
+| include | -        | bool | false   | true    |
 
 
 ### Plugin parameters:

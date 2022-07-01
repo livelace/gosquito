@@ -7,9 +7,9 @@
 
 | Param   | Required | Type  | Default | Example |
 |:--------|:--------:|:-----:|:-------:|:-------:|
-| include |    -     | bool  |  true   |  false  |
-| require |    -     | array |   []    | [1, 2]  |
-| timeout |    -     |  int  |    2    |    3    |
+| include | -        | bool  | false   | true    |
+| require | -        | array | []      | [1, 2]  |
+| timeout | -        | int   | 2       | 3       |
 
 
 ### Plugin parameters:

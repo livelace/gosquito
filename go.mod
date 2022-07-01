@@ -14,8 +14,10 @@ require (
 	github.com/google/renameio v0.1.0
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-getter v1.5.9
+	github.com/hbollon/go-edlib v1.6.0
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
+	github.com/liuzl/tokenizer v0.0.0-20181128060327-56c1056833c1
 	github.com/livelace/go-tdlib v0.6.1-0.20220509220015-92a5c6e1f36e
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost-server/v6 v6.6.1
@@ -38,5 +40,6 @@ require (
 	github.com/confluentinc/confluent-kafka-go v1.7.0 // indirect
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.1
+	github.com/liuzl/segment v0.0.0-20160915185041-762005e7a34f // indirect
 	golang.org/x/crypto v0.0.0-20220307211146-efcb8507fb70 // indirect
 )

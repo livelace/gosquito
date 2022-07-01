@@ -18,6 +18,7 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/expandurl"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/fetch"
 	jqProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/jq"
+	sameProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/same"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/minio"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpfind"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpmatch"
@@ -405,6 +406,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				plugin, err = regexpreplaceProcess.Init(&processPluginConfig)
 			case "resty":
 				plugin, err = restyMulti.Init(&processPluginConfig)
+			case "same":
+				plugin, err = sameProcess.Init(&processPluginConfig)
 			case "unique":
 				plugin, err = uniqueProcess.Init(&processPluginConfig)
 			case "webchela":
