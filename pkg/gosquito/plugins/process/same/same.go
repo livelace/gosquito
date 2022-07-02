@@ -33,8 +33,8 @@ const (
 )
 
 var (
-    ERROR_WRONG_VALUE = errors.New("%v: value must be between 1 and 100: %v")
-    ERROR_UNKNOWN_ALGORITHM =  errors.New("%v: unknown algorithm: %v")
+	ERROR_WRONG_VALUE       = errors.New("%v: value must be between 1 and 100: %v")
+	ERROR_UNKNOWN_ALGORITHM = errors.New("%v: unknown algorithm: %v")
 )
 
 func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool {
@@ -52,9 +52,9 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 		if err == nil {
 			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax {
 				counter += 1
-				//core.LogProcessPlugin(p.LogFields, fmt.Sprintf(
-				//	"%v <> %v, ratio min: %v, ratio max: %v, ratio: %v",
-				//	text, k, p.OptionSameRatioMin, p.OptionSameRatioMax, ratio_human))
+				core.LogProcessPlugin(p.LogFields, fmt.Sprintf(
+					"%v <> %v, ratio min: %v, ratio max: %v, ratio: %v",
+					text, k, p.OptionSameRatioMin, p.OptionSameRatioMax, ratio_human))
 			}
 		} else {
 			return false
@@ -248,8 +248,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Will be set to "0" if parameter is set somehow (defaults, template, config).
 
 	availableParams := map[string]int{
-		"include": -1,
-		"require": -1,
+		"include":  -1,
+		"require":  -1,
 		"template": -1,
 
 		"input":           1,
@@ -326,8 +326,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		plugin.OptionSameAlgoConst = edlib.SorensenDice
 	case "qgram":
 		plugin.OptionSameAlgoConst = edlib.Qgram
-    default:
-        return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_ALGORITHM.Error(), "same_algo", plugin.OptionSameAlgo)
+	default:
+		return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_ALGORITHM.Error(), "same_algo", plugin.OptionSameAlgo)
 	}
 
 	// same_all.
@@ -446,21 +446,21 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
-	
-    if plugin.OptionSameRatioMax < 1 || plugin.OptionSameRatioMax > 100 {
-        return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_max", plugin.OptionSameRatioMax)
+
+	if plugin.OptionSameRatioMax < 1 || plugin.OptionSameRatioMax > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_max", plugin.OptionSameRatioMax)
 	}
-    
-    if plugin.OptionSameRatioMin < 1 || plugin.OptionSameRatioMin > 100 {
-        return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_min", plugin.OptionSameRatioMin)
+
+	if plugin.OptionSameRatioMin < 1 || plugin.OptionSameRatioMin > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_min", plugin.OptionSameRatioMin)
 	}
 
 	if plugin.OptionSameShareMax < 1 || plugin.OptionSameShareMax > 100 {
-        return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_max", plugin.OptionSameShareMax)
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_max", plugin.OptionSameShareMax)
 	}
-	
-    if plugin.OptionSameShareMin < 1 || plugin.OptionSameShareMin > 100 {
-        return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_min", plugin.OptionSameShareMin)
+
+	if plugin.OptionSameShareMin < 1 || plugin.OptionSameShareMin > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_min", plugin.OptionSameShareMin)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
