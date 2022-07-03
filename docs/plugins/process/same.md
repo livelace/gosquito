@@ -40,7 +40,7 @@ flow:
         ]
 
   process:
-    # rss title may be similar not more than 50% to each (same_share_min: 100) saved state.
+    # rss title may be similar not more than 40% to each (same_share_min: 100) saved state.
     # old states will be wiped within 24 hours.
     - id: 0
       plugin: "same"
