@@ -21,7 +21,7 @@ const (
 	DEFAULT_SAME_ALGO       = "levenshtein"
 	DEFAULT_SAME_ALL        = false
 	DEFAULT_SAME_RATIO_MAX  = 100
-	DEFAULT_SAME_RATIO_MIN  = 1
+	DEFAULT_SAME_RATIO_MIN  = 0
 	DEFAULT_SAME_SHARE_MAX  = 100
 	DEFAULT_SAME_SHARE_MIN  = 1
 	DEFAULT_SAME_TOKENS_MAX = 30
@@ -33,7 +33,8 @@ const (
 )
 
 var (
-	ERROR_WRONG_VALUE       = errors.New("%v: value must be between 1 and 100: %v")
+	ERROR_WRONG_MAX_VALUE   = errors.New("%v: value must be between 1 and 100: %v")
+	ERROR_WRONG_MIN_VALUE   = errors.New("%v: value must be between 0 and 100: %v")
 	ERROR_UNKNOWN_ALGORITHM = errors.New("%v: unknown algorithm: %v")
 )
 
@@ -50,7 +51,7 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 		ratio_human := ratio * 100
 
 		if err == nil {
-			if ratio == 0 || (ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax) {
+			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax {
 				counter += 1
 			} else {
 				core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%",
@@ -342,7 +343,31 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSameAll((*pluginConfig.PluginParams)["same_all"])
 	core.ShowPluginParam(plugin.LogFields, "same_all", plugin.OptionSameAll)
 
-	// same_share_max.
+	// same_ratio_max.
+	setSameRatioMax := func(p interface{}) {
+		if v, b := core.IsFloat(p); b {
+			availableParams["same_ratio_max"] = 0
+			plugin.OptionSameRatioMax = v
+		}
+	}
+	setSameRatioMax(DEFAULT_SAME_RATIO_MAX)
+	setSameRatioMax(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_ratio_max", template)))
+	setSameRatioMax((*pluginConfig.PluginParams)["same_ratio_max"])
+	core.ShowPluginParam(plugin.LogFields, "same_ratio_max", plugin.OptionSameRatioMax)
+
+	// same_ratio_min.
+	setSameRatioMin := func(p interface{}) {
+		if v, b := core.IsFloat(p, true); b {
+			availableParams["same_ratio_min"] = 0
+			plugin.OptionSameRatioMin = v
+		}
+	}
+	setSameRatioMin(DEFAULT_SAME_RATIO_MIN)
+	setSameRatioMin(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_ratio_min", template)))
+	setSameRatioMin((*pluginConfig.PluginParams)["same_ratio_min"])
+	core.ShowPluginParam(plugin.LogFields, "same_ratio_min", plugin.OptionSameRatioMin)
+	
+    // same_share_max.
 	setSameShareMax := func(p interface{}) {
 		if v, b := core.IsFloat(p); b {
 			availableParams["same_share_max"] = 0
@@ -365,30 +390,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSameShareMin(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_share_min", template)))
 	setSameShareMin((*pluginConfig.PluginParams)["same_share_min"])
 	core.ShowPluginParam(plugin.LogFields, "same_share_min", plugin.OptionSameShareMin)
-
-	// same_ratio_max.
-	setSameRatioMax := func(p interface{}) {
-		if v, b := core.IsFloat(p); b {
-			availableParams["same_ratio_max"] = 0
-			plugin.OptionSameRatioMax = v
-		}
-	}
-	setSameRatioMax(DEFAULT_SAME_RATIO_MAX)
-	setSameRatioMax(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_ratio_max", template)))
-	setSameRatioMax((*pluginConfig.PluginParams)["same_ratio_max"])
-	core.ShowPluginParam(plugin.LogFields, "same_ratio_max", plugin.OptionSameRatioMax)
-
-	// same_ratio_min.
-	setSameRatioMin := func(p interface{}) {
-		if v, b := core.IsFloat(p); b {
-			availableParams["same_ratio_min"] = 0
-			plugin.OptionSameRatioMin = v
-		}
-	}
-	setSameRatioMin(DEFAULT_SAME_RATIO_MIN)
-	setSameRatioMin(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_ratio_min", template)))
-	setSameRatioMin((*pluginConfig.PluginParams)["same_ratio_min"])
-	core.ShowPluginParam(plugin.LogFields, "same_ratio_min", plugin.OptionSameRatioMin)
 
 	// same_tokens_max.
 	setSameTokensMax := func(p interface{}) {
@@ -448,22 +449,32 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	if plugin.OptionSameRatioMax < 1 || plugin.OptionSameRatioMax > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_max", plugin.OptionSameRatioMax)
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MAX_VALUE.Error(),
+			"same_ratio_max", plugin.OptionSameRatioMax)
 	}
 
-	if plugin.OptionSameRatioMin < 1 || plugin.OptionSameRatioMin > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_ratio_min", plugin.OptionSameRatioMin)
+	if plugin.OptionSameRatioMin > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MIN_VALUE.Error(),
+			"same_ratio_min", plugin.OptionSameRatioMin)
 	}
 
 	if plugin.OptionSameShareMax < 1 || plugin.OptionSameShareMax > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_max", plugin.OptionSameShareMax)
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MAX_VALUE.Error(),
+			"same_share_max", plugin.OptionSameShareMax)
 	}
 
-	if plugin.OptionSameShareMin < 1 || plugin.OptionSameShareMin > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(), "same_share_min", plugin.OptionSameShareMin)
+	if plugin.OptionSameShareMin > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MIN_VALUE.Error(),
+			"same_share_min", plugin.OptionSameShareMin)
 	}
+
+    if plugin.OptionSameTokensMin > plugin.OptionSameTokensMax {
+        return &Plugin{}, fmt.Errorf("same_tokens_min: cannot be more than same_tokens_max")
+    }
 
 	// -----------------------------------------------------------------------------------------------------------------
+	// Reset states if some settings have changed.
+
 	resetState := false
 	settings := make(map[string]int, 0)
 

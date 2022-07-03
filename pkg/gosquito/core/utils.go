@@ -540,12 +540,12 @@ func HashString(s *string) string {
 }
 
 func IntervalToMilliseconds(s string) (int64, error) {
-    digitsPattern := regexp.MustCompile("[0-9]+")
+	digitsPattern := regexp.MustCompile("[0-9]+")
 	formatPattern := regexp.MustCompile("^[0-9]+[SMHD]+$")
-	
-    su := strings.ToUpper(s)
 
-    if !formatPattern.MatchString(strings.ToUpper(s)) {
+	su := strings.ToUpper(s)
+
+	if !formatPattern.MatchString(strings.ToUpper(s)) {
 		return 0, fmt.Errorf("%s: %s", ERROR_INTERVAL_FORMAT_UNKNOWN, s)
 	} else {
 		v, _ := strconv.ParseInt(string(digitsPattern.Find([]byte(s))), 10, 64)
@@ -584,7 +584,7 @@ func IsBool(i interface{}) (bool, bool) {
 			return v, true
 		}
 	}
-    return false, false
+	return false, false
 }
 
 func IsChatUsername(i interface{}) (string, bool) {
@@ -666,14 +666,19 @@ func IsFlowName(name string) bool {
 	return re.MatchString(name)
 }
 
-func IsFloat(i interface{}) (float32, bool) {
+func IsFloat(i interface{}, args ...bool) (float32, bool) {
+    canBeZero := false
+    if len(args) > 0 {
+        canBeZero = args[0]
+    }
+
 	switch v := i.(type) {
 	case int:
-		if v > 0 {
+		if canBeZero || (!canBeZero && v > 0) {
 			return float32(v), true
 		}
 	case float64:
-		if v > 0 {
+		if canBeZero || (!canBeZero && v > 0) {
 			return float32(v), true
 		}
 	case string:
@@ -687,10 +692,15 @@ func IsFloat(i interface{}) (float32, bool) {
 	return 0, false
 }
 
-func IsInt(i interface{}) (int, bool) {
+func IsInt(i interface{}, args ...bool) (int, bool) {
+    canBeZero := false
+    if len(args) > 0 {
+        canBeZero = args[0]
+    }
+
 	switch v := i.(type) {
 	case int:
-		if v > 0 {
+		if canBeZero || (!canBeZero && v > 0) {
 			return v, true
 		}
 	case string:

@@ -16,10 +16,10 @@
 | **input**       |    +     | array  |    -     |      []       | ["twitter.text"] | List of [Datum](../../concept.md) fields with data.                          |
 | same_algo       |    -     | string |    +     | "levenshtein" |      "jaro"      | Similarity [algorithm](https://github.com/hbollon/go-edlib).                 |
 | same_all        |    -     |  bool  |    -     |     false     |       true       | Similarity must be matched in all selected [Datum](../../concept.md) fields. |
+| same_ratio_max  |    -     |  int   |    +     |      100      |        70        | Maximum similarity ratio per comparison (percents).                          |
+| same_ratio_min  |    -     |  int   |    +     |       0       |        50        | Minimum similarity ratio per comparison (percents).                          |
 | same_share_max  |    -     |  int   |    +     |      100      |        70        | Maximum similarity over all data (percents).                                 |
 | same_share_min  |    -     |  int   |    +     |       1       |        50        | Minimum similarity over all data (percents).                                 |
-| same_ratio_max  |    -     |  int   |    +     |      100      |        70        | Maximum similarity ratio per comparison (percents).                          |
-| same_ratio_min  |    -     |  int   |    +     |       1       |        50        | Minimum similarity ratio per comparison (percents).                          |
 | same_tokens_max |    -     |  int   |    +     |      30       |       100        | Maximum amount of tokens for comparison.                                     |
 | same_tokens_min |    -     |  int   |    +     |       5       |        30        | Minimum amount of tokens for comparison.                                     |
 | same_ttl        |    -     | string |    +     |     "1h"      |      "24h"       | TTL (Time To Live) for saved states (tokens joint into a sentence/state).    |
