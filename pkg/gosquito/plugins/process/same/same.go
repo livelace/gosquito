@@ -50,7 +50,7 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 		ratio_human := ratio * 100
 
 		if err == nil {
-			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax {
+			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax || ratio == 0 {
 				counter += 1
 			} else {
 				core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%",
