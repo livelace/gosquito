@@ -311,15 +311,18 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 	sourcesExpired := false
 
 	// Check if any source is expired.
-    for _, source := range p.OptionInput {
-        sourceTime := flowStates[source]
-		
-        if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
+	for _, source := range p.OptionInput {
+		sourceTime := flowStates[source]
+
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
+
+			core.LogInputPlugin(p.LogFields, source, 
+                fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay / 1000 {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay/1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -332,12 +335,12 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
 					core.LogInputPlugin(p.LogFields, source, fmt.Sprintf(
-						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						"source expired action: command: %s, arguments: %v, output: %s, error: %v",
 						cmd, args, output, err))
 				}
 			}
 		}
-    }
+	}
 
 	// Inform about expiration.
 	if sourcesExpired {
@@ -630,7 +633,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeZoneC((*pluginConfig.PluginParams)["time_zone_c"])
 	core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
 
-    // timeout.
+	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
@@ -641,7 +644,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.timeout", template)))
 	setTimeout((*pluginConfig.PluginParams)["timeout"])
 	core.ShowPluginParam(plugin.LogFields, "timeout", plugin.OptionTimeout)
-
 
 	// user_agent.
 	setUserAgent := func(p interface{}) {

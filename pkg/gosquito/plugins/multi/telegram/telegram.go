@@ -1693,6 +1693,9 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 		
         if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
 			sourcesExpired = true
+            
+            core.LogInputPlugin(p.LogFields, source, 
+                fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
@@ -1709,7 +1712,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 					output, err := core.ExecWithTimeout(cmd, args, p.OptionExpireActionTimeout)
 
 					core.LogInputPlugin(p.LogFields, source, fmt.Sprintf(
-						"expire_action: command: %s, arguments: %v, output: %s, error: %v",
+						"source expired action: command: %s, arguments: %v, output: %s, error: %v",
 						cmd, args, output, err))
 				}
 			}
