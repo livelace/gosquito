@@ -9,10 +9,10 @@ libraries {
         destination = "${APP_NAME}-${APP_VERSION}.appimage"
     }
     dependency_check
-    dependency_track {
-        project = "${APP_NAME}"
-        version = env.VERSION
-    }
+    //dependency_track {
+    //    project = "${APP_NAME}"
+    //    version = env.VERSION
+    //}
     dracut
     git {
         repo_url = "${APP_REPO}"
