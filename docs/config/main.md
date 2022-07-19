@@ -8,8 +8,8 @@
 # 3. $(pwd)/config.toml
 
 # Interval units suffixes:
-# s - seconds, m - minutes, h - hours, d - days.
-# Example: 10s, 120m, 48h, 365d 
+# ms - milliseconds, s - seconds, m - minutes, h - hours, d - days.
+# Example: 100ms, 10s, 120m, 48h, 365d 
 
 # Set command execution for expired input plugin sources.
 # First 3 arguments always added: <flow_name> <input_source> <source_timestamp>

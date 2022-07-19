@@ -311,8 +311,10 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 	sourcesExpired := false
 
 	// Check if any source is expired.
-	for source, sourceTime := range flowStates {
-		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
+    for _, source := range p.OptionInput {
+        sourceTime := flowStates[source]
+		
+        if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
 			sourcesExpired = true
 
 			// Execute command if expire delay exceeded.
@@ -335,7 +337,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				}
 			}
 		}
-	}
+    }
 
 	// Inform about expiration.
 	if sourcesExpired {

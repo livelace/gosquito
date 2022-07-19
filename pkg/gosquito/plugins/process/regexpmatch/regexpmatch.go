@@ -137,7 +137,6 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			}
 		}
 
-		// Append replaced item to results.
 		matchedInSomeInputs := false
 		matchedInAllInputs := true
 
