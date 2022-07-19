@@ -8,7 +8,7 @@ libraries {
         source = "${APP_NAME}"
         destination = "${APP_NAME}-${APP_VERSION}.appimage"
     }
-    //dependency_check
+    dependency_check
     //dependency_track {
     //    project = "${APP_NAME}"
     //    version = env.VERSION
