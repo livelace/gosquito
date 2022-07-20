@@ -265,7 +265,7 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 
 		// Write scripts output.
 		for index, output := range result.ScriptOutput {
-			err = core.WriteStringToFile(outputDir, fmt.Sprintf("webchela_script%d_output.txt", index), output)
+			err = core.WriteStringToFile(outputDir, fmt.Sprintf("script%d.txt", index), output)
 			if err != nil {
 				return err
 			}
