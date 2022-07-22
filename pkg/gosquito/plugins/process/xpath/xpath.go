@@ -15,9 +15,10 @@ const (
 	PLUGIN_NAME = "xpath"
 
 	DEFAULT_FIND_ALL        = false
+	DEFAULT_XPATH_ARRAY     = false
 	DEFAULT_XPATH_HTML      = true
 	DEFAULT_XPATH_HTML_SELF = true
-	DEFAULT_XPATH_SEPARATOR = "\n"
+	DEFAULT_XPATH_SEPARATOR = ""
 )
 
 var (
@@ -25,11 +26,11 @@ var (
 	ERROR_PARSE_ERROR = errors.New("xpath parse error: %s")
 )
 
-func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
+func findXpath(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	var doc *html.Node
 	var err error
 
-	result := ""
+	result := make([]string, 0)
 
 	// Read document from file/string.
 	if core.IsFile(text, "") {
@@ -40,7 +41,7 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 
 	if err != nil {
 		core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_PARSE_ERROR.Error(), err))
-		return "", false
+		return result, false
 	}
 
 	// Find xpaths.
@@ -49,23 +50,23 @@ func findXpath(p *Plugin, xpaths []string, text string) (string, bool) {
 
 		if err != nil {
 			core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_NODE_ERROR.Error(), err))
-			return "", false
+			return result, false
 		}
 
 		for _, node := range nodes {
 			if p.OptionXpathHtml {
-				result += fmt.Sprintf("%s%s",
-					htmlquery.OutputHTML(node, p.OptionXpathHtmlSelf), p.OptionXpathSeparator)
-
+				result = append(result, fmt.Sprintf("%s%s",
+					htmlquery.OutputHTML(node, p.OptionXpathHtmlSelf), p.OptionXpathSeparator))
 			} else {
-				result += fmt.Sprintf("%s%s",
-					htmlquery.InnerText(node), p.OptionXpathSeparator)
+				result = append(result, fmt.Sprintf("%s%s",
+					htmlquery.InnerText(node), p.OptionXpathSeparator))
 			}
 		}
 	}
 
 	return result, len(result) > 0
 }
+
 
 type Plugin struct {
 	Flow *core.Flow
@@ -83,6 +84,7 @@ type Plugin struct {
 	OptionOutput         []string
 	OptionRequire        []int
 	OptionXpath          [][]string
+	OptionXpathArray     bool
 	OptionXpathHtml      bool
 	OptionXpathHtmlSelf  bool
 	OptionXpathSeparator string
@@ -116,7 +118,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
@@ -136,7 +138,12 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			case reflect.String:
 				if result, ok := findXpath(p, p.OptionXpath[index], ri.String()); ok {
 					found[index] = true
-					ro.SetString(result)
+
+					if p.OptionXpathArray {
+						ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(result)))
+					} else {
+                        ro.SetString(core.ConcatStringSliceToString(&result))
+                    }
 				}
 
 			case reflect.Slice:
@@ -145,7 +152,12 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				for i := 0; i < ri.Len(); i++ {
 					if result, ok := findXpath(p, p.OptionXpath[index], ri.Index(i).String()); ok {
 						somethingWasFound = true
-						ro.Set(reflect.Append(ro, reflect.ValueOf(result)))
+
+                        if p.OptionXpathArray {
+						    ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(result)))
+                        } else {
+						    ro.Set(reflect.Append(ro, reflect.ValueOf(core.ConcatStringSliceToString(&result))))
+                        }
 					}
 				}
 
@@ -208,6 +220,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"input":           1,
 		"output":          1,
 		"xpath":           1,
+		"xpath_array":     -1,
 		"xpath_html":      -1,
 		"xpath_separator": -1,
 	}
@@ -278,6 +291,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setXpath((*pluginConfig.PluginParams)["xpath"])
 	core.ShowPluginParam(plugin.LogFields, "xpath", plugin.OptionXpath)
 
+	// xpath_array.
+	setXpathArray := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["xpath_array"] = 0
+			plugin.OptionXpathArray = v
+		}
+	}
+	setXpathArray(DEFAULT_XPATH_ARRAY)
+	setXpathArray((*pluginConfig.PluginParams)["xpath_array"])
+	core.ShowPluginParam(plugin.LogFields, "xpath_array", plugin.OptionXpathArray)
+
 	// xpath_html.
 	setXpathHtml := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -327,8 +351,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)
 	}
 
-	if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
-		return &Plugin{}, err
+	if plugin.OptionXpathArray {
+		if err := core.IsDatumFieldsSlice(&plugin.OptionOutput); err != nil {
+			return &Plugin{}, err
+		}
+	} else {
+		if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
+			return &Plugin{}, err
+		}
 	}
 
 	return &plugin, nil

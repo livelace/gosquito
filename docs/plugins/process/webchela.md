@@ -33,7 +33,6 @@
 | **input**              | +        | array  | +        | []          | ["twitter.urls", "data.array0"]   | List of [Datum](../../concept.md) fields with URLs.                                                            |
 | mem_free               | -        | string | +        | "1g"        | "3g"                              | Minimum free MEM size on a server.                                                                             |
 | **output**             | -        | array  | +        | []          | ["data.array1", "data.array2"]    | List of target [Datum](../../concept.md) fields.                                                               |
-| output_filename        | -        | string | +        | ""          | "page_body.html"                  | Append file name to path of output directory (webchela saves multiple files into single directory by default). |
 | request_timeout        | -        | int    | +        | 10          | 30                                | Server GRPC request timeout.                                                                                   |
 | script                 | -        | array  | +        | []          | ["scripts.clicker", "return 42;"] | List of config templates/raw javascript code.                                                                  |
 | **server**             | +        | array  | +        | []          | ["server1.example.com:8080"]      | List of Webchela servers.                                                                                      |
@@ -60,7 +59,6 @@ flow:
         template: "templates.webchela.default"
         input:  ["rss.link"]
         output: ["data.text0"]
-        output_filename: "page_body.html"
 
     - id: 1
       plugin: "xpath"
@@ -86,8 +84,8 @@ batch_size = 10
 browser_type = "firefox"
 browser_instance = 1
 browser_instance_tab = 10
-browser_extension = ["bypass-paywalls-1.7.6.xpi", "ublock-origin-1.30.6.xpi"]
-cpu_load = 25
+browser_extension = ["bypass-paywalls-1.8.0.xpi", "ublock-origin-1.43.0.xpi"]
+cpu_load = 50
 server = ["172.17.0.3:50051"]
 timeout = 900
 ```

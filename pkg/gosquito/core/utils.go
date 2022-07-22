@@ -97,6 +97,14 @@ func CreateDirIfNotExist(d string) error {
 	return nil
 }
 
+func GetStringFromStringSlice(s *[]string) string {
+    r := ""
+    for _, v := range *s {
+        r += v
+    }
+    return r
+}
+
 func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) []string {
 	temp := make([]string, 0)
 
