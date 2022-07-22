@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/antchfx/htmlquery"
+	"github.com/antchfx/xmlquery"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"golang.org/x/net/html"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -18,15 +20,17 @@ const (
 	DEFAULT_XPATH_ARRAY     = false
 	DEFAULT_XPATH_HTML      = true
 	DEFAULT_XPATH_HTML_SELF = true
+	DEFAULT_XPATH_MODE      = "html"
 	DEFAULT_XPATH_SEPARATOR = ""
 )
 
 var (
-	ERROR_NODE_ERROR  = errors.New("xpath node error: %s")
-	ERROR_PARSE_ERROR = errors.New("xpath parse error: %s")
+	ERROR_NODE_ERROR   = errors.New("xpath node error: %s")
+	ERROR_PARSE_ERROR  = errors.New("xpath parse error: %s")
+	ERROR_UNKNOWN_MODE = errors.New("unknown mode: %s")
 )
 
-func findXpath(p *Plugin, xpaths []string, text string) ([]string, bool) {
+func findXpathHTML(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	var doc *html.Node
 	var err error
 
@@ -67,6 +71,42 @@ func findXpath(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	return result, len(result) > 0
 }
 
+func findXpathXML(p *Plugin, xpaths []string, text string) ([]string, bool) {
+	var doc *xmlquery.Node
+	var err error
+
+	result := make([]string, 0)
+
+	// Read document from file/string.
+	if core.IsFile(text, "") {
+		f, _ := os.Open(text)
+		defer f.Close()
+		doc, err = xmlquery.Parse(f)
+	} else {
+		doc, err = xmlquery.Parse(strings.NewReader(text))
+	}
+
+	if err != nil {
+		core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_PARSE_ERROR.Error(), err))
+		return result, false
+	}
+
+	// Find xpaths.
+	for _, xpath := range xpaths {
+		nodes, err := xmlquery.QueryAll(doc, xpath)
+
+		if err != nil {
+			core.LogProcessPlugin(p.LogFields, fmt.Errorf(ERROR_NODE_ERROR.Error(), err))
+			return result, false
+		}
+
+		for _, node := range nodes {
+			result = append(result, fmt.Sprintf("%s%s", node.InnerText(), p.OptionXpathSeparator))
+		}
+	}
+
+	return result, len(result) > 0
+}
 
 type Plugin struct {
 	Flow *core.Flow
@@ -87,6 +127,7 @@ type Plugin struct {
 	OptionXpathArray     bool
 	OptionXpathHtml      bool
 	OptionXpathHtmlSelf  bool
+	OptionXpathMode      string
 	OptionXpathSeparator string
 }
 
@@ -134,31 +175,46 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			ri, _ := core.ReflectDatumField(item, input)
 			ro, _ := core.ReflectDatumField(item, p.OptionOutput[index])
 
+			var result []string
+			var ok bool
+
 			switch ri.Kind() {
 			case reflect.String:
-				if result, ok := findXpath(p, p.OptionXpath[index], ri.String()); ok {
+				if p.OptionXpathMode == "html" {
+					result, ok = findXpathHTML(p, p.OptionXpath[index], ri.String())
+				} else {
+					result, ok = findXpathXML(p, p.OptionXpath[index], ri.String())
+				}
+
+				if ok {
 					found[index] = true
 
 					if p.OptionXpathArray {
 						ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(result)))
 					} else {
-                        ro.SetString(core.ConcatStringSliceToString(&result))
-                    }
+						ro.SetString(core.GetStringFromStringSlice(&result))
+					}
 				}
 
 			case reflect.Slice:
 				somethingWasFound := false
 
 				for i := 0; i < ri.Len(); i++ {
-					if result, ok := findXpath(p, p.OptionXpath[index], ri.Index(i).String()); ok {
+					if p.OptionXpathMode == "html" {
+						result, ok = findXpathHTML(p, p.OptionXpath[index], ri.Index(i).String())
+					} else {
+						result, ok = findXpathXML(p, p.OptionXpath[index], ri.Index(i).String())
+					}
+
+                    if ok {
 						somethingWasFound = true
 
-                        if p.OptionXpathArray {
-						    ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(result)))
-                        } else {
-						    ro.Set(reflect.Append(ro, reflect.ValueOf(core.ConcatStringSliceToString(&result))))
-                        }
-					}
+						if p.OptionXpathArray {
+							ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(result)))
+						} else {
+							ro.Set(reflect.Append(ro, reflect.ValueOf(core.GetStringFromStringSlice(&result))))
+						}
+                    }
 				}
 
 				found[index] = somethingWasFound
@@ -222,6 +278,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"xpath":           1,
 		"xpath_array":     -1,
 		"xpath_html":      -1,
+		"xpath_html_self": -1,
+		"xpath_mode":      -1,
 		"xpath_separator": -1,
 	}
 
@@ -324,6 +382,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setXpathHtmlSelf((*pluginConfig.PluginParams)["xpath_html_self"])
 	core.ShowPluginParam(plugin.LogFields, "xpath_html_self", plugin.OptionXpathHtmlSelf)
 
+	// xpath_mode.
+	setXpathMode := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["xpath_mode"] = 0
+			plugin.OptionXpathMode = v
+		}
+	}
+	setXpathMode(DEFAULT_XPATH_MODE)
+	setXpathMode((*pluginConfig.PluginParams)["xpath_mode"])
+	core.ShowPluginParam(plugin.LogFields, "xpath_mode", plugin.OptionXpathMode)
+
 	// xpath_separator.
 	setXpathSeparator := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -344,6 +413,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
+
+	if plugin.OptionXpathMode != "html" && plugin.OptionXpathMode != "xml" {
+		return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_MODE.Error(), plugin.OptionXpathMode)
+	}
 
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionXpath) {
 		return &Plugin{}, fmt.Errorf(

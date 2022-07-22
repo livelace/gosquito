@@ -20,7 +20,8 @@
 | xpath_array     |    -     |  bool  |    -     |  false  |      true       | Put nodes into array (output Datum field must be array).                        |
 | xpath_html      |    -     |  bool  |    -     |  true   |      false      | Get nodes with HTML tags (only text by default).                                |
 | xpath_html_self |    -     |  bool  |    -     |  true   |      false      | Include HTML tags of Xpath node.                                                |
-| xpath_separator |    -     | string |    -     |  ""   |      "\n"      | Add a custom separator between found nodes.                                     |
+| xpath_mode      |    -     | string |    -     | "html"  |      "xml"      | Xpath parse mode.                                                               |
+| xpath_separator |    -     | string |    -     |   ""    |      "\n"       | Add a custom separator between found nodes.                                     |
 
 ### Flow sample:
 
