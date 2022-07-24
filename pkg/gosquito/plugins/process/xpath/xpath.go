@@ -37,7 +37,7 @@ func findXpathHTML(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	result := make([]string, 0)
 
 	// Read document from file/string.
-	if core.IsFile(text, "") {
+    if _, err := core.IsFile(text); err == nil {
 		doc, err = htmlquery.LoadDoc(text)
 	} else {
 		doc, err = htmlquery.Parse(strings.NewReader(text))
@@ -78,7 +78,7 @@ func findXpathXML(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	result := make([]string, 0)
 
 	// Read document from file/string.
-	if core.IsFile(text, "") {
+    if _, err := core.IsFile(text); err == nil {
 		f, _ := os.Open(text)
 		defer f.Close()
 		doc, err = xmlquery.Parse(f)

@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -98,11 +99,11 @@ func CreateDirIfNotExist(d string) error {
 }
 
 func GetStringFromStringSlice(s *[]string) string {
-    r := ""
-    for _, v := range *s {
-        r += v
-    }
-    return r
+	r := ""
+	for _, v := range *s {
+		r += v
+	}
+	return r
 }
 
 func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) []string {
@@ -463,11 +464,11 @@ func GetDatumFieldType(field interface{}) (reflect.Kind, error) {
 	}
 }
 
-func GetFileMimeType(path string) (*mimetype.MIME, error) {
-	if IsFile(path, "") {
-		return mimetype.DetectFile(path)
+func GetFileMimeType(file string) (*mimetype.MIME, error) {
+    if _, err := IsFile(file); err == nil {
+		return mimetype.DetectFile(file)
 	} else {
-		return &mimetype.MIME{}, fmt.Errorf("not a file: %v", path)
+		return &mimetype.MIME{}, err
 	}
 }
 
@@ -658,27 +659,24 @@ func IsDatumFieldsTypesEqual(a *[]string, b *[]string) error {
 	}
 }
 
-func IsFile(path string, file string) bool {
-	info, err := os.Stat(filepath.Join(path, file))
-
+func IsFile(file string) (time.Time, error) {
+	info, err := os.Stat(file)
 	if err != nil || info.IsDir() || !info.Mode().IsRegular() {
-		return false
+		return time.Now().UTC(), fmt.Errorf(ERROR_FILE_INVALID.Error(), file)
 	}
-
-	return true
+	return info.ModTime(), nil
 }
 
-func IsFlowName(name string) bool {
+func IsFlowNameValid(name string) bool {
 	re := regexp.MustCompile("^[a-zA-Z0-9-]+$")
-
 	return re.MatchString(name)
 }
 
 func IsFloat(i interface{}, args ...bool) (float32, bool) {
-    canBeZero := false
-    if len(args) > 0 {
-        canBeZero = args[0]
-    }
+	canBeZero := false
+	if len(args) > 0 {
+		canBeZero = args[0]
+	}
 
 	switch v := i.(type) {
 	case int:
@@ -701,10 +699,10 @@ func IsFloat(i interface{}, args ...bool) (float32, bool) {
 }
 
 func IsInt(i interface{}, args ...bool) (int, bool) {
-    canBeZero := false
-    if len(args) > 0 {
-        canBeZero = args[0]
-    }
+	canBeZero := false
+	if len(args) > 0 {
+		canBeZero = args[0]
+	}
 
 	switch v := i.(type) {
 	case int:
@@ -940,7 +938,7 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 }
 
 func PluginLoadData(database string, data interface{}) error {
-	if IsFile(database, "") {
+    if _, err := IsFile(database); err == nil {
 		// open file.
 		f, err := os.OpenFile(database, os.O_RDONLY, 0644)
 		if err != nil {
@@ -970,7 +968,10 @@ func PluginLoadData(database string, data interface{}) error {
 		err = f.Close()
 
 		return err
-	}
+
+	} else {
+        return err
+    }
 
 	return nil
 }
@@ -1288,4 +1289,25 @@ func WriteStringToFile(path string, file string, s string) error {
 	}
 
 	return nil
+}
+
+func GetStringFromFile(file string) (string, error) {
+    if _, err := IsFile(file); err != nil {
+		return "", err
+	}
+
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+
+    return string(b), nil
+}
+
+func GetLinesFromFile(file string) ([]string, error) {
+    s, err := GetStringFromFile(file)
+    if err != nil {
+        return make([]string, 0), err
+    }
+    return strings.Split(s, "\n"), nil
 }

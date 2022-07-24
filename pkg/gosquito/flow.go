@@ -8,6 +8,7 @@ import (
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
 	kafkaMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/kafka"
 	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
+	ioMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/io"
 	telegramMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/telegram"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
@@ -44,11 +45,11 @@ func readFlow(dir string) ([]string, error) {
 
 	err := filepath.Walk(dir, func(item string, info os.FileInfo, err error) error {
 
-		if core.IsFile(item, "") &&
+        if _, err := core.IsFile(item); err == nil &&
 			(re1.MatchString(info.Name()) || re2.MatchString(info.Name())) {
 			temp = append(temp, item)
 
-		} else if core.IsFile(item, "") {
+        } else {
 			log.WithFields(log.Fields{
 				"file":  item,
 				"error": core.ERROR_FILE_YAML,
@@ -155,7 +156,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		}
 
 		// Flow name must be compatible.
-		if !core.IsFlowName(flowBody.Flow.Name) {
+		if !core.IsFlowNameValid(flowBody.Flow.Name) {
 			logFlowFileError(fmt.Errorf(core.ERROR_FLOW_NAME_COMPAT.Error(), flowBody.Flow.Name))
 			continue
 		}
@@ -312,6 +313,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 
 		// Available "input" plugins.
 		switch flowBody.Flow.Input.Plugin {
+		case "io":
+			inputPlugin, err = ioMulti.Init(&inputPluginConfig)
 		case "kafka":
 			inputPlugin, err = kafkaMulti.Init(&inputPluginConfig)
 		case "resty":
@@ -394,6 +397,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				plugin, err = expandurlProcess.Init(&processPluginConfig)
 			case "fetch":
 				plugin, err = fetchProcess.Init(&processPluginConfig)
+			case "io":
+				plugin, err = ioMulti.Init(&processPluginConfig)
 			case "jq":
 				plugin, err = jqProcess.Init(&processPluginConfig)
 			case "minio":

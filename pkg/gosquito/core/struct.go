@@ -248,6 +248,12 @@ type Iter struct {
 	VALUE string
 }
 
+type Io struct {
+	LINES []string
+    MTIME string
+	TEXT string
+}
+
 type Resty struct {
 	BODY       string
 	PROTO      string
@@ -342,6 +348,7 @@ type Datum struct {
 	DATA Data
 	ITER Iter
 
+	IO       Io
 	RESTY    Resty
 	RSS      Rss
 	TELEGRAM Telegram

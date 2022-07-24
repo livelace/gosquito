@@ -8,6 +8,7 @@ var (
 	ERROR_DATA_FIELD_TYPE_MISMATCH     = errors.New("datum field type mismatch: %s")
 	ERROR_DATA_FIELD_UNKNOWN           = errors.New("datum field unknown: %s")
 	ERROR_EXPORTER_LISTEN              = errors.New("exporter error")
+    ERROR_FILE_INVALID                 = errors.New("file invalid: %s")
 	ERROR_FILE_YAML                    = errors.New("only yml/yaml file extensions are accepted")
 	ERROR_FLOW_DISABLED                = errors.New("flow disabled")
 	ERROR_FLOW_ENABLE_DISABLE_CONFLICT = errors.New("default.flow_disable & default.flow_enable are mutual exclusive!")

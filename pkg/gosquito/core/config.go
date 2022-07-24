@@ -25,13 +25,13 @@ func initAppConfig() (string, error) {
 	// 1. /etc/gosquito/
 	// 2. ~/.gosquito
 	// 3. .gosquito
-	if IsFile(DEFAULT_ETC_PATH, configFile) {
+    if _, err := IsFile(filepath.Join(DEFAULT_ETC_PATH, configFile)); err == nil {
 		return DEFAULT_ETC_PATH, nil
 
-	} else if IsFile(userDir, configFile) {
+    } else if _, err := IsFile(filepath.Join(userDir, configFile)); err == nil {
 		return userDir, nil
 
-	} else if IsFile(DEFAULT_CURRENT_PATH, configFile) {
+    } else if _, err := IsFile(filepath.Join(DEFAULT_CURRENT_PATH, configFile)); err == nil {
 		return DEFAULT_CURRENT_PATH, nil
 	}
 

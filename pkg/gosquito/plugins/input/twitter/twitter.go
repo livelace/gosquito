@@ -355,14 +355,14 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 		}
     }
 
-	// Inform about expiration.
-	if sourcesExpired {
-		return temp, core.ERROR_FLOW_EXPIRE
-	}
-
 	// Inform about sources failures.
 	if len(failedSources) > 0 {
 		return temp, core.ERROR_FLOW_SOURCE_FAIL
+	}
+
+	// Inform about expiration.
+	if sourcesExpired {
+		return temp, core.ERROR_FLOW_EXPIRE
 	}
 
 	return temp, nil

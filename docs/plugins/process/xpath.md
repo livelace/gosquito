@@ -32,10 +32,9 @@ flow:
   input:
     plugin: "rss"
     params:
-      input:
-        [
-          "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
-        ]
+      input: [
+        "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
+      ]
       force: true
       force_count: 3
 

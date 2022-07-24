@@ -218,7 +218,6 @@ func RunApp() {
 					flowRunning += 1
 
 					go runFlow(candidate.Flow)
-					time.Sleep(1 * time.Millisecond)
 				}
 			}
 		}
