@@ -967,8 +967,6 @@ func PluginLoadData(database string, data interface{}) error {
 
 		err = f.Close()
 
-		return err
-
 	} else {
         return err
     }

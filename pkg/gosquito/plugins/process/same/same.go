@@ -366,8 +366,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSameRatioMin(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_ratio_min", template)))
 	setSameRatioMin((*pluginConfig.PluginParams)["same_ratio_min"])
 	core.ShowPluginParam(plugin.LogFields, "same_ratio_min", plugin.OptionSameRatioMin)
-	
-    // same_share_max.
+
+	// same_share_max.
 	setSameShareMax := func(p interface{}) {
 		if v, b := core.IsFloat(p); b {
 			availableParams["same_share_max"] = 0
@@ -468,9 +468,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			"same_share_min", plugin.OptionSameShareMin)
 	}
 
-    if plugin.OptionSameTokensMin > plugin.OptionSameTokensMax {
-        return &Plugin{}, fmt.Errorf("same_tokens_min: cannot be more than same_tokens_max")
-    }
+	if plugin.OptionSameTokensMin > plugin.OptionSameTokensMax {
+		return &Plugin{}, fmt.Errorf("same_tokens_min: cannot be more than same_tokens_max")
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Reset states if some settings have changed.
@@ -484,8 +484,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	stateDir := filepath.Join(dataDir, DEFAULT_STATE_DIR)
 	_ = core.CreateDirIfNotExist(stateDir)
 
+	settingsFile := filepath.Join(dataDir, DEFAULT_SETTINGS_DB)
+
+	// Check first start.
+	if _, err := core.IsFile(settingsFile); err != nil {
+		if err := core.PluginSaveData(settingsFile, &settings); err != nil {
+			return &plugin, err
+		}
+	}
+
 	// Load previous settings and compare current and old values.
-	if err := core.PluginLoadData(filepath.Join(dataDir, DEFAULT_SETTINGS_DB), &settings); err != nil {
+	if err := core.PluginLoadData(settingsFile, &settings); err != nil {
 		return &plugin, err
 	}
 
@@ -510,7 +519,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 
 	// Save updated settings.
-	if err := core.PluginSaveData(filepath.Join(dataDir, DEFAULT_SETTINGS_DB), &settings); err != nil {
+	if err := core.PluginSaveData(settingsFile, &settings); err != nil {
 		return &plugin, err
 	}
 
