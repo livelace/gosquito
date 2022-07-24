@@ -17,8 +17,8 @@
 | file_in_mode  |    -     | string |  -   |    +     |       -       |   "text"   |             "lines"             | Read input file as text or line by line into array.                |
 | file_out      |    -     |  bool  |  -   |    +     |       -       |   false    |              true               | Process output as files.                                           |
 | file_out_mode |    -     | string |  -   |    +     |       -       | "truncate" |            "append"             | Append data to output files.                                       |
-| file_out_wrap |    -     | string |  -   |    +     |       -       |    "\n"    |              "AAA"              | Wrap appended data to file with this characters.                   |
-| text_wrap     |    -     | string |  -   |    +     |       -       |    "\n"    |              "BBB"              | Wrap processed text with this characters.                          |
+| file_out_wrap |    -     | string |  -   |    +     |       -       |    "\n"    |              "AAA"              | Wrap appended data to file with these characters.                  |
+| text_wrap     |    -     | string |  -   |    +     |       -       |    "\n"    |              "BBB"              | Wrap processed text with these characters.                         |
 | **input**     |    +     | array  |  -   |    +     |       -       |    "[]"    | ["/path/to/file1", "just text"] | Set input as text, file paths or [Datum](../../concept.md) field.  |
 | **output**    |    +     | array  |  -   |    +     |       -       |    "[]"    |  ["data.array0", "data.text0"]  | Set output as text, file paths or [Datum](../../concept.md) field. |
 
