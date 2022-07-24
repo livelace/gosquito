@@ -418,7 +418,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_MODE.Error(), plugin.OptionXpathMode)
 	}
 
-	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionXpath) {
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) || len(plugin.OptionOutput) != len(plugin.OptionXpath) {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionXpath)

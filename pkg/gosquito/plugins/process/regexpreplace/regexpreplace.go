@@ -277,7 +277,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionRegexp) &&
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) || len(plugin.OptionOutput) != len(plugin.OptionRegexp) &&
 		len(plugin.OptionRegexp) != len(plugin.OptionReplace) {
 
 		return &Plugin{}, fmt.Errorf(

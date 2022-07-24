@@ -1,6 +1,6 @@
 ### Description:
 
-**xpath** process plugin is intended for finding HTML elements inside data.
+**xpath** process plugin is intended for finding HTML/XML elements inside data (ToDo: Work with broken XML).
 
 ### Generic parameters:
 

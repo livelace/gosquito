@@ -306,7 +306,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	if availableParams["output"] == 0 {
-		if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
+		if len(plugin.OptionInput) != len(plugin.OptionOutput) || len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
 			return &Plugin{}, fmt.Errorf(
 				"%s: %v, %v, %v",
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)

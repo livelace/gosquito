@@ -334,7 +334,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	// "input, output, regexp" must have equal size.
-	if len(plugin.OptionInput) != len(plugin.OptionOutput) && len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
+	if len(plugin.OptionInput) != len(plugin.OptionOutput) || len(plugin.OptionOutput) != len(plugin.OptionRegexp) {
 		return &Plugin{}, fmt.Errorf(
 			"%s: %v, %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput, plugin.OptionRegexp)
