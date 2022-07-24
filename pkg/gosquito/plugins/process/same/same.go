@@ -52,10 +52,12 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 		if err == nil {
 			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax {
 				counter += 1
-			} else {
-				core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%",
-					text, k, ratio_human))
 			}
+            // Too much noise.
+            //else {
+			//	core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%",
+			//		text, k, ratio_human))
+			//}
 		} else {
 			return false
 		}
