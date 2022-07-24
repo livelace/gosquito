@@ -33,8 +33,7 @@ const (
 )
 
 var (
-	ERROR_WRONG_MAX_VALUE   = errors.New("%v: value must be between 1 and 100: %v")
-	ERROR_WRONG_MIN_VALUE   = errors.New("%v: value must be between 0 and 100: %v")
+	ERROR_WRONG_VALUE   = errors.New("%v: value must be between 0 and 100: %v")
 	ERROR_UNKNOWN_ALGORITHM = errors.New("%v: unknown algorithm: %v")
 )
 
@@ -345,7 +344,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// same_ratio_max.
 	setSameRatioMax := func(p interface{}) {
-		if v, b := core.IsFloat(p); b {
+		if v, b := core.IsFloat(p, true); b {
 			availableParams["same_ratio_max"] = 0
 			plugin.OptionSameRatioMax = v
 		}
@@ -369,7 +368,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// same_share_max.
 	setSameShareMax := func(p interface{}) {
-		if v, b := core.IsFloat(p); b {
+		if v, b := core.IsFloat(p, true); b {
 			availableParams["same_share_max"] = 0
 			plugin.OptionSameShareMax = v
 		}
@@ -448,23 +447,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if plugin.OptionSameRatioMax < 1 || plugin.OptionSameRatioMax > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MAX_VALUE.Error(),
+	if plugin.OptionSameRatioMax < 0 || plugin.OptionSameRatioMax > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(),
 			"same_ratio_max", plugin.OptionSameRatioMax)
 	}
 
 	if plugin.OptionSameRatioMin > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MIN_VALUE.Error(),
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(),
 			"same_ratio_min", plugin.OptionSameRatioMin)
 	}
 
-	if plugin.OptionSameShareMax < 1 || plugin.OptionSameShareMax > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MAX_VALUE.Error(),
+	if plugin.OptionSameShareMax < 0 || plugin.OptionSameShareMax > 100 {
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(),
 			"same_share_max", plugin.OptionSameShareMax)
 	}
 
 	if plugin.OptionSameShareMin > 100 {
-		return &Plugin{}, fmt.Errorf(ERROR_WRONG_MIN_VALUE.Error(),
+		return &Plugin{}, fmt.Errorf(ERROR_WRONG_VALUE.Error(),
 			"same_share_min", plugin.OptionSameShareMin)
 	}
 
