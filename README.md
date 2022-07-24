@@ -53,7 +53,7 @@ graph TD;
 | [echo](docs/plugins/process/echo.md)                   | Echoing processing data.                                                   |
 | [expandurl](docs/plugins/process/expandurl.md)         | Expand short URLs.                                                         |
 | [fetch](docs/plugins/process/fetch.md)                 | Fetch remote data.                                                         |
-| [io](docs/plugins/process/io.md)                 | Read/write text and files.                                                         |
+| [io](docs/plugins/process/io.md)                       | Read/write text and files.                                                 |
 | [jq](docs/plugins/process/jq.md)                       | Extract JSON elements.                                                     |
 | [minio](docs/plugins/process/minio.md)                 | Get/put data from/to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket. |
 | [regexpfind](docs/plugins/process/regexpfind.md)       | Find patters in data.                                                      |
