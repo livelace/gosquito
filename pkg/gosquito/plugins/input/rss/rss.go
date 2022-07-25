@@ -5,9 +5,10 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
-
+	"errors"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
@@ -21,7 +22,11 @@ const (
 	DEFAULT_SSL_VERIFY = true
 )
 
-func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofeed.Feed, error) {
+var (
+    ERROR_PROXY_INVALID = errors.New("proxy invalid: %s")
+)
+
+func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 	temp := &gofeed.Feed{}
 
 	// context.
@@ -30,13 +35,16 @@ func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofe
 	defer cancel()
 
 	// http.
-	transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: !sslVerify}}
+	transport := &http.Transport{
+		Proxy:           http.ProxyURL(p.OptionProxyURL),
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: !p.OptionSSLVerify},
+	}
 	client := http.Client{Transport: transport}
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", p.OptionUserAgent)
 
 	// background.
 	go func() {
@@ -78,7 +86,7 @@ func fetchFeed(url string, userAgent string, sslVerify bool, timeout int) (*gofe
 		if err != nil {
 			return temp, fmt.Errorf("error: %s, %s", url, err)
 		}
-	case <-time.After(time.Duration(timeout) * time.Second):
+	case <-time.After(time.Duration(p.OptionTimeout) * time.Second):
 		return temp, fmt.Errorf("timeout: %s", url)
 	}
 
@@ -105,6 +113,8 @@ type Plugin struct {
 	OptionInput               []string
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
+	OptionProxy               string
+	OptionProxyURL            *url.URL
 	OptionSSLVerify           bool
 	OptionTimeFormat          string
 	OptionTimeFormatA         string
@@ -185,7 +195,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 		}
 
 		// Try to fetch new articles.
-		feeds, err := fetchFeed(source, p.OptionUserAgent, p.OptionSSLVerify, p.OptionTimeout)
+		feeds, err := fetchFeed(p, source)
 		if err != nil {
 			failedSources = append(failedSources, source)
 			core.LogInputPlugin(p.LogFields, source, err)
@@ -317,8 +327,8 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
 
-			core.LogInputPlugin(p.LogFields, source, 
-                fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
+			core.LogInputPlugin(p.LogFields, source,
+				fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
@@ -408,6 +418,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"input":           1,
 		"match_signature": -1,
 		"match_ttl":       -1,
+		"proxy":           -1,
 		"user_agent":      -1,
 	}
 
@@ -524,6 +535,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setMatchTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.match_ttl", template)))
 	setMatchTTL((*pluginConfig.PluginParams)["match_ttl"])
 	core.ShowPluginParam(plugin.LogFields, "match_ttl", plugin.OptionMatchTTL)
+
+	// proxy.
+	setProxy := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["proxy"] = 0
+			plugin.OptionProxy = v
+		}
+	}
+	setProxy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.proxy", template)))
+	setProxy((*pluginConfig.PluginParams)["proxy"])
+	core.ShowPluginParam(plugin.LogFields, "proxy", plugin.OptionProxy)
 
 	// ssl_verify.
 	setSSLVerify := func(p interface{}) {
@@ -663,6 +685,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	if err := core.CheckPluginParams(&availableParams, pluginConfig.PluginParams); err != nil {
 		return &Plugin{}, err
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Additional checks.
+
+    if plugin.OptionProxy != "" {
+        if proxyUrl, err := url.Parse(plugin.OptionProxy); err == nil {
+            plugin.OptionProxyURL = proxyUrl
+        } else {
+		    return &Plugin{}, fmt.Errorf(ERROR_PROXY_INVALID.Error(), plugin.OptionProxy)
+        }
+    }
 
 	// -----------------------------------------------------------------------------------------------------------------
 
