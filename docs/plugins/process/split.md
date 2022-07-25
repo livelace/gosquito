@@ -12,12 +12,12 @@
 
 ### Plugin parameters:
 
-| Param       | Required |  Type  | Default  |            Example             | Description                                             |
-| :---------- | :------: | :----: | :------: | :----------------------------: | :------------------------------------------------------ |
-| **input**   |    +     | array  |    []    | ["data.array0", "data.array1"] | Slice of strings [Datum](../../concept.md) fields.      |
-| **output**  |    +     | array  |    []    |  ["data.text0", "data.text1"]  | Strings [Datum](../../concept.md) fields.               |
-| mode        |    -     | string | "strict" |            "sparse"            | Input arrays may have different sizes if mode "sparse". |
-| sparse_stub |    -     | string | "!SPARSE!" |            "AAA"            | Input arrays may have different sizes if mode "sparse". |
+| Param       | Required |  Type  |  Default   |            Example             | Description                                             |
+| :---------- | :------: | :----: | :--------: | :----------------------------: | :------------------------------------------------------ |
+| **input**   |    +     | array  |     []     | ["data.array0", "data.array1"] | Slice of strings [Datum](../../concept.md) fields.      |
+| **output**  |    +     | array  |     []     |  ["data.text0", "data.text1"]  | Strings [Datum](../../concept.md) fields.               |
+| mode        |    -     | string |  "strict"  |            "sparse"            | Input arrays may have different sizes if mode "sparse". |
+| sparse_stub |    -     | string | "!SPARSE!" |             "AAA"              | Stub for absent values.                                 |
 
 ### Flow sample:
 
