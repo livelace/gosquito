@@ -46,7 +46,9 @@ func applyQueryToText(queries []*gojq.Query, jsonText string) ([]string, error) 
 
 			if v != nil {
 				temp = append(temp, fmt.Sprintf("%s", v))
-			}
+			} else {
+                temp = append(temp, "null")
+            }
 		}
 	}
 
