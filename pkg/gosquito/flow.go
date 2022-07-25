@@ -6,9 +6,9 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
 	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
+	ioMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/io"
 	kafkaMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/kafka"
 	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
-	ioMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/io"
 	telegramMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/telegram"
 	mattermostOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/mattermost"
 	slackOut "github.com/livelace/gosquito/pkg/gosquito/plugins/output/slack"
@@ -19,11 +19,12 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/expandurl"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/fetch"
 	jqProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/jq"
-	sameProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/same"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/minio"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpfind"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpmatch"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpreplace"
+	sameProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/same"
+	splitProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/split"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/unique"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/webchela"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/xpath"
@@ -45,11 +46,11 @@ func readFlow(dir string) ([]string, error) {
 
 	err := filepath.Walk(dir, func(item string, info os.FileInfo, err error) error {
 
-        if _, err := core.IsFile(item); err == nil &&
+		if _, err := core.IsFile(item); err == nil &&
 			(re1.MatchString(info.Name()) || re2.MatchString(info.Name())) {
 			temp = append(temp, item)
 
-        } else {
+		} else {
 			log.WithFields(log.Fields{
 				"file":  item,
 				"error": core.ERROR_FILE_YAML,
@@ -322,7 +323,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 		case "rss":
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
-            inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
+			inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
 		case "twitter":
 			inputPlugin, err = twitterIn.Init(&inputPluginConfig)
 		default:
@@ -413,6 +414,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				plugin, err = restyMulti.Init(&processPluginConfig)
 			case "same":
 				plugin, err = sameProcess.Init(&processPluginConfig)
+			case "split":
+				plugin, err = splitProcess.Init(&processPluginConfig)
 			case "unique":
 				plugin, err = uniqueProcess.Init(&processPluginConfig)
 			case "webchela":
@@ -464,7 +467,7 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			case "smtp":
 				outputPlugin, err = smtpOut.Init(&outputPluginConfig)
 			case "telegram":
-                outputPlugin, err = telegramMulti.Init(&outputPluginConfig)
+				outputPlugin, err = telegramMulti.Init(&outputPluginConfig)
 			default:
 				err = fmt.Errorf("%s: %s", core.ERROR_PLUGIN_UNKNOWN, flowBody.Flow.Output.Plugin)
 			}

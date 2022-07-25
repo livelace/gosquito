@@ -5,6 +5,7 @@ import "errors"
 var (
 	ERROR_DATA_FIELD_KEY               = errors.New("datum field key must be string: %v")
 	ERROR_DATA_FIELD_NOT_SLICE         = errors.New("datum field not slice: %s")
+	ERROR_DATA_FIELD_NOT_STRING         = errors.New("datum field not string: %s")
 	ERROR_DATA_FIELD_TYPE_MISMATCH     = errors.New("datum field type mismatch: %s")
 	ERROR_DATA_FIELD_UNKNOWN           = errors.New("datum field unknown: %s")
 	ERROR_EXPORTER_LISTEN              = errors.New("exporter error")

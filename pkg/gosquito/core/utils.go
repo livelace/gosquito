@@ -638,6 +638,24 @@ func IsDatumFieldsSlice(fields *[]string) error {
 	}
 }
 
+func IsDatumFieldsString(fields *[]string) error {
+	temp := make([]string, 0)
+
+	for _, field := range *fields {
+		rv, err := ReflectDatumField(&Datum{}, field)
+
+		if err != nil || rv.Kind() != reflect.String {
+			temp = append(temp, field)
+		}
+	}
+
+	if len(temp) > 0 {
+		return fmt.Errorf(ERROR_DATA_FIELD_NOT_STRING.Error(), temp)
+	} else {
+		return nil
+	}
+}
+
 func IsDatumFieldsTypesEqual(a *[]string, b *[]string) error {
 	temp := make([]string, 0)
 

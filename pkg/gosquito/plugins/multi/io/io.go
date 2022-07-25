@@ -28,7 +28,7 @@ const (
 
 var (
 	ERROR_COPY_TO_STRING = errors.New("cannot copy anything to string: %v")
-	ERROR_UNKNOWN_MODE   = errors.New("unknown mode: %v")
+	ERROR_MODE_UNKNOWN   = errors.New("mode unknown: %v")
 
 	INFO_APPEND_FILE_TO_FILE = "append file to file: %v -> %v, %v"
 	INFO_COPY_FILE_TO_FILE   = "copy file to file: %v -> %v, %v"
@@ -1141,7 +1141,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Additional checks.
 
 	if plugin.OptionFileInMode != "lines" && plugin.OptionFileInMode != "text" {
-		return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_MODE.Error(), plugin.OptionFileInMode)
+		return &Plugin{}, fmt.Errorf(ERROR_MODE_UNKNOWN.Error(), plugin.OptionFileInMode)
 	}
 
 	if pluginConfig.PluginType == "process" {
@@ -1152,7 +1152,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		}
 
 		if plugin.OptionFileOutMode != "append" && plugin.OptionFileOutMode != "truncate" {
-			return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_MODE.Error(), plugin.OptionFileOutMode)
+			return &Plugin{}, fmt.Errorf(ERROR_MODE_UNKNOWN.Error(), plugin.OptionFileOutMode)
 		}
 	}
 
