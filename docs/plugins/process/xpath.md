@@ -32,10 +32,9 @@ flow:
   input:
     plugin: "rss"
     params:
-      input:
-        [
-          "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
-        ]
+      input: [
+        "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
+      ]
       force: true
       force_count: 3
 
@@ -53,11 +52,10 @@ flow:
       params:
         input: ["data.text0", "data.text0"]
         output: ["data.text1", "data.text2"]
-        xpath:
-          [
-            "//div[contains(@data-qa, 'vacancy-description')]",
-            "//span[contains(@data-qa, 'bloko-tag__text')]",
-          ]
+        xpath: [
+          "//div[contains(@data-qa, 'vacancy-description')]",
+          "//span[contains(@data-qa, 'bloko-tag__text')]",
+        ]
         xpath_html: false
 
     - id: 2
