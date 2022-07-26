@@ -47,24 +47,24 @@ graph TD;
 
 ### Process plugins:
 
-| Plugin                                                 | Description                                                                |
-| :----------------------------------------------------- | :------------------------------------------------------------------------- |
-| [dedup](docs/plugins/process/dedup.md)                 | Deduplicate datums by UUID.                                                |
-| [echo](docs/plugins/process/echo.md)                   | Echoing processing data.                                                   |
-| [expandurl](docs/plugins/process/expandurl.md)         | Expand short URLs.                                                         |
-| [fetch](docs/plugins/process/fetch.md)                 | Fetch remote data.                                                         |
-| [io](docs/plugins/process/io.md)                       | Read/write text and files.                                                 |
-| [jq](docs/plugins/process/jq.md)                       | Extract JSON elements.                                                     |
-| [minio](docs/plugins/process/minio.md)                 | Get/put data from/to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket. |
-| [regexpfind](docs/plugins/process/regexpfind.md)       | Find patters in data.                                                      |
-| [regexpmatch](docs/plugins/process/regexpmatch.md)     | Match data by patterns.                                                    |
-| [regexpreplace](docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                                  |
-| [resty](docs/plugins/process/resty.md)                 | Perform REST queries.                                                      |
-| [same](docs/plugins/process/same.md)                   | Match data similarity.                                                     |
-| [split](docs/plugins/process/split.md)                 | Split single datum into multiple.                                          |
-| [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                               |
-| [webchela](docs/plugins/process/webchela.md)           | Process web pages with [full browser support (Chrome, Firefox)](https://github.com/livelace/webchela).             |
-| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML/XML nodes.                                                    |
+| Plugin                                                 | Description                                                                                            |
+| :----------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| [dedup](docs/plugins/process/dedup.md)                 | Deduplicate datums by UUID.                                                                            |
+| [echo](docs/plugins/process/echo.md)                   | Echoing processing data.                                                                               |
+| [expandurl](docs/plugins/process/expandurl.md)         | Expand short URLs.                                                                                     |
+| [fetch](docs/plugins/process/fetch.md)                 | Fetch remote data.                                                                                     |
+| [io](docs/plugins/process/io.md)                       | Read/write text and files.                                                                             |
+| [jq](docs/plugins/process/jq.md)                       | Extract JSON elements.                                                                                 |
+| [minio](docs/plugins/process/minio.md)                 | Get/put data from/to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                             |
+| [regexpfind](docs/plugins/process/regexpfind.md)       | Find patters in data.                                                                                  |
+| [regexpmatch](docs/plugins/process/regexpmatch.md)     | Match data by patterns.                                                                                |
+| [regexpreplace](docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                                                              |
+| [resty](docs/plugins/process/resty.md)                 | Perform REST queries.                                                                                  |
+| [same](docs/plugins/process/same.md)                   | Match data similarity.                                                                                 |
+| [split](docs/plugins/process/split.md)                 | Split single datum into multiple.                                                                      |
+| [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                                                           |
+| [webchela](docs/plugins/process/webchela.md)           | Process web pages with [full browser support (Chrome, Firefox)](https://github.com/livelace/webchela). |
+| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML/XML nodes.                                                                                |
 
 ### Output plugins:
 
