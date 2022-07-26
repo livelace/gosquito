@@ -5,11 +5,11 @@ import "errors"
 var (
 	ERROR_DATA_FIELD_KEY               = errors.New("datum field key must be string: %v")
 	ERROR_DATA_FIELD_NOT_SLICE         = errors.New("datum field not slice: %s")
-	ERROR_DATA_FIELD_NOT_STRING         = errors.New("datum field not string: %s")
+	ERROR_DATA_FIELD_NOT_STRING        = errors.New("datum field not string: %s")
 	ERROR_DATA_FIELD_TYPE_MISMATCH     = errors.New("datum field type mismatch: %s")
 	ERROR_DATA_FIELD_UNKNOWN           = errors.New("datum field unknown: %s")
 	ERROR_EXPORTER_LISTEN              = errors.New("exporter error")
-    ERROR_FILE_INVALID                 = errors.New("file invalid: %s")
+	ERROR_FILE_INVALID                 = errors.New("file invalid: %s")
 	ERROR_FILE_YAML                    = errors.New("only yml/yaml file extensions are accepted")
 	ERROR_FLOW_DISABLED                = errors.New("flow disabled")
 	ERROR_FLOW_ENABLE_DISABLE_CONFLICT = errors.New("default.flow_disable & default.flow_enable are mutual exclusive!")
