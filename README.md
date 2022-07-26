@@ -64,7 +64,7 @@ graph TD;
 | [split](docs/plugins/process/split.md)                 | Split single datum into multiple.                                          |
 | [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                               |
 | [webchela](docs/plugins/process/webchela.md)           | Process web pages with full browser support (Chrome, Firefox).             |
-| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML/XML elements.                                                     |
+| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML/XML nodes.                                                    |
 
 ### Output plugins:
 
