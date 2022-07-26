@@ -18,7 +18,7 @@
 | **output**      |    +     | array  |    -     |   []    | ["data.array0"] | List of target [Datum](../../concept.md) fields.                                |
 | **xpath**       |    +     | array  |    +     |   []    |  ["//a/@href"]  | List of [Xpath](https://en.wikipedia.org/wiki/XPath) queries.                   |
 | xpath_array     |    -     |  bool  |    -     |  false  |      true       | Put nodes into array (output Datum field must be array).                        |
-| xpath_html      |    -     |  bool  |    -     |  true   |      false      | Get nodes with HTML tags (only text by default).                                |
+| xpath_html      |    -     |  bool  |    -     |  true   |      false      | Get nodes with HTML tags.                                                       |
 | xpath_html_self |    -     |  bool  |    -     |  true   |      false      | Include HTML tags of Xpath node.                                                |
 | xpath_mode      |    -     | string |    -     | "html"  |      "xml"      | Xpath parse mode.                                                               |
 | xpath_separator |    -     | string |    -     |   ""    |      "\n"       | Add a custom separator between found nodes.                                     |
@@ -32,9 +32,10 @@ flow:
   input:
     plugin: "rss"
     params:
-      input: [
-        "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
-      ]
+      input:
+        [
+          "https://spb.hh.ru/search/vacancy/rss?area=113&clusters=true&enable_snippets=true&search_period=1&order_by=publication_time&text=.",
+        ]
       force: true
       force_count: 3
 
