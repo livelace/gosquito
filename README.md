@@ -61,10 +61,10 @@ graph TD;
 | [regexpreplace](docs/plugins/process/regexpreplace.md) | Replace patterns in data.                                                  |
 | [resty](docs/plugins/process/resty.md)                 | Perform REST queries.                                                      |
 | [same](docs/plugins/process/same.md)                   | Match data similarity.                                                     |
-| [split](docs/plugins/process/split.md)                 | Split single datum into multiple.                                      |
+| [split](docs/plugins/process/split.md)                 | Split single datum into multiple.                                          |
 | [unique](docs/plugins/process/unique.md)               | Get unique values from data.                                               |
 | [webchela](docs/plugins/process/webchela.md)           | Process web pages with full browser support (Chrome, Firefox).             |
-| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML elements.                                                     |
+| [xpath](docs/plugins/process/xpath.md)                 | Extract HTML/XML elements.                                                     |
 
 ### Output plugins:
 
