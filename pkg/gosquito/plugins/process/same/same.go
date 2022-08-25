@@ -10,7 +10,6 @@ import (
 	"time"
 
 	edlib "github.com/hbollon/go-edlib"
-	"github.com/liuzl/tokenizer"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 )
@@ -20,10 +19,12 @@ const (
 
 	DEFAULT_SAME_ALGO       = "levenshtein"
 	DEFAULT_SAME_ALL        = false
+	DEFAULT_SAME_DEBUG      = false
 	DEFAULT_SAME_RATIO_MAX  = 100
 	DEFAULT_SAME_RATIO_MIN  = 0
 	DEFAULT_SAME_SHARE_MAX  = 100
 	DEFAULT_SAME_SHARE_MIN  = 1
+	DEFAULT_SAME_TOKENIZER  = " "
 	DEFAULT_SAME_TOKENS_MAX = 20
 	DEFAULT_SAME_TOKENS_MIN = 1
 	DEFAULT_SAME_TTL        = "1h"
@@ -33,7 +34,7 @@ const (
 )
 
 var (
-	ERROR_WRONG_VALUE   = errors.New("%v: value must be between 0 and 100: %v")
+	ERROR_WRONG_VALUE       = errors.New("%v: value must be between 0 and 100: %v")
 	ERROR_UNKNOWN_ALGORITHM = errors.New("%v: unknown algorithm: %v")
 )
 
@@ -53,11 +54,9 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 			if ratio_human >= p.OptionSameRatioMin && ratio_human <= p.OptionSameRatioMax {
 				counter += 1
 			}
-            // Too much noise.
-            //else {
-			//	core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%",
-			//		text, k, ratio_human))
-			//}
+            if p.OptionSameDebug {
+			    core.LogProcessPlugin(p.LogFields, fmt.Sprintf("%v <> %v, ratio: %v%%", text, k, ratio_human))
+            }
 		} else {
 			return false
 		}
@@ -75,7 +74,7 @@ func matchSimilarity(p *Plugin, states *map[string]time.Time, text string) bool 
 
 func tokenizeToString(p *Plugin, text string) (bool, string) {
 	result := ""
-	tokens := tokenizer.Tokenize(text)
+	tokens := strings.Split(text, p.OptionSameTokenizer)
 
 	if len(tokens) < p.OptionSameTokensMin {
 		return false, ""
@@ -113,10 +112,12 @@ type Plugin struct {
 	OptionSameAlgo      string
 	OptionSameAll       bool
 	OptionSameAlgoConst edlib.Algorithm
+	OptionSameDebug     bool
 	OptionSameRatioMax  float32
 	OptionSameRatioMin  float32
 	OptionSameShareMax  float32
 	OptionSameShareMin  float32
+	OptionSameTokenizer string
 	OptionSameTokensMax int
 	OptionSameTokensMin int
 	OptionSameTTL       time.Duration
@@ -260,6 +261,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"same_ratio_min":  -1,
 		"same_share_max":  -1,
 		"same_share_min":  -1,
+		"same_tokenizer":  -1,
 		"same_tokens_max": -1,
 		"same_tokens_min": -1,
 		"same_ttl":        -1,
@@ -343,6 +345,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSameAll(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_all", template)))
 	setSameAll((*pluginConfig.PluginParams)["same_all"])
 	core.ShowPluginParam(plugin.LogFields, "same_all", plugin.OptionSameAll)
+	
+    // same_debug.
+	setSameDebug := func(p interface{}) {
+		if v, b := core.IsBool(p); b {
+			availableParams["same_debug"] = 0
+			plugin.OptionSameDebug = v
+		}
+	}
+	setSameDebug(DEFAULT_SAME_DEBUG)
+	setSameDebug(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_debug", template)))
+	setSameDebug((*pluginConfig.PluginParams)["same_debug"])
+	core.ShowPluginParam(plugin.LogFields, "same_debug", plugin.OptionSameDebug)
 
 	// same_ratio_max.
 	setSameRatioMax := func(p interface{}) {
@@ -391,6 +405,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setSameShareMin(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_share_min", template)))
 	setSameShareMin((*pluginConfig.PluginParams)["same_share_min"])
 	core.ShowPluginParam(plugin.LogFields, "same_share_min", plugin.OptionSameShareMin)
+
+	// same_tokenizer.
+	setSameTokenizer := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["same_tokenizer"] = 0
+			plugin.OptionSameTokenizer = v
+		}
+	}
+	setSameTokenizer(DEFAULT_SAME_TOKENIZER)
+	setSameTokenizer(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.same_tokenizer", template)))
+	setSameTokenizer((*pluginConfig.PluginParams)["same_tokenizer"])
+	core.ShowPluginParam(plugin.LogFields, "same_tokenizer", plugin.OptionSameTokenizer)
 
 	// same_tokens_max.
 	setSameTokensMax := func(p interface{}) {
