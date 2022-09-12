@@ -1317,7 +1317,7 @@ func GetStringFromFile(file string) (string, error) {
 		return "", err
 	}
 
-    return string(b), nil
+    return strings.Trim(string(b), "\n"), nil
 }
 
 func GetLinesFromFile(file string) ([]string, error) {
