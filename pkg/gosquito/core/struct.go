@@ -79,6 +79,7 @@ type Flow struct {
 	MetricExpire  int32
 	MetricNoData  int32
 	MetricReceive int32
+	MetricRun     int32
 	MetricSend    int32
 }
 
@@ -98,6 +99,7 @@ func (f *Flow) ResetMetric() {
 	f.MetricExpire = 0
 	f.MetricNoData = 0
 	f.MetricReceive = 0
+	f.MetricRun = 0
 	f.MetricSend = 0
 }
 
@@ -250,8 +252,8 @@ type Iter struct {
 
 type Io struct {
 	LINES []string
-    MTIME string
-	TEXT string
+	MTIME string
+	TEXT  string
 }
 
 type Resty struct {

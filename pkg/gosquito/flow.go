@@ -507,6 +507,7 @@ func runFlow(flow *core.Flow) {
 			"run":  flow.GetRunID(),
 			"flow": flow.FlowName,
 		}
+		atomic.AddInt32(&flow.MetricRun, 1)
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_START)
 		defer flow.Unlock()
 

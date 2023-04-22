@@ -18,7 +18,7 @@ var (
 	flowMetricError = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_error",
-			Help: "",
+			Help: "How many errors raised during flow executions.",
 		},
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
@@ -34,7 +34,7 @@ var (
 	flowMetricNoData = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_nodata",
-			Help: "",
+			Help: "How many times flow received previously seen data.",
 		},
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
@@ -42,7 +42,15 @@ var (
 	flowMetricReceive = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_receive",
-			Help: "",
+			Help: "How much new data flow has received.",
+		},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+	)
+
+	flowMetricRun = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "gosquito_flow_run",
+			Help: "How many times flow has executed.",
 		},
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
@@ -50,7 +58,7 @@ var (
 	flowMetricSend = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "gosquito_flow_send",
-			Help: "",
+			Help: "How much data flow sent.",
 		},
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
@@ -61,6 +69,7 @@ func init() {
 	prometheus.MustRegister(flowMetricExpire)
 	prometheus.MustRegister(flowMetricNoData)
 	prometheus.MustRegister(flowMetricReceive)
+	prometheus.MustRegister(flowMetricRun)
 	prometheus.MustRegister(flowMetricSend)
 
 	log.SetFormatter(&log.TextFormatter{
@@ -162,6 +171,7 @@ func RunApp() {
 				flowMetricExpire.With(labels).Add(float64(flow.MetricExpire))
 				flowMetricNoData.With(labels).Add(float64(flow.MetricNoData))
 				flowMetricReceive.With(labels).Add(float64(flow.MetricReceive))
+				flowMetricRun.With(labels).Add(float64(flow.MetricRun))
 				flowMetricSend.With(labels).Add(float64(flow.MetricSend))
 
 				flow.ResetMetric()
@@ -170,7 +180,7 @@ func RunApp() {
 			// Find flow candidates and save their execution counters.
 			if flow.GetInstance() < flow.FlowInstance {
 				// Save candidates counters.
-				if currentTime.Unix()-lastTime.Unix() > flow.FlowInterval / 1000 {
+				if currentTime.Unix()-lastTime.Unix() > flow.FlowInterval/1000 {
 					flowCandidates[flow] = flowCounter[flow.FlowUUID]
 				}
 			}
