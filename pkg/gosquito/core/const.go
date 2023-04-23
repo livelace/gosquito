@@ -26,7 +26,7 @@ const (
 	DEFAULT_FORCE_COUNT           = 100
 	DEFAULT_LOG_LEVEL             = "INFO"
 	DEFAULT_LOG_TIME_FORMAT       = "02.01.2006 15:04:05.000"
-	DEFAULT_LOOP_SLEEP            = 1
+	DEFAULT_LOOP_SLEEP            = 1000
 	DEFAULT_PLUGIN_INCLUDE        = false
 	DEFAULT_PLUGIN_TIMEOUT        = 60
 	DEFAULT_STATE_DIR             = "state"
@@ -73,6 +73,7 @@ const (
 	VIPER_DEFAULT_FLOW_INTERVAL         = "default.flow_interval"
 	VIPER_DEFAULT_FLOW_LIMIT            = "default.flow_limit"
 	VIPER_DEFAULT_LOG_LEVEL             = "default.log_level"
+	VIPER_DEFAULT_LOOP_SLEEP            = "default.loop_sleep"
 	VIPER_DEFAULT_PLUGIN_INCLUDE        = "default.plugin_include"
 	VIPER_DEFAULT_PLUGIN_TIMEOUT        = "default.plugin_timeout"
 	VIPER_DEFAULT_PROC_NUM              = "default.proc_num"
@@ -131,6 +132,9 @@ const (
 #flow_interval           = "5m"
 
 #log_level               = "DEBUG"
+
+# Main loop sleep (milliseconds).
+#loop_sleep              = 1000
 
 # Should flow send results of processing plugins with output plugin by default.
 #plugin_include          = false

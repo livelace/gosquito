@@ -242,6 +242,6 @@ func RunApp() {
 			}
 		}
 
-		time.Sleep(core.DEFAULT_LOOP_SLEEP * time.Millisecond)
+		time.Sleep(time.Duration(appConfig.GetInt(core.VIPER_DEFAULT_LOOP_SLEEP)) * time.Millisecond)
 	}
 }

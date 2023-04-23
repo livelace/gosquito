@@ -510,7 +510,7 @@ func runFlow(flow *core.Flow) {
 			"flow": flow.FlowName,
 		}
 		startTime = time.Now()
-		atomic.AddInt32(&flow.MetricRun, 1)
+		atomic.AddInt64(&flow.MetricRun, 1)
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_START)
 		defer flow.Unlock()
 
@@ -522,15 +522,14 @@ func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Helper functions.
 
-	cleanFlowTemp := func() {
+	flowStop := func() {
+		atomic.StoreInt64(&flow.MetricTime, time.Since(startTime).Milliseconds())
+
 		if flow.FlowCleanup {
 			_ = os.RemoveAll(flow.FlowTempDir)
 			log.WithFields(flowLogFields).Info(core.LOG_FLOW_CLEANUP)
 		}
-	}
 
-	flowStop := func() {
-		atomic.StoreInt32(&flow.MetricTime, int32(time.Since(startTime).Seconds()))
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_STOP)
 	}
 
@@ -550,29 +549,28 @@ func runFlow(flow *core.Flow) {
 	// Process data if flow sources are expired/failed.
 	// Skip flow if we have other problems.
 	if err == core.ERROR_FLOW_EXPIRE {
-		atomic.AddInt32(&flow.MetricExpire, 1)
+		atomic.AddInt64(&flow.MetricExpire, 1)
 		flow.InputPlugin.FlowLog(err)
 
 	} else if err == core.ERROR_FLOW_SOURCE_FAIL {
-		atomic.AddInt32(&flow.MetricError, 1)
+		atomic.AddInt64(&flow.MetricError, 1)
 		flow.InputPlugin.FlowLog(err)
 
 	} else if err != nil {
-		atomic.AddInt32(&flow.MetricError, 1)
+		atomic.AddInt64(&flow.MetricError, 1)
 		flow.InputPlugin.FlowLog(err)
-		cleanFlowTemp()
 		flowStop()
 		return
 	}
 
 	// Skip flow if we don't have new data.
 	if len(inputData) == 0 {
-		atomic.AddInt32(&flow.MetricNoData, 1)
+		atomic.AddInt64(&flow.MetricNoData, 1)
 		flow.InputPlugin.FlowLog(core.ERROR_NO_NEW_DATA)
 		flowStop()
 		return
 	} else {
-		atomic.AddInt32(&flow.MetricReceive, int32(len(inputData)))
+		atomic.AddInt64(&flow.MetricReceive, int64(len(inputData)))
 	}
 
 	// -------------------------------------------------------------------------------------------------------------
@@ -625,8 +623,7 @@ func runFlow(flow *core.Flow) {
 			// 2. Save plugin results.
 			if err != nil {
 				plugin.FlowLog(err)
-				atomic.AddInt32(&flow.MetricError, 1)
-				cleanFlowTemp()
+				atomic.AddInt64(&flow.MetricError, 1)
 				flowStop()
 				return
 
@@ -670,14 +667,13 @@ func runFlow(flow *core.Flow) {
 
 						// Skip flow if there are problems with sending.
 						if err != nil {
-							atomic.AddInt32(&flow.MetricError, 1)
+							atomic.AddInt64(&flow.MetricError, 1)
 							flow.OutputPlugin.FlowLog(err)
-							cleanFlowTemp()
 							flowStop()
 							return
 
 						} else {
-							atomic.AddInt32(&flow.MetricSend, int32(len(pluginData)))
+							atomic.AddInt64(&flow.MetricSend, int64(len(pluginData)))
 							flow.OutputPlugin.FlowLog(fmt.Sprintf("process plugin id: %d, send data: %d",
 								pluginID, len(pluginData)))
 						}
@@ -698,14 +694,13 @@ func runFlow(flow *core.Flow) {
 
 			// Skip flow if there are problems with sending.
 			if err != nil {
-				atomic.AddInt32(&flow.MetricError, 1)
+				atomic.AddInt64(&flow.MetricError, 1)
 				flow.OutputPlugin.FlowLog(err)
-				cleanFlowTemp()
 				flowStop()
 				return
 
 			} else {
-				atomic.AddInt32(&flow.MetricSend, int32(len(inputData)))
+				atomic.AddInt64(&flow.MetricSend, int64(len(inputData)))
 				flow.OutputPlugin.FlowLog(len(inputData))
 			}
 
@@ -717,7 +712,6 @@ func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Cleanup at the end.
 
-	cleanFlowTemp()
 	flowStop()
 
 	// -----------------------------------------------------------------------------------------------------------------

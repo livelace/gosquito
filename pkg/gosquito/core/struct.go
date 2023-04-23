@@ -75,13 +75,13 @@ type Flow struct {
 	ProcessPluginsNames []string
 	OutputPlugin        OutputPlugin
 
-	MetricError   int32
-	MetricExpire  int32
-	MetricNoData  int32
-	MetricReceive int32
-	MetricRun     int32
-	MetricSend    int32
-	MetricTime    int32
+	MetricError   int64
+	MetricExpire  int64
+	MetricNoData  int64
+	MetricReceive int64
+	MetricRun     int64
+	MetricSend    int64
+	MetricTime    int64
 }
 
 func (f *Flow) GetInstance() int {

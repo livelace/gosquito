@@ -25,13 +25,13 @@ func initAppConfig() (string, error) {
 	// 1. /etc/gosquito/
 	// 2. ~/.gosquito
 	// 3. .gosquito
-    if _, err := IsFile(filepath.Join(DEFAULT_ETC_PATH, configFile)); err == nil {
+	if _, err := IsFile(filepath.Join(DEFAULT_ETC_PATH, configFile)); err == nil {
 		return DEFAULT_ETC_PATH, nil
 
-    } else if _, err := IsFile(filepath.Join(userDir, configFile)); err == nil {
+	} else if _, err := IsFile(filepath.Join(userDir, configFile)); err == nil {
 		return userDir, nil
 
-    } else if _, err := IsFile(filepath.Join(DEFAULT_CURRENT_PATH, configFile)); err == nil {
+	} else if _, err := IsFile(filepath.Join(DEFAULT_CURRENT_PATH, configFile)); err == nil {
 		return DEFAULT_CURRENT_PATH, nil
 	}
 
@@ -92,6 +92,7 @@ func GetAppConfig() *viper.Viper {
 	v.SetDefault(VIPER_DEFAULT_FLOW_INTERVAL, DEFAULT_FLOW_INTERVAL)
 	v.SetDefault(VIPER_DEFAULT_FLOW_LIMIT, DEFAULT_FLOW_LIMIT)
 	v.SetDefault(VIPER_DEFAULT_LOG_LEVEL, DEFAULT_LOG_LEVEL)
+	v.SetDefault(VIPER_DEFAULT_LOOP_SLEEP, DEFAULT_LOOP_SLEEP)
 	v.SetDefault(VIPER_DEFAULT_PLUGIN_INCLUDE, DEFAULT_PLUGIN_INCLUDE)
 	v.SetDefault(VIPER_DEFAULT_PLUGIN_TIMEOUT, DEFAULT_PLUGIN_TIMEOUT)
 	v.SetDefault(VIPER_DEFAULT_PROC_NUM, runtime.GOMAXPROCS(0))
