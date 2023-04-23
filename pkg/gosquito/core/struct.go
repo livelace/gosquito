@@ -81,6 +81,7 @@ type Flow struct {
 	MetricReceive int32
 	MetricRun     int32
 	MetricSend    int32
+	MetricTime    int32
 }
 
 func (f *Flow) GetInstance() int {
@@ -101,6 +102,7 @@ func (f *Flow) ResetMetric() {
 	f.MetricReceive = 0
 	f.MetricRun = 0
 	f.MetricSend = 0
+	f.MetricTime = 0
 }
 
 func (f *Flow) Lock() bool {

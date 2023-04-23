@@ -62,6 +62,14 @@ var (
 		},
 		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
 	)
+
+	flowMetricTime = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "gosquito_flow_time",
+			Help: "How much time flow ran.",
+		},
+		[]string{"flow", "hash", "input_plugin", "input_values", "process_plugins", "output_plugin", "output_values"},
+	)
 )
 
 func init() {
@@ -71,6 +79,7 @@ func init() {
 	prometheus.MustRegister(flowMetricReceive)
 	prometheus.MustRegister(flowMetricRun)
 	prometheus.MustRegister(flowMetricSend)
+	prometheus.MustRegister(flowMetricTime)
 
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: false,
@@ -173,6 +182,7 @@ func RunApp() {
 				flowMetricReceive.With(labels).Add(float64(flow.MetricReceive))
 				flowMetricRun.With(labels).Add(float64(flow.MetricRun))
 				flowMetricSend.With(labels).Add(float64(flow.MetricSend))
+				flowMetricTime.With(labels).Set(float64(flow.MetricTime))
 
 				flow.ResetMetric()
 			}

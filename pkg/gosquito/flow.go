@@ -36,6 +36,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync/atomic"
+	"time"
 )
 
 func readFlow(dir string) ([]string, error) {
@@ -500,6 +501,7 @@ func runFlow(flow *core.Flow) {
 	// -----------------------------------------------------------------------------------------------------------------
 	var err error
 	var flowLogFields log.Fields
+	var startTime time.Time
 
 	if flow.Lock() {
 		flowLogFields = log.Fields{
@@ -507,6 +509,7 @@ func runFlow(flow *core.Flow) {
 			"run":  flow.GetRunID(),
 			"flow": flow.FlowName,
 		}
+		startTime = time.Now()
 		atomic.AddInt32(&flow.MetricRun, 1)
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_START)
 		defer flow.Unlock()
@@ -526,7 +529,8 @@ func runFlow(flow *core.Flow) {
 		}
 	}
 
-	logFlowStop := func() {
+	flowStop := func() {
+		atomic.StoreInt32(&flow.MetricTime, int32(time.Since(startTime).Seconds()))
 		log.WithFields(flowLogFields).Info(core.LOG_FLOW_STOP)
 	}
 
@@ -557,7 +561,7 @@ func runFlow(flow *core.Flow) {
 		atomic.AddInt32(&flow.MetricError, 1)
 		flow.InputPlugin.FlowLog(err)
 		cleanFlowTemp()
-		logFlowStop()
+		flowStop()
 		return
 	}
 
@@ -565,7 +569,7 @@ func runFlow(flow *core.Flow) {
 	if len(inputData) == 0 {
 		atomic.AddInt32(&flow.MetricNoData, 1)
 		flow.InputPlugin.FlowLog(core.ERROR_NO_NEW_DATA)
-		logFlowStop()
+		flowStop()
 		return
 	} else {
 		atomic.AddInt32(&flow.MetricReceive, int32(len(inputData)))
@@ -623,7 +627,7 @@ func runFlow(flow *core.Flow) {
 				plugin.FlowLog(err)
 				atomic.AddInt32(&flow.MetricError, 1)
 				cleanFlowTemp()
-				logFlowStop()
+				flowStop()
 				return
 
 			} else {
@@ -669,7 +673,7 @@ func runFlow(flow *core.Flow) {
 							atomic.AddInt32(&flow.MetricError, 1)
 							flow.OutputPlugin.FlowLog(err)
 							cleanFlowTemp()
-							logFlowStop()
+							flowStop()
 							return
 
 						} else {
@@ -697,7 +701,7 @@ func runFlow(flow *core.Flow) {
 				atomic.AddInt32(&flow.MetricError, 1)
 				flow.OutputPlugin.FlowLog(err)
 				cleanFlowTemp()
-				logFlowStop()
+				flowStop()
 				return
 
 			} else {
@@ -714,7 +718,7 @@ func runFlow(flow *core.Flow) {
 	// Cleanup at the end.
 
 	cleanFlowTemp()
-	logFlowStop()
+	flowStop()
 
 	// -----------------------------------------------------------------------------------------------------------------
 }
