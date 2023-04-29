@@ -51,6 +51,9 @@
 
 #log_level               = "DEBUG"
 
+# Main loop sleep (milliseconds).
+#loop_sleep              = 1000
+
 # Should flow send results of processing plugins with output plugin by default.
 #plugin_include          = false
 
