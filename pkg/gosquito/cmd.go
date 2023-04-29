@@ -236,10 +236,12 @@ func RunApp() {
 					break
 				}
 
-				flowTimestamp[candidate.Flow.FlowUUID] = currentTime
-				flowRunning += 1
+				if candidate.Flow.GetInstance() < candidate.Flow.FlowInstance {
+					flowTimestamp[candidate.Flow.FlowUUID] = currentTime
+					flowRunning += 1
 
-				go runFlow(candidate.Flow)
+					go runFlow(candidate.Flow)
+				}
 			}
 		}
 
