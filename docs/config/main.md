@@ -69,5 +69,5 @@
 #time_zone               = "UTC"
 
 # Default user_agent for all compatible plugins.
-#user_agent              = "gosquito v4.4.0"
+#user_agent              = "gosquito v4.4.1"
 ```

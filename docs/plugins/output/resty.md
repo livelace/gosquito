@@ -26,7 +26,7 @@
 | redirect     | -        | bool   | -    | +        | -             | true              | false                           | Follow redirects.                         |
 | send_delay   | -        | string | -    | +        | -             | "1ms"             | "1s"                            | Delay between sending.                    |
 | ssl_verify   | -        | bool   | -    | +        | -             | true              | false                           | Verify server certificate.                |
-| user_agent   | -        | string | -    | +        | -             | "gosquito v4.4.0" | "webchela 1.0"                  | Custom User-Agent for feed access.        |
+| user_agent   | -        | string | -    | +        | -             | "gosquito v4.4.1" | "webchela 1.0"                  | Custom User-Agent for feed access.        |
 | username     | -        | string | +    | -        | -             | ""                | ""                              | Basic auth username.                      |
 
 
