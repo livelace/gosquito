@@ -6,7 +6,8 @@ Main goal is to replace various in-house automated tasks with a single tool and 
 
 ```mermaid
 graph TD;
-    I1(kafka)-->P1(process plugins);
+    I2(io)-->P1(process plugins);
+    I1(kafka)-->P1;
     I2(resty)-->P1;
     I3(rss)-->P1;
     I4(telegram)-->P1;
