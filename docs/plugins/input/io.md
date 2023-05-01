@@ -6,9 +6,9 @@
 
 ```go
 type Io struct {
-    LINES  []string
-    MTIME* string
-    TEXT*  string
+LINES  []string
+MTIME* string
+TEXT*  string
 }
 ```
 
@@ -17,7 +17,7 @@ type Io struct {
 ### Generic parameters:
 
 | Param                 | Required |  Type  | Template |        Default        |
-| :-------------------- | :------: | :----: | :------: | :-------------------: |
+|:----------------------|:--------:|:------:|:--------:|:---------------------:|
 | expire_action         |    -     | array  |    +     |          []           |
 | expire_action_delay   |    -     | string |    +     |         "1d"          |
 | expire_action_timeout |    -     |  int   |    +     |          30           |
@@ -34,11 +34,11 @@ type Io struct {
 
 ### Plugin parameters:
 
-| Param         | Required |  Type  | Cred | Template | Text Template | Default |      Example       | Description                                         |
-| :------------ | :------: | :----: | :--: | :------: | :-----------: | :-----: | :----------------: | :-------------------------------------------------- |
-| file_in       |    -     |  bool  |  -   |    +     |       -       |  false  |        true        | Process input as files.                           |
-| file_in_mode  |    -     | string |  -   |    +     |       -       | "text"  |      "lines"       | Read input file as text or line by line into array. |
-| **input**     |    +     | array  |  -   |    +     |       -       |  "[]"   | ["/path/to/file1"] | Set input as text or file paths.                    |
+| Param        | Required |  Type  | Cred | Template | Text Template | Default |      Example       | Description                                         |
+|:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:------------------:|:----------------------------------------------------|
+| file_in      |    -     |  bool  |  -   |    +     |       -       |  false  |        true        | Process input as files.                             |
+| file_in_mode |    -     | string |  -   |    +     |       -       | "text"  |      "lines"       | Read input file as text or line by line into array. |
+| **input**    |    +     | array  |  -   |    +     |       -       |  "[]"   | ["/path/to/file1"] | Set input as text or file paths.                    |
 
 ### Flow samples:
 
@@ -49,13 +49,13 @@ flow:
   input:
     plugin: "io"
     params:
-      input: ["Hello", ",", "World", "!"]
+      input: [ "Hello", ",", "World", "!" ]
 
   process:
     - id: 0
       plugin: "echo"
       params:
-        input: ["io.text"]
+        input: [ "io.text" ]
 ```
 
 ```yaml
@@ -65,7 +65,7 @@ flow:
   input:
     plugin: "io"
     params:
-      input: ["/etc/passwd"]
+      input: [ "/etc/passwd" ]
       file_in: true
       file_in_mode: "lines"
 
@@ -74,9 +74,8 @@ flow:
       plugin: "echo"
       alias: "show passwd records"
       params:
-        input: ["io.lines"]
+        input: [ "io.lines" ]
 ```
-
 
 ```yaml
 flow:
@@ -85,16 +84,16 @@ flow:
   input:
     plugin: "io"
     params:
-      input: ["/tmp/externally_updated_file"]
+      input: [ "/tmp/externally_updated_file" ]
       file_in: true
       file_in_mode: "text"
-      match_signature: ["io.mtime"]
-      match_ttl: ["1d"]
+      match_signature: [ "io.mtime" ]
+      match_ttl: [ "1d" ]
 
   process:
     - id: 0
       plugin: "echo"
       alias: "show updated content"
       params:
-        input: ["io.text"]
+        input: [ "io.text" ]
 ```

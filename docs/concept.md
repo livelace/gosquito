@@ -34,6 +34,7 @@ type Datum struct {
   DATA       Data              // Temporary structure for keeping static data.
   ITER       Iter              // Temporary structure for keeping iterated data.
   
+  IO         Io                // IO plugin structure.
   RESTY      Resty             // Resty plugin structure.
   RSS        Rss               // RSS plugin structure.
   TELEGRAM   Telegram          // Telegram plugin structure.
@@ -148,7 +149,8 @@ type Iter struct {
 
 #### Plugin specific data structures:
 
-1. [RESTY](plugins/input/resty.md)    
-2. [RSS](plugins/input/rss.md)  
-3. [TELEGRAM](plugins/input/telegram.md)  
-4. [TWITTER](plugins/input/twitter.md)  
+1. [IO](plugins/input/io.md)    
+2. [RESTY](plugins/input/resty.md)
+3. [RSS](plugins/input/rss.md)  
+4. [TELEGRAM](plugins/input/telegram.md)  
+5. [TWITTER](plugins/input/twitter.md)  
