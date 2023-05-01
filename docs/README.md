@@ -7,3 +7,4 @@
 5. [Storage](storage.md)
 6. [Template](template.md)
 7. [Credentials](credentials.md)
+8. [Metrics](metrics.md)
