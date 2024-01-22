@@ -80,7 +80,8 @@ graph TD;
 
 ### ToDo:
 
-0. prometheus: last message received timestamp.
+0. graceful shutdown.
+1. prometheus: last message received timestamp.
 1. prometheus: extend metrics with invalid flows.
 2. core: cron mode.
 3. regexp/ml: storage of interests.
@@ -98,3 +99,9 @@ graph TD;
 15. kafka: warn about connection problems.
 16. core: log level for flow.
 17. core: flow enable/disable regexp support.
+
+
+### Credits:
+<br>
+
+[![main](assets/jetbrains.png)](https://www.jetbrains.com/ides/)
