@@ -26,7 +26,7 @@ libraries {
     //    policy = "${APP_NAME}"
     //}
     k8s_build {
-        image = "registry.livelace.ru/dev/gosquito:${IMAGE_TAG}"
+        image = "registry.livelace.ru/infra/gosquito:${IMAGE_TAG}"
         force_pull = true
     }
     kaniko {
