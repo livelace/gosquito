@@ -6,7 +6,7 @@ check() {
 }
 
 depends() {
-    echo "base"
+    echo "base" "debug"
     return 0
 }
 
