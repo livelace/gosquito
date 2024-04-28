@@ -51,16 +51,16 @@ func (p *Plugin) FlowLog(message interface{}) {
 }
 
 func (p *Plugin) GetInclude() bool {
-	return false
+	return p.OptionInclude
 }
 
 func (p *Plugin) GetRequire() []int {
-	return []int{0}
+	return p.OptionRequire
 }
 
 func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
