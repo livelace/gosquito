@@ -2,7 +2,8 @@
 
 **_gosquito_** ("go" + "mosquito") is a pluggable tool for data
 gathering, data processing and data transmitting to various destinations.
-Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge. See [docs](docs/README.md) and [examples](https://github.com/livelace/gosquito-public) for additional info.
+Main goal is to replace various in-house automated tasks with a single tool and move those tasks at the edge.
+See [docs](docs/README.md) and [examples](https://github.com/livelace/gosquito-public) for additional info.
 
 ```mermaid
 graph TD;
@@ -38,7 +39,7 @@ graph TD;
 ### Input plugins:
 
 | Plugin                                     | Description                                                                                    |
-| :----------------------------------------- | :--------------------------------------------------------------------------------------------- |
+|:-------------------------------------------|:-----------------------------------------------------------------------------------------------|
 | [io](docs/plugins/input/io.md)             | Use text and files as data source.                                                             |
 | [kafka](docs/plugins/input/kafka.md)       | [Kafka](https://kafka.apache.org/) topic as data source.                                       |
 | [resty](docs/plugins/input/resty.md)       | [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoint as data source. |
@@ -49,11 +50,12 @@ graph TD;
 ### Process plugins:
 
 | Plugin                                                 | Description                                                                                            |
-| :----------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+|:-------------------------------------------------------|:-------------------------------------------------------------------------------------------------------|
 | [dedup](docs/plugins/process/dedup.md)                 | Deduplicate datums by UUID.                                                                            |
 | [echo](docs/plugins/process/echo.md)                   | Echoing processing data.                                                                               |
 | [expandurl](docs/plugins/process/expandurl.md)         | Expand short URLs.                                                                                     |
 | [fetch](docs/plugins/process/fetch.md)                 | Fetch remote data.                                                                                     |
+| [iconv](docs/plugins/process/iconv.md)                 | Convert text encoding.                                                                                 |
 | [io](docs/plugins/process/io.md)                       | Read/write text and files.                                                                             |
 | [jq](docs/plugins/process/jq.md)                       | Extract JSON elements.                                                                                 |
 | [minio](docs/plugins/process/minio.md)                 | Get/put data from/to [S3](https://en.wikipedia.org/wiki/Amazon_S3) bucket.                             |
@@ -70,7 +72,7 @@ graph TD;
 ### Output plugins:
 
 | Plugin                                          | Description                                                                                  |
-| :---------------------------------------------- | :------------------------------------------------------------------------------------------- |
+|:------------------------------------------------|:---------------------------------------------------------------------------------------------|
 | [kafka](docs/plugins/output/kafka.md)           | Send data to [Kafka](https://kafka.apache.org/) topic.                                       |
 | [mattermost](docs/plugins/output/mattermost.md) | Send data to [Mattermost](https://mattermost.org/) channel/user.                             |
 | [resty](docs/plugins/output/resty.md)           | Send data to [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoint. |
@@ -100,8 +102,8 @@ graph TD;
 16. core: log level for flow.
 17. core: flow enable/disable regexp support.
 
-
 ### Credits:
+
 <br>
 
 [![main](assets/jetbrains.png)](https://www.jetbrains.com/ides/)

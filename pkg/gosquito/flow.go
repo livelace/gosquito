@@ -18,6 +18,7 @@ import (
 	echoProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/echo"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/expandurl"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/fetch"
+	iconvProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/iconv"
 	jqProcess "github.com/livelace/gosquito/pkg/gosquito/plugins/process/jq"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/minio"
 	"github.com/livelace/gosquito/pkg/gosquito/plugins/process/regexpfind"
@@ -399,6 +400,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 				plugin, err = expandurlProcess.Init(&processPluginConfig)
 			case "fetch":
 				plugin, err = fetchProcess.Init(&processPluginConfig)
+			case "iconv":
+				plugin, err = iconvProcess.Init(&processPluginConfig)
 			case "io":
 				plugin, err = ioMulti.Init(&processPluginConfig)
 			case "jq":
