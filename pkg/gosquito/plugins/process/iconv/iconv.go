@@ -20,6 +20,7 @@ func convert(p *Plugin, text string) (string, bool) {
 
 	cd, err := iconv.Open(p.OptionTo, p.OptionFrom)
 	if err != nil {
+		p.FlowLog(err)
 		return text, false
 	}
 	defer cd.Close()
