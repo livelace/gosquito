@@ -11,9 +11,6 @@ depends() {
 }
 
 install() {
-    mapfile -t -d '' _filenames < <(find /usr/share/i18n -type f -print0)
-    inst_multiple "${_filenames[@]}"
-
     mapfile -t -d '' _filenames < <(find /usr/lib64/gconv -type f -print0)
     inst_multiple "${_filenames[@]}"
 
