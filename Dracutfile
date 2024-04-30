@@ -11,5 +11,8 @@ depends() {
 }
 
 install() {
+    mapfile -t -d '' _filenames < <(find /usr/share/i18n -type f -print0)
+    inst_multiple "${_filenames[@]}"
+
     inst "$WORK_DIR/gosquito" "/usr/local/bin/gosquito"
 }
