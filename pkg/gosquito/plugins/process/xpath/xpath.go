@@ -16,12 +16,13 @@ import (
 const (
 	PLUGIN_NAME = "xpath"
 
-	DEFAULT_FIND_ALL        = false
-	DEFAULT_XPATH_ARRAY     = false
-	DEFAULT_XPATH_HTML      = true
-	DEFAULT_XPATH_HTML_SELF = true
-	DEFAULT_XPATH_MODE      = "html"
-	DEFAULT_XPATH_SEPARATOR = ""
+	DEFAULT_FIND_ALL         = false
+	DEFAULT_XPATH_ARRAY      = false
+	DEFAULT_XPATH_FILL_EMPTY = ""
+	DEFAULT_XPATH_HTML       = true
+	DEFAULT_XPATH_HTML_SELF  = true
+	DEFAULT_XPATH_MODE       = "html"
+	DEFAULT_XPATH_SEPARATOR  = ""
 )
 
 var (
@@ -37,7 +38,7 @@ func findXpathHTML(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	result := make([]string, 0)
 
 	// Read document from file/string.
-    if _, err := core.IsFile(text); err == nil {
+	if _, err := core.IsFile(text); err == nil {
 		doc, err = htmlquery.LoadDoc(text)
 	} else {
 		doc, err = htmlquery.Parse(strings.NewReader(text))
@@ -78,7 +79,7 @@ func findXpathXML(p *Plugin, xpaths []string, text string) ([]string, bool) {
 	result := make([]string, 0)
 
 	// Read document from file/string.
-    if _, err := core.IsFile(text); err == nil {
+	if _, err := core.IsFile(text); err == nil {
 		f, _ := os.Open(text)
 		defer f.Close()
 		doc, err = xmlquery.Parse(f)
@@ -125,6 +126,7 @@ type Plugin struct {
 	OptionRequire        []int
 	OptionXpath          [][]string
 	OptionXpathArray     bool
+	OptionXpathFillEmpty string
 	OptionXpathHtml      bool
 	OptionXpathHtmlSelf  bool
 	OptionXpathMode      string
@@ -196,6 +198,16 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
+				if !ok && p.OptionXpathFillEmpty != DEFAULT_XPATH_FILL_EMPTY {
+					found[index] = true
+
+					if p.OptionXpathArray {
+						ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(p.OptionXpathFillEmpty)))
+					} else {
+						ro.SetString(p.OptionXpathFillEmpty)
+					}
+				}
+
 			case reflect.Slice:
 				somethingWasFound := false
 
@@ -206,7 +218,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						result, ok = findXpathXML(p, p.OptionXpath[index], ri.Index(i).String())
 					}
 
-                    if ok {
+					if ok {
 						somethingWasFound = true
 
 						if p.OptionXpathArray {
@@ -214,7 +226,17 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						} else {
 							ro.Set(reflect.Append(ro, reflect.ValueOf(core.GetStringFromStringSlice(&result))))
 						}
-                    }
+					}
+
+					if !ok && p.OptionXpathFillEmpty != DEFAULT_XPATH_FILL_EMPTY {
+						somethingWasFound = true
+
+						if p.OptionXpathArray {
+							ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(p.OptionXpathFillEmpty)))
+						} else {
+							ro.Set(reflect.Append(ro, reflect.ValueOf(p.OptionXpathFillEmpty)))
+						}
+					}
 				}
 
 				found[index] = somethingWasFound
@@ -272,15 +294,16 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"include": -1,
 		"require": -1,
 
-		"find_all":        -1,
-		"input":           1,
-		"output":          1,
-		"xpath":           1,
-		"xpath_array":     -1,
-		"xpath_html":      -1,
-		"xpath_html_self": -1,
-		"xpath_mode":      -1,
-		"xpath_separator": -1,
+		"find_all":         -1,
+		"input":            1,
+		"output":           1,
+		"xpath":            1,
+		"xpath_array":      -1,
+		"xpath_fill_empty": -1,
+		"xpath_html":       -1,
+		"xpath_html_self":  -1,
+		"xpath_mode":       -1,
+		"xpath_separator":  -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -359,6 +382,17 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setXpathArray(DEFAULT_XPATH_ARRAY)
 	setXpathArray((*pluginConfig.PluginParams)["xpath_array"])
 	core.ShowPluginParam(plugin.LogFields, "xpath_array", plugin.OptionXpathArray)
+
+	// xpath_fill_empty.
+	setXpathFillEmpty := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["xpath_fill_empty"] = 0
+			plugin.OptionXpathFillEmpty = v
+		}
+	}
+	setXpathFillEmpty(DEFAULT_XPATH_FILL_EMPTY)
+	setXpathFillEmpty((*pluginConfig.PluginParams)["xpath_fill_empty"])
+	core.ShowPluginParam(plugin.LogFields, "xpath_fill_empty", plugin.OptionXpathFillEmpty)
 
 	// xpath_html.
 	setXpathHtml := func(p interface{}) {
