@@ -21,14 +21,14 @@ const (
 
 	DEFAULT_BATCH_RETRY              = 0 // no retries.
 	DEFAULT_BATCH_SIZE               = 100
-	DEFAULT_BROWSER_GEOMETRY         = "1024x768"
+	DEFAULT_BROWSER_GEOMETRY         = "1920x1080"
 	DEFAULT_BROWSER_INSTANCE         = 1
 	DEFAULT_BROWSER_INSTANCE_TAB     = 5
 	DEFAULT_BROWSER_PAGE_SIZE        = "10M"
 	DEFAULT_BROWSER_PAGE_TIMEOUT     = 20
 	DEFAULT_BROWSER_PROXY            = ""
 	DEFAULT_BROWSER_SCRIPT_TIMEOUT   = 20
-	DEFAULT_BROWSER_TYPE             = "firefox"
+	DEFAULT_BROWSER_TYPE             = "chrome"
 	DEFAULT_BUFFER_LENGHT            = 1000
 	DEFAULT_CHUNK_SIZE               = "3M"
 	DEFAULT_CPU_LOAD                 = 25
@@ -351,7 +351,6 @@ type Plugin struct {
 	OptionRequire              []int
 	OptionScreenshotInput      [][]string
 	OptionScreenshotOutput     []string
-	OptionScript               []string
 	OptionScriptInput          [][]string
 	OptionScriptOutput         []string
 	OptionServer               []string
@@ -412,29 +411,34 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		for inputIndex, inputField := range p.OptionInput {
 
 			// Combine screenshots for URL:
-			var urlScreenshot string
-			for i, v := range p.OptionScreenshotInput[inputIndex] {
-				if i == 0 {
-					urlScreenshot += fmt.Sprintf("%s", v)
-				} else {
-					urlScreenshot += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+			urlScreenshot := ""
+			if len(p.OptionScreenshotInput) > 0 {
+				for i, v := range p.OptionScreenshotInput[inputIndex] {
+					if i == 0 {
+						urlScreenshot += fmt.Sprintf("%s", v)
+					} else {
+						urlScreenshot += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+					}
 				}
 			}
 
 			// Combine scripts for an URL:
-			var urlScript string
-			for i, v := range p.OptionScriptInput[inputIndex] {
-				if i == 0 {
-					urlScript += fmt.Sprintf("%s", v)
-				} else {
-					urlScript += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+			urlScript := ""
+			if len(p.OptionScriptInput) > 0 {
+				for i, v := range p.OptionScriptInput[inputIndex] {
+					if i == 0 {
+						urlScript += fmt.Sprintf("%s", v)
+					} else {
+						urlScript += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+					}
 				}
 			}
 
-			ri, _ := core.ReflectDatumField(itemData, inputField)
-
 			// 1. Set amount of URLs for specific data item and input.
 			// 2. Append URLs to flat slice.
+
+			ri, _ := core.ReflectDatumField(itemData, inputField)
+
 			switch ri.Kind() {
 			case reflect.String:
 				datumURLMeta[itemIndex][inputIndex] = 1
@@ -660,7 +664,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"request_timeout":        -1,
 		"screenshot_input":       -1,
 		"screenshot_output":      -1,
-		"script":                 -1,
 		"script_input":           -1,
 		"script_output":          -1,
 		"server":                 1,
@@ -964,17 +967,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setScriptOutput((*pluginConfig.PluginParams)["script_output"])
 	core.ShowPluginParam(plugin.LogFields, "script_output", plugin.OptionScriptOutput)
-
-	// script.
-	setScript := func(p interface{}) {
-		if v, b := core.IsSliceOfString(p); b {
-			availableParams["script"] = 0
-			plugin.OptionScript = core.ExtractScripts(pluginConfig.AppConfig, v)
-		}
-	}
-	setScript(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.script", template)))
-	setScript((*pluginConfig.PluginParams)["script"])
-	core.ShowPluginParam(plugin.LogFields, "script", plugin.OptionScript)
 
 	// server.
 	setServer := func(p interface{}) {
