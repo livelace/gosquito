@@ -2,6 +2,7 @@ package webchelaProcess
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
@@ -11,41 +12,51 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"time"
 )
 
 const (
 	PLUGIN_NAME = "webchela"
 
-	DEFAULT_BATCH_RETRY            = 0 // no retries.
-	DEFAULT_BATCH_SIZE             = 100
-	DEFAULT_BROWSER_GEOMETRY       = "1024x768"
-	DEFAULT_BROWSER_INSTANCE       = 1
-	DEFAULT_BROWSER_INSTANCE_TAB   = 5
-	DEFAULT_BROWSER_PAGE_SIZE      = "10M"
-	DEFAULT_BROWSER_PAGE_TIMEOUT   = 20
-	DEFAULT_BROWSER_PROXY          = ""
-	DEFAULT_BROWSER_SCRIPT_TIMEOUT = 20
-	DEFAULT_BROWSER_TYPE           = "firefox"
-	DEFAULT_BUFFER_LENGHT          = 1000
-	DEFAULT_CHUNK_SIZE             = "3M"
-	DEFAULT_CPU_LOAD               = 25
-	DEFAULT_MEM_FREE               = "1G"
-	DEFAULT_OUTPUT_FILENAME        = ""
-	DEFAULT_PAGE_BODY_FILENAME     = "body.html"
-	DEFAULT_PAGE_TITLE_FILENAME    = "title.txt"
-	DEFAULT_PAGE_URL_FILENAME      = "url.txt"
-	DEFAULT_SERVER_CONNECT_TIMEOUT = 3
-	DEFAULT_SERVER_REQUEST_TIMEOUT = 10
-	DEFAULT_TIMEOUT                = 300
+	DEFAULT_BATCH_RETRY              = 0 // no retries.
+	DEFAULT_BATCH_SIZE               = 100
+	DEFAULT_BROWSER_GEOMETRY         = "1024x768"
+	DEFAULT_BROWSER_INSTANCE         = 1
+	DEFAULT_BROWSER_INSTANCE_TAB     = 5
+	DEFAULT_BROWSER_PAGE_SIZE        = "10M"
+	DEFAULT_BROWSER_PAGE_TIMEOUT     = 20
+	DEFAULT_BROWSER_PROXY            = ""
+	DEFAULT_BROWSER_SCRIPT_TIMEOUT   = 20
+	DEFAULT_BROWSER_TYPE             = "firefox"
+	DEFAULT_BUFFER_LENGHT            = 1000
+	DEFAULT_CHUNK_SIZE               = "3M"
+	DEFAULT_CPU_LOAD                 = 25
+	DEFAULT_MEM_FREE                 = "1G"
+	DEFAULT_OUTPUT_FILENAME          = ""
+	DEFAULT_PAGE_BODY_FILENAME       = "body.html"
+	DEFAULT_PAGE_TITLE_FILENAME      = "title.txt"
+	DEFAULT_PAGE_URL_FILENAME        = "url.txt"
+	DEFAULT_SCREENSHOT_PREFIX_REGEXP = "^class:|^css:|^id:|^name:|^tag:|^xpath:"
+	DEFAULT_SERVER_CONNECT_TIMEOUT   = 3
+	DEFAULT_SERVER_REQUEST_TIMEOUT   = 10
+	DEFAULT_TIMEOUT                  = 300
+)
+
+var (
+	ERROR_UNKNOWN_SCREENSHOT_PREFIX = errors.New("unknown screenshot prefix: %s, valid values: class, css, id, name, tag, xpath")
 )
 
 type BatchTask struct {
-	ID     int
-	Server string
-	Status string
-	Input  []string
-	Output []string
+	ID               int
+	Server           string
+	Status           string
+	Input            []string
+	Output           []string
+	ScreenshotInput  []string
+	ScreenshotOutput [][]string
+	ScriptInput      []string
+	ScriptOutput     [][]string
 }
 
 func getServer(p *Plugin, batchId int, serverFailStat *map[string]int) string {
@@ -169,14 +180,15 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 	}
 
 	webchelaTask := pb.Task{
-		ClientId:  clientId,
-		Urls:      batchTask.Input,
-		Scripts:   p.OptionScript,
-		ChunkSize: p.OptionChunkSize,
-		CpuLoad:   p.OptionCpuLoad,
-		MemFree:   p.OptionMemFree,
-		Timeout:   int32(p.OptionTimeout),
-		Browser:   &webchelaTaskBrowser,
+		ClientId:    clientId,
+		Urls:        batchTask.Input,
+		Screenshots: batchTask.ScreenshotInput,
+		Scripts:     batchTask.ScriptInput,
+		ChunkSize:   p.OptionChunkSize,
+		CpuLoad:     p.OptionCpuLoad,
+		MemFree:     p.OptionMemFree,
+		Timeout:     int32(p.OptionTimeout),
+		Browser:     &webchelaTaskBrowser,
 	}
 
 	client := pb.NewServerClient(conn)
@@ -245,34 +257,59 @@ func saveData(p *Plugin, b *BatchTask, results []*pb.Result) error {
 			return err
 		}
 
-		// Write page url.
+		// Save page data:
 		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_URL_FILENAME, result.PageUrl)
 		if err != nil {
 			return err
 		}
 
-		// Write page title.
 		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_TITLE_FILENAME, result.PageTitle)
 		if err != nil {
 			return err
 		}
 
-		// Write page body.
 		err = core.WriteStringToFile(outputDir, DEFAULT_PAGE_BODY_FILENAME, result.PageBody)
 		if err != nil {
 			return err
 		}
 
-		// Write scripts output.
-		for index, output := range result.ScriptOutput {
-			err = core.WriteStringToFile(outputDir, fmt.Sprintf("script%d.txt", index), output)
+		b.Output = append(b.Output, filepath.Join(outputDir, DEFAULT_PAGE_BODY_FILENAME))
+
+		// Save screenshots data:
+		screenshots := make([]string, 0, len(result.Screenshots))
+
+		for index, output := range result.Screenshots {
+			filename := fmt.Sprintf("screenshot%02d-%02d.png", index, result.ScreenshotsId[index])
+
+			err = core.WriteBase64ToFile(outputDir, filename, &output)
+
 			if err != nil {
 				return err
 			}
+
+			screenshots = append(screenshots, filepath.Join(outputDir, filename))
 		}
 
-		b.Output = append(b.Output, filepath.Join(outputDir, DEFAULT_PAGE_BODY_FILENAME))
+		b.ScreenshotOutput = append(b.ScreenshotOutput, screenshots)
 
+		// Write scripts files:
+		scripts := make([]string, 0, len(result.Scripts))
+
+		for index, output := range result.Scripts {
+			filename := fmt.Sprintf("script%02d-%02d.txt", index, result.ScriptsId[index])
+
+			err = core.WriteStringToFile(outputDir, filename, output)
+
+			if err != nil {
+				return err
+			}
+
+			scripts = append(scripts, filepath.Join(outputDir, filename))
+		}
+
+		b.ScriptOutput = append(b.ScriptOutput, scripts)
+
+		// Show data path in console:
 		core.LogProcessPlugin(p.LogFields,
 			fmt.Sprintf("batch: %d, save received data into: %s", b.ID, outputDir))
 	}
@@ -312,7 +349,11 @@ type Plugin struct {
 	OptionOutput               []string
 	OptionRequestTimeout       int
 	OptionRequire              []int
+	OptionScreenshotInput      [][]string
+	OptionScreenshotOutput     []string
 	OptionScript               []string
+	OptionScriptInput          [][]string
+	OptionScriptOutput         []string
 	OptionServer               []string
 	OptionServerTimeout        int
 	OptionTimeout              int
@@ -346,7 +387,7 @@ func (p *Plugin) GetRequire() []int {
 
 func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	temp := make([]*core.Datum, 0)
-  p.LogFields["run"] = p.Flow.GetRunID()
+	p.LogFields["run"] = p.Flow.GetRunID()
 
 	if len(data) == 0 {
 		return temp, nil
@@ -358,27 +399,57 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	// we extract all URLs from all "Datums" into one flat slice: [url0, url1 ... urlN].
 	// To recognize boundaries between Datums in slice we save "metadata".
 	// Example metadata: [0] = [20, 300].
-	// that means: [Datum 0] = [data.array0 = 20 urls, data.array1 = 300 urls].
+	// that means: [Datum 0] = [data.array0 = 20 urls, data.array1 = 300 urls], [0][20, 300]
+	datumURLMeta := make(map[int][]int, 0)
+
 	allURL := make([]string, 0)
-	itemURLMeta := make(map[int][]int, 0)
+	allScreenshots := make([]string, 0)
+	allScripts := make([]string, 0)
 
 	for itemIndex, itemData := range data {
-		itemURLMeta[itemIndex] = make([]int, len(p.OptionInput))
+		datumURLMeta[itemIndex] = make([]int, len(p.OptionInput))
 
 		for inputIndex, inputField := range p.OptionInput {
+
+			// Combine screenshots for URL:
+			var urlScreenshot string
+			for i, v := range p.OptionScreenshotInput[inputIndex] {
+				if i == 0 {
+					urlScreenshot += fmt.Sprintf("%s", v)
+				} else {
+					urlScreenshot += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+				}
+			}
+
+			// Combine scripts for an URL:
+			var urlScript string
+			for i, v := range p.OptionScriptInput[inputIndex] {
+				if i == 0 {
+					urlScript += fmt.Sprintf("%s", v)
+				} else {
+					urlScript += fmt.Sprintf("%s%s", core.DEFAULT_UNIQUE_SEPARATOR, v)
+				}
+			}
+
 			ri, _ := core.ReflectDatumField(itemData, inputField)
 
 			// 1. Set amount of URLs for specific data item and input.
 			// 2. Append URLs to flat slice.
 			switch ri.Kind() {
 			case reflect.String:
-				itemURLMeta[itemIndex][inputIndex] = 1
+				datumURLMeta[itemIndex][inputIndex] = 1
+
 				allURL = append(allURL, ri.String())
+				allScreenshots = append(allScreenshots, urlScreenshot)
+				allScripts = append(allScripts, urlScript)
 
 			case reflect.Slice:
-				itemURLMeta[itemIndex][inputIndex] = ri.Len()
+				datumURLMeta[itemIndex][inputIndex] = ri.Len()
+
 				for i := 0; i < ri.Len(); i++ {
 					allURL = append(allURL, ri.Index(i).String())
+					allScreenshots = append(allScreenshots, urlScreenshot)
+					allScripts = append(allScripts, urlScript)
 				}
 			}
 		}
@@ -386,6 +457,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 	// Split input data into batches.
 	batches := make([][]string, 0)
+	batchesScreenshots := make([][]string, 0)
+	batchesScripts := make([][]string, 0)
 
 	for i := 0; i < len(allURL); i += p.OptionBatchSize {
 		end := i + p.OptionBatchSize
@@ -393,6 +466,8 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			end = len(allURL)
 		}
 		batches = append(batches, allURL[i:end])
+		batchesScreenshots = append(batchesScreenshots, allScreenshots[i:end])
+		batchesScripts = append(batchesScripts, allScripts[i:end])
 	}
 
 	// Send batches to webchela servers concurrently.
@@ -413,15 +488,17 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 		completed := true
 
-		// Run batches one-by-one on suitable servers (cpu/mem load is fine).
+		// Run batches one-by-one on suitable servers (cpu/mem free enough).
 		for batchId, batchData := range batches {
 			switch batchStatus[batchId] {
 			case "":
 				if server := getServer(p, batchId, &serverFailStat); server != "" {
 					go processBatch(p, &BatchTask{
-						ID:     batchId,
-						Server: server,
-						Input:  batchData,
+						ID:              batchId,
+						Server:          server,
+						Input:           batchData,
+						ScreenshotInput: batchesScreenshots[batchId],
+						ScriptInput:     batchesScripts[batchId],
 					})
 					batchStatus[batchId] = "progress"
 				}
@@ -461,53 +538,69 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 		}
 	}
 
-	// Reassemble batches into output.
+	// Put all batches results into flat slices:
 	outputData := make([]string, 0)
+	screenshotOutputData := make([][]string, 0)
+	scriptOutputData := make([][]string, 0)
 
-	// put batches results into flat output slice.
 	for i := 0; i < len(batches); i++ {
 		outputData = append(outputData, batchResult[i].Output...)
+		screenshotOutputData = append(screenshotOutputData, batchResult[i].ScreenshotOutput...)
+		scriptOutputData = append(scriptOutputData, batchResult[i].ScriptOutput...)
 	}
 
 	// Amount of input and output data must be equal, even if some pages were processed
-	// with errors (timeouts, not known DNS names etc.).
+	// with errors (timeouts, DNS resolution problems, etc.).
 	if len(allURL) != len(outputData) {
 		core.LogProcessPlugin(p.LogFields, fmt.Errorf("main loop: received data not equal sent data: %d != %d",
 			len(outputData), len(allURL)))
 		return temp, nil
 	}
 
-	// Fill corresponding Datum with output data.
+	// Fill corresponding Datum with output data:
 	outputOffset := 0
 
-	for itemIndex := 0; itemIndex < len(itemURLMeta); itemIndex++ {
+	// process all metadata items:
+	// datum[0] = 20 urls
+	// datum[1] = 300 urls
+	for datumIndex := 0; datumIndex < len(datumURLMeta); datumIndex++ {
 		grabbed := false
 
-		itemMeta := itemURLMeta[itemIndex]
+		datumMeta := datumURLMeta[datumIndex]
 
-		for index, value := range itemMeta {
-			if value > 0 {
+		// datum may contain multiple data structures,
+		// this is why we need dataIndex here.
+		// exp. [data.array0, data.array1]
+		// dataValue just represents how much data
+		// we have to extract from flat slices.
+		for dataIndex, dataValue := range datumMeta {
+			if dataValue > 0 {
 				grabbed = true
 			}
 
-			ro, _ := core.ReflectDatumField(data[itemIndex], p.OptionOutput[index])
+			ro, _ := core.ReflectDatumField(data[datumIndex], p.OptionOutput[dataIndex])
+			screenshotRo, _ := core.ReflectDatumField(data[datumIndex], p.OptionScreenshotOutput[dataIndex])
+			scriptRo, _ := core.ReflectDatumField(data[datumIndex], p.OptionScriptOutput[dataIndex])
 
-			switch ro.Kind() {
-			case reflect.String:
-				for offset := outputOffset; offset < outputOffset+value; offset++ {
+			for offset := outputOffset; offset < outputOffset+dataValue; offset++ {
+				switch ro.Kind() {
+				case reflect.String:
 					ro.SetString(outputData[offset])
+				case reflect.Slice:
+					for offset := outputOffset; offset < outputOffset+dataValue; offset++ {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
+					}
 				}
-			case reflect.Slice:
-				for offset := outputOffset; offset < outputOffset+value; offset++ {
-					ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
-				}
+
+				screenshotRo.Set(reflect.ValueOf(screenshotOutputData[offset]))
+				scriptRo.Set(reflect.ValueOf(scriptOutputData[offset]))
 			}
 
-			outputOffset += value
+			outputOffset += dataValue
 		}
 
 		if grabbed {
-			temp = append(temp, data[itemIndex])
+			temp = append(temp, data[datumIndex])
 		}
 	}
 
@@ -565,7 +658,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"mem_free":               -1,
 		"output":                 -1,
 		"request_timeout":        -1,
+		"screenshot_input":       -1,
+		"screenshot_output":      -1,
 		"script":                 -1,
+		"script_input":           -1,
+		"script_output":          -1,
 		"server":                 1,
 		"server_timeout":         -1,
 		"timeout":                -1,
@@ -824,6 +921,50 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setRequire((*pluginConfig.PluginParams)["require"])
 	core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
 
+	// screenshot_input.
+	setScreenshotInput := func(p interface{}) {
+		if v, b := core.IsSliceOfSliceString(p); b {
+			availableParams["screenshot_input"] = 0
+			plugin.OptionScreenshotInput = v
+		}
+	}
+	setScreenshotInput((*pluginConfig.PluginParams)["screenshot_input"])
+	core.ShowPluginParam(plugin.LogFields, "screenshot_input", plugin.OptionScreenshotInput)
+
+	// screenshot_output.
+	setScreenshotOutput := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
+				availableParams["screenshot_output"] = 0
+				plugin.OptionScreenshotOutput = v
+			}
+		}
+	}
+	setScreenshotOutput((*pluginConfig.PluginParams)["screenshot_output"])
+	core.ShowPluginParam(plugin.LogFields, "screenshot_output", plugin.OptionScreenshotOutput)
+
+	// script_input.
+	setScriptInput := func(p interface{}) {
+		if v, b := core.IsSliceOfSliceString(p); b {
+			availableParams["script_input"] = 0
+			plugin.OptionScriptInput = v
+		}
+	}
+	setScriptInput((*pluginConfig.PluginParams)["script_input"])
+	core.ShowPluginParam(plugin.LogFields, "script_input", plugin.OptionScriptInput)
+
+	// script_output.
+	setScriptOutput := func(p interface{}) {
+		if v, b := core.IsSliceOfString(p); b {
+			if err := core.IsDatumFieldsSlice(&v); err == nil {
+				availableParams["script_output"] = 0
+				plugin.OptionScriptOutput = v
+			}
+		}
+	}
+	setScriptOutput((*pluginConfig.PluginParams)["script_output"])
+	core.ShowPluginParam(plugin.LogFields, "script_output", plugin.OptionScriptOutput)
+
 	// script.
 	setScript := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -884,6 +1025,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
+	// input/output:
 	if len(plugin.OptionInput) != len(plugin.OptionOutput) {
 		return &Plugin{}, fmt.Errorf("%s: %v, %v",
 			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
@@ -891,6 +1033,38 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if err := core.IsDatumFieldsTypesEqual(&plugin.OptionInput, &plugin.OptionOutput); err != nil {
 		return &Plugin{}, err
+	}
+
+	// screenshot_input/screenshot_output:
+	if len(plugin.OptionScreenshotInput) > 0 && len(plugin.OptionScreenshotInput) != len(plugin.OptionInput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionScreenshotInput)
+	}
+
+	if len(plugin.OptionScreenshotInput) > 0 && len(plugin.OptionScreenshotOutput) != len(plugin.OptionScreenshotInput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionScreenshotInput, plugin.OptionScreenshotOutput)
+	}
+
+	matchPrefix, _ := regexp.Compile(DEFAULT_SCREENSHOT_PREFIX_REGEXP)
+
+	for _, v := range plugin.OptionScreenshotInput {
+		for _, i := range v {
+			if !matchPrefix.MatchString(i) {
+				return &Plugin{}, fmt.Errorf(ERROR_UNKNOWN_SCREENSHOT_PREFIX.Error(), i)
+			}
+		}
+	}
+
+	// script_input/script_output:
+	if len(plugin.OptionScriptInput) > 0 && len(plugin.OptionScriptInput) != len(plugin.OptionInput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionScriptInput)
+	}
+
+	if len(plugin.OptionScriptInput) > 0 && len(plugin.OptionScriptOutput) != len(plugin.OptionScriptInput) {
+		return &Plugin{}, fmt.Errorf("%s: %v, %v",
+			core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionScriptInput, plugin.OptionScriptOutput)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------

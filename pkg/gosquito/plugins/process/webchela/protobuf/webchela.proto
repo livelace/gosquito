@@ -26,10 +26,13 @@ message Result {
   string page_url = 2;
   string page_title = 3;
   string page_body = 4;
-  repeated string script_output = 5;
-  string url = 6;
-  int32 status_code = 7;
-  string content_type = 8;
+  repeated string screenshots = 5;
+  repeated int32 screenshots_id = 6;
+  repeated string scripts = 7;
+  repeated int32 scripts_id = 8;
+  string url = 9;
+  int32 status_code = 10;
+  string content_type = 11;
 }
 
 message Task {
@@ -51,10 +54,11 @@ message Task {
   Browser browser = 2;
 
   repeated string urls = 3;
-  repeated string scripts = 4;
-  int64 chunk_size = 5;
-  int32 cpu_load = 6;
-  int64 mem_free = 7;
-  int32 timeout = 8;
+  repeated string screenshots = 4;
+  repeated string scripts = 5;
+  int64 chunk_size = 6;
+  int32 cpu_load = 7;
+  int64 mem_free = 8;
+  int32 timeout = 9;
 }
 

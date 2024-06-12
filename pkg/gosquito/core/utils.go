@@ -8,10 +8,10 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
-	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -96,14 +96,6 @@ func CreateDirIfNotExist(d string) error {
 	}
 
 	return nil
-}
-
-func GetStringFromStringSlice(s *[]string) string {
-	r := ""
-	for _, v := range *s {
-		r += v
-	}
-	return r
 }
 
 func ExtractConfigVariableIntoArray(config *viper.Viper, variable interface{}) []string {
@@ -401,6 +393,14 @@ func ExecWithTimeout(cmd string, args []string, timeout int) ([]byte, error) {
 	return c.Output()
 }
 
+func GetStringFromStringSlice(s *[]string) string {
+	r := ""
+	for _, v := range *s {
+		r += v
+	}
+	return r
+}
+
 func GenUID() string {
 	runes := []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 
@@ -442,13 +442,6 @@ func GetCredValue(cred string, vault *vault.Client) string {
 	return cred
 }
 
-func GetVarFromEnv(v string) string {
-	if c := strings.Split(v, "env://"); len(c) > 1 {
-		return os.Getenv(c[1])
-	}
-	return v
-}
-
 func GetDatumFieldType(field interface{}) (reflect.Kind, error) {
 	if f, ok := field.(string); ok {
 		rv, err := ReflectDatumField(&Datum{}, f)
@@ -465,7 +458,7 @@ func GetDatumFieldType(field interface{}) (reflect.Kind, error) {
 }
 
 func GetFileMimeType(file string) (*mimetype.MIME, error) {
-    if _, err := IsFile(file); err == nil {
+	if _, err := IsFile(file); err == nil {
 		return mimetype.DetectFile(file)
 	} else {
 		return &mimetype.MIME{}, err
@@ -482,6 +475,34 @@ func GetFileNameAndExtension(file string) (string, string) {
 	fileName := fileWithExtension[0 : len(fileWithExtension)-len(fileExtension)]
 
 	return fileName, fileExtension
+}
+
+func GetLinesFromFile(file string) ([]string, error) {
+	s, err := GetStringFromFile(file)
+	if err != nil {
+		return make([]string, 0), err
+	}
+	return strings.Split(s, "\n"), nil
+}
+
+func GetStringFromFile(file string) (string, error) {
+	if _, err := IsFile(file); err != nil {
+		return "", err
+	}
+
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Trim(string(b), "\n"), nil
+}
+
+func GetVarFromEnv(v string) string {
+	if c := strings.Split(v, "env://"); len(c) > 1 {
+		return os.Getenv(c[1])
+	}
+	return v
 }
 
 func GetVault(m map[string]interface{}) (*vault.Client, error) {
@@ -865,6 +886,34 @@ func IsSliceOfSliceInt(i interface{}) ([][]int, bool) {
 	return temp, true
 }
 
+func IsSliceOfSliceString(i interface{}) ([][]string, bool) {
+	temp := make([][]string, 0)
+
+	if i == nil {
+		return temp, false
+
+	} else if ii, ok := i.([]interface{}); ok {
+		if len(ii) == 0 {
+			return temp, false
+		}
+
+		for _, v := range ii {
+			i, ok := IsSliceOfString(v)
+
+			if !ok {
+				return temp, false
+			} else {
+				temp = append(temp, i)
+			}
+		}
+
+	} else {
+		return temp, false
+	}
+
+	return temp, true
+}
+
 func IsSliceOfString(i interface{}) ([]string, bool) {
 	temp := make([]string, 0)
 
@@ -955,43 +1004,6 @@ func MapKeysToStringSlice(m *map[string]interface{}) []string {
 	return temp
 }
 
-func PluginLoadData(database string, data interface{}) error {
-    if _, err := IsFile(database); err == nil {
-		// open file.
-		f, err := os.OpenFile(database, os.O_RDONLY, 0644)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
-		}
-
-		// get file size.
-		fs, err := f.Stat()
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
-		}
-
-		// read file.
-		content := make([]byte, fs.Size())
-		_, err = f.Read(content)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
-		}
-
-		// decode data.
-		decoder := gob.NewDecoder(bytes.NewReader(content))
-		err = decoder.Decode(data)
-		if err != nil {
-			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
-		}
-
-		err = f.Close()
-
-	} else {
-        return err
-    }
-
-	return nil
-}
-
 func LogInputPlugin(fields log.Fields, source string, message interface{}) {
 	f := log.Fields{}
 	for k, v := range fields {
@@ -1050,8 +1062,41 @@ func LogOutputPlugin(fields log.Fields, destination string, message interface{})
 	}
 }
 
-func SymlinkFile(source string, destination string) error {
-	return renameio.Symlink(source, destination)
+func PluginLoadData(database string, data interface{}) error {
+	if _, err := IsFile(database); err == nil {
+		// open file.
+		f, err := os.OpenFile(database, os.O_RDONLY, 0644)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		// get file size.
+		fs, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		// read file.
+		content := make([]byte, fs.Size())
+		_, err = f.Read(content)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		// decode data.
+		decoder := gob.NewDecoder(bytes.NewReader(content))
+		err = decoder.Decode(data)
+		if err != nil {
+			return fmt.Errorf(ERROR_PLUGIN_LOAD_DATA.Error(), err)
+		}
+
+		err = f.Close()
+
+	} else {
+		return err
+	}
+
+	return nil
 }
 
 func PluginLoadState(database string, data *map[string]time.Time) error {
@@ -1188,6 +1233,10 @@ func ReflectDatumField(item *Datum, i interface{}) (reflect.Value, error) {
 	return temp, nil
 }
 
+func SymlinkFile(source string, destination string) error {
+	return renameio.Symlink(source, destination)
+}
+
 func ShowPluginParam(fields log.Fields, key string, value interface{}) {
 	f := log.Fields{}
 	for k, v := range fields {
@@ -1287,6 +1336,31 @@ func UniqueSliceValues(s *[]string) []string {
 	return temp
 }
 
+func WriteBase64ToFile(path string, file string, s *string) error {
+	b, err := b64.StdEncoding.DecodeString(*s)
+	if err != nil {
+		return err
+	}
+
+	fp := filepath.Join(path, file)
+
+	f, err := os.OpenFile(fp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	if _, err := f.Write(b); err != nil {
+		return err
+	}
+
+	if err := f.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func WriteStringToFile(path string, file string, s string) error {
 	fp := filepath.Join(path, file)
 
@@ -1305,25 +1379,4 @@ func WriteStringToFile(path string, file string, s string) error {
 	}
 
 	return nil
-}
-
-func GetStringFromFile(file string) (string, error) {
-    if _, err := IsFile(file); err != nil {
-		return "", err
-	}
-
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return "", err
-	}
-
-    return strings.Trim(string(b), "\n"), nil
-}
-
-func GetLinesFromFile(file string) ([]string, error) {
-    s, err := GetStringFromFile(file)
-    if err != nil {
-        return make([]string, 0), err
-    }
-    return strings.Split(s, "\n"), nil
 }

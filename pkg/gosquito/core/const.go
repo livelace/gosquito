@@ -33,6 +33,7 @@ const (
 	DEFAULT_TEMP_DIR              = "temp"
 	DEFAULT_TIME_FORMAT           = "15:04:05 02.01.2006"
 	DEFAULT_TIME_ZONE             = "UTC"
+	DEFAULT_UNIQUE_SEPARATOR      = "= == === ==== ====="
 
 	// -----------------------------------------------------------------------------------------------------------------
 
