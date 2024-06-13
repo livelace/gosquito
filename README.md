@@ -79,31 +79,3 @@ graph TD;
 | [slack](docs/plugins/output/slack.md)           | Send data to [Slack](https://slack.com) channel/user.                                        |
 | [smtp](docs/plugins/output/smtp.md)             | Send data as email.                                                                          |
 | [telegram](docs/plugins/output/telegram.md)     | Send data to [Telegram](https://telegram.org) chat.                                          |
-
-### ToDo:
-
-0. graceful shutdown.
-1. prometheus: last message received timestamp.
-1. prometheus: extend metrics with invalid flows.
-2. core: cron mode.
-3. regexp/ml: storage of interests.
-4. input: match_ignore_case option for match_signature.
-5. docs: add complex examples, docker compose environments.
-6. telegram: add careful (api limits) support for download/sending unread files/messages.
-7. plugins: new (echo plugin more suitable?) file plugin for saving text to files.
-8. core/ml: auto learning interval.
-9. process: ocr plugin.
-10. process: lang detect plugin.
-11. core: file deduplication cache.
-12. process: exec plugin.
-13. core: top content ratio.
-14. core: flow schedule.
-15. kafka: warn about connection problems.
-16. core: log level for flow.
-17. core: flow enable/disable regexp support.
-
-### Credits:
-
-<br>
-
-[![main](assets/jetbrains.png)](https://www.jetbrains.com/ides/)
