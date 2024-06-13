@@ -89,7 +89,7 @@ flow:
 ```toml
 [templates.webchela.default]
 batch_size = 10
-browser_extension = ["bypass-paywalls-clean-3.7.1.0.crx", "ublock-origin-1.58.0.crx", "accept-all-cookies-1.0.3.0.crx"]
+browser_extension = ["accept-all-cookies-1.0.3.0.crx", "bypass-paywalls-clean-3.7.1.0.crx", "ublock-origin-1.58.0.crx"]
 browser_geometry = "dynamic"
 browser_instance = 1
 browser_instance_tab = 10
