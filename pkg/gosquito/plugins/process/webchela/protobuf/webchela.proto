@@ -54,11 +54,13 @@ message Task {
   Browser browser = 2;
 
   repeated string urls = 3;
-  repeated string screenshots = 4;
-  repeated string scripts = 5;
-  int64 chunk_size = 6;
-  int32 cpu_load = 7;
-  int64 mem_free = 8;
-  int32 timeout = 9;
+  repeated string cookies = 4;
+  repeated string screenshots = 5;
+  repeated string scripts = 6;
+  int64 chunk_size = 7;
+  int32 cpu_load = 8;
+  int64 mem_free = 9;
+  int32 timeout = 10;
+  int32 screenshot_timeout = 11;
 }
 

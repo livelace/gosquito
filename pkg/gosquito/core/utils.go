@@ -774,6 +774,20 @@ func IsInterval(i interface{}) (int64, bool) {
 	}
 }
 
+func IsJson(s string) error {
+	var jm map[string]interface{}
+	var js []map[string]interface{}
+
+	jmErr := json.Unmarshal([]byte(s), &jm)
+	jsErr := json.Unmarshal([]byte(s), &js)
+
+	if jmErr == nil || jsErr == nil {
+		return nil
+	} else {
+		return fmt.Errorf("invalid json: %s", s)
+	}
+}
+
 func IsMapWithStringAsKey(i interface{}) (map[string]interface{}, bool) {
 	temp := make(map[string]interface{}, 0)
 
