@@ -14,7 +14,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/renameio v0.1.0
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-getter v1.5.9
+	github.com/hashicorp/go-getter v1.6.1
 	github.com/hbollon/go-edlib v1.6.0
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8

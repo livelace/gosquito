@@ -35,7 +35,7 @@ libraries {
     mattermost
     nexus {
       source = "${APP_NAME}-${APP_VERSION}.appimage"
-      destination = "raw/gosquito/${APP_NAME}/${APP_NAME}-${APP_VERSION}.appimage"
+      destination = "raw/${APP_NAME}/${APP_NAME}-${APP_VERSION}.appimage"
       ignore_ssl = true
     }
     //sonarqube
