@@ -29,7 +29,7 @@ require (
 	github.com/spf13/viper v1.10.0
 	github.com/xhit/go-simple-mail/v2 v2.10.0
 	golang.org/x/net v0.17.0
-	google.golang.org/grpc v1.50.1
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/confluentinc/confluent-kafka-go.v1 v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -37,6 +37,7 @@ require (
 
 require (
 	github.com/confluentinc/confluent-kafka-go v1.7.0 // indirect
+	github.com/golang/protobuf v1.5.3
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.1
 	github.com/qiniu/iconv v1.2.0
