@@ -2,11 +2,12 @@ package mattermostOut
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
-	mattermost "github.com/mattermost/mattermost-server/v6/model"
+	mattermost "github.com/mattermost/mattermost/server/public/model"
 	"io"
 	"net/http"
 	"os"
@@ -57,7 +58,7 @@ func uploadFile(p *Plugin, channel string, file string) (string, error) {
 	data := buf.Bytes()
 
 	// Upload file.
-	fileUploadResponse, _, err := p.MattermostApi.UploadFile(data, channel, fileName)
+	fileUploadResponse, _, err := p.MattermostApi.UploadFile(context.Background(), data, channel, fileName)
 	if err != nil {
 		return "", err
 	}
@@ -195,7 +196,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 
 		// Send to channel.
 		for _, channel := range p.OptionChannels {
-            filesId := uploadFiles(p, channel, &files)
+			filesId := uploadFiles(p, channel, &files)
 			post := mattermost.Post{
 				UserId:    p.MattermostUser.Id,
 				ChannelId: channel,
@@ -204,23 +205,23 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				Props:     props,
 			}
 
-			_, _, err := p.MattermostApi.CreatePost(&post)
+			_, _, err := p.MattermostApi.CreatePost(context.Background(), &post)
 			if err != nil {
 				sendStatus = false
 				core.LogOutputPlugin(p.LogFields, channel,
 					fmt.Errorf(ERROR_SEND_MESSAGE_CHANNEL.Error(), err))
 			}
-            
-            time.Sleep(p.OptionSendDelay)
+
+			time.Sleep(p.OptionSendDelay)
 		}
 
 		// Send to users.
 		for _, user := range p.OptionUsers {
-            ch, _, err := p.MattermostApi.CreateDirectChannel(p.MattermostUser.Id, user)
+			ch, _, err := p.MattermostApi.CreateDirectChannel(context.Background(), p.MattermostUser.Id, user)
 			if err != nil {
 				sendStatus = false
-				core.LogOutputPlugin(p.LogFields, user, 
-                    fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
+				core.LogOutputPlugin(p.LogFields, user,
+					fmt.Errorf(ERROR_USER_CONNECT.Error(), err))
 			}
 
 			filesId := uploadFiles(p, ch.Id, &files)
@@ -232,14 +233,14 @@ func (p *Plugin) Send(data []*core.Datum) error {
 				Props:     props,
 			}
 
-			_, _, err = p.MattermostApi.CreatePost(&post)
+			_, _, err = p.MattermostApi.CreatePost(context.Background(), &post)
 			if err != nil {
 				sendStatus = false
-				core.LogOutputPlugin(p.LogFields, user, 
-                    fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
+				core.LogOutputPlugin(p.LogFields, user,
+					fmt.Errorf(ERROR_SEND_MESSAGE_USER.Error(), err))
 			}
-            
-            time.Sleep(p.OptionSendDelay)
+
+			time.Sleep(p.OptionSendDelay)
 		}
 	}
 
@@ -520,14 +521,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		Timeout: time.Duration(plugin.OptionTimeout) * time.Second,
 	}
 
-	user, _, err := plugin.MattermostApi.Login(plugin.OptionUsername, plugin.OptionPassword)
+	user, _, err := plugin.MattermostApi.Login(context.Background(), plugin.OptionUsername, plugin.OptionPassword)
 	if err != nil {
 		return &Plugin{}, err
 	}
 	plugin.MattermostUser = user
 
 	// Team.
-	team, _, err := plugin.MattermostApi.GetTeamByName(plugin.OptionTeam, "")
+	team, _, err := plugin.MattermostApi.GetTeamByName(context.Background(), plugin.OptionTeam, "")
 	if err != nil {
 		return &Plugin{}, err
 	}
@@ -535,7 +536,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Resolve channels ids.
 	channelsId := make([]string, 0)
 	for _, channel := range plugin.OptionChannels {
-		ch, _, err := plugin.MattermostApi.GetChannelByName(channel, team.Id, "")
+		ch, _, err := plugin.MattermostApi.GetChannelByName(context.Background(), channel, team.Id, "")
 		if err == nil {
 			channelsId = append(channelsId, ch.Id)
 		} else {
@@ -548,7 +549,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Resolve users ids.
 	usersId := make([]string, 0)
 	for _, user := range plugin.OptionUsers {
-		u, _, err := plugin.MattermostApi.GetUserByUsername(user, "")
+		u, _, err := plugin.MattermostApi.GetUserByUsername(context.Background(), user, "")
 		if err == nil {
 			usersId = append(usersId, u.Id)
 		} else {
