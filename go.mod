@@ -37,7 +37,6 @@ require (
 
 require (
 	github.com/confluentinc/confluent-kafka-go v1.7.0 // indirect
-	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/vault/api v1.5.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.1
 	github.com/qiniu/iconv v1.2.0
