@@ -32,10 +32,11 @@ libraries {
     kaniko {
         destination = "infra/${APP_NAME}:${IMAGE_TAG}"
     }
-    //mattermost
-    //nexus {
-    //    source = "${APP_NAME}-${APP_VERSION}.appimage"
-    //    destination = "dists-internal/${APP_NAME}/${APP_NAME}-${APP_VERSION}.appimage"
-    //}
+    mattermost
+    nexus {
+      source = "${APP_NAME}-${APP_VERSION}.appimage"
+      destination = "raw/gosquito/${APP_NAME}/${APP_NAME}-${APP_VERSION}.appimage"
+      ignore_ssl = true
+    }
     //sonarqube
 }
