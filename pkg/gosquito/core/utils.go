@@ -849,6 +849,13 @@ func IsSliceOfInt(i interface{}) ([]int, bool) {
 
 	if i == nil {
 		return temp, false
+	}
+
+	if ii, ok := i.([]int); ok {
+		if len(ii) == 0 {
+			return temp, false
+		}
+		return ii, true
 
 	} else if ii, ok := i.([]interface{}); ok {
 		if len(ii) == 0 {

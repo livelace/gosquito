@@ -23,19 +23,47 @@ message Load {
 
 message Result {
   string UUID = 1;
+
   string page_url = 2;
   string page_title = 3;
   string page_body = 4;
+
   repeated string screenshots = 5;
   repeated int32 screenshots_id = 6;
+
   repeated string scripts = 7;
   repeated int32 scripts_id = 8;
+
   string url = 9;
+
   int32 status_code = 10;
+
   string content_type = 11;
 }
 
 message Task {
+  string client_id = 1;
+
+  repeated string urls = 2;
+  repeated string cookies = 3;
+  repeated string screenshots = 4;
+  repeated string scripts = 5;
+
+  int64 chunk_size = 6;
+  int32 cpu_load = 7;
+  int64 mem_free = 8;
+  int64 page_size = 9;
+  int32 page_timeout = 10;
+  repeated int32 retry_codes = 11;
+  int32 retry_codes_tries = 12;
+  int32 screenshot_timeout = 13;
+  int32 script_timeout = 14;
+  int32 timeout = 15;
+  string tab_open_randomize = 16;
+
+  Browser browser = 17;
+  Debug debug = 18;
+
   message Browser {
     string type = 1;
     repeated string argument = 2;
@@ -43,24 +71,14 @@ message Task {
     string geometry = 4;
     int32 instance = 5;
     int32 instance_tab = 6;
-    int64 page_size = 7;
-    int32 page_timeout = 8;
-    int32 script_timeout = 9;
-    string proxy = 10;
+    string proxy = 7;
   }
 
-  string client_id = 1;
-
-  Browser browser = 2;
-
-  repeated string urls = 3;
-  repeated string cookies = 4;
-  repeated string screenshots = 5;
-  repeated string scripts = 6;
-  int64 chunk_size = 7;
-  int32 cpu_load = 8;
-  int64 mem_free = 9;
-  int32 timeout = 10;
-  int32 screenshot_timeout = 11;
+  message Debug {
+    int32 pre_close_delay = 1;
+    int32 pre_open_delay = 2;
+    int32 pre_process_delay = 3;
+    int32 pre_wait_delay = 4;
+  }
 }
 

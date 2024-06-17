@@ -20,28 +20,34 @@ const (
 	PLUGIN_NAME = "webchela"
 
 	DEFAULT_BATCH_RETRY              = 0 // no retries.
-	DEFAULT_BATCH_SIZE               = 100
+	DEFAULT_BATCH_SIZE               = 10
 	DEFAULT_BROWSER_GEOMETRY         = "1920x1080"
 	DEFAULT_BROWSER_INSTANCE         = 1
-	DEFAULT_BROWSER_INSTANCE_TAB     = 5
-	DEFAULT_BROWSER_PAGE_SIZE        = "10M"
-	DEFAULT_BROWSER_PAGE_TIMEOUT     = 20
+	DEFAULT_BROWSER_INSTANCE_TAB     = 10
 	DEFAULT_BROWSER_PROXY            = ""
-	DEFAULT_BROWSER_SCRIPT_TIMEOUT   = 20
 	DEFAULT_BROWSER_TYPE             = "chrome"
 	DEFAULT_BUFFER_LENGHT            = 1000
 	DEFAULT_CHUNK_SIZE               = "3M"
 	DEFAULT_COOKIE_INPUT_FILE        = false
 	DEFAULT_COOKIE_INPUT_FILE_MODE   = "text"
-	DEFAULT_CPU_LOAD                 = 25
+	DEFAULT_CPU_LOAD                 = 50
+	DEFAULT_DEBUG_PRE_CLOSE_DELAY    = 0
+	DEFAULT_DEBUG_PRE_OPEN_DELAY     = 0
+	DEFAULT_DEBUG_PRE_PROCESS_DELAY  = 0
+	DEFAULT_DEBUG_PRE_WAIT_DELAY     = 0
 	DEFAULT_MEM_FREE                 = "1G"
 	DEFAULT_PAGE_BODY_FILENAME       = "body.html"
+	DEFAULT_PAGE_SIZE                = "10M"
+	DEFAULT_PAGE_TIMEOUT             = 30
 	DEFAULT_PAGE_TITLE_FILENAME      = "title.txt"
 	DEFAULT_PAGE_URL_FILENAME        = "url.txt"
+	DEFAULT_RETRY_CODES_TRIES        = 1
 	DEFAULT_SCREENSHOT_PREFIX_REGEXP = "^class:|^css:|^id:|^name:|^tag:|^xpath:"
-	DEFAULT_SCREENSHOT_TIMEOUT       = 10
-	DEFAULT_SERVER_CONNECT_TIMEOUT   = 3
+	DEFAULT_SCREENSHOT_TIMEOUT       = 30
+	DEFAULT_SCRIPT_TIMEOUT           = 30
+	DEFAULT_SERVER_CONNECT_TIMEOUT   = 10
 	DEFAULT_SERVER_REQUEST_TIMEOUT   = 10
+	DEFAULT_TAB_OPEN_RANDOMIZE       = "0:0"
 	DEFAULT_TIMEOUT                  = 300
 )
 
@@ -162,16 +168,20 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 
 	// Form and run webchela task.
 	webchelaTaskBrowser := pb.Task_Browser{
-		Type:          p.OptionBrowserType,
-		Argument:      p.OptionBrowserArgument,
-		Extension:     p.OptionBrowserExtension,
-		Geometry:      p.OptionBrowserGeometry,
-		Instance:      int32(p.OptionBrowserInstance),
-		InstanceTab:   int32(p.OptionBrowserInstanceTab),
-		PageSize:      p.OptionBrowserPageSize,
-		PageTimeout:   int32(p.OptionBrowserPageTimeout),
-		Proxy:         p.OptionBrowserProxy,
-		ScriptTimeout: int32(p.OptionBrowserScriptTimeout),
+		Type:        p.OptionBrowserType,
+		Argument:    p.OptionBrowserArgument,
+		Extension:   p.OptionBrowserExtension,
+		Geometry:    p.OptionBrowserGeometry,
+		Instance:    int32(p.OptionBrowserInstance),
+		InstanceTab: int32(p.OptionBrowserInstanceTab),
+		Proxy:       p.OptionBrowserProxy,
+	}
+
+	webchelaTaskDebug := pb.Task_Debug{
+		PreCloseDelay:   int32(p.OptionDebugPreCloseDelay),
+		PreOpenDelay:    int32(p.OptionDebugPreOpenDelay),
+		PreProcessDelay: int32(p.OptionDebugPreProcessDelay),
+		PreWaitDelay:    int32(p.OptionDebugPreWaitDelay),
 	}
 
 	// Set client id for identification.
@@ -183,17 +193,27 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 	}
 
 	webchelaTask := pb.Task{
-		ClientId:          clientId,
-		Urls:              batchTask.Input,
-		Cookies:           batchTask.CookieInput,
-		Screenshots:       batchTask.ScreenshotInput,
-		Scripts:           batchTask.ScriptInput,
+		ClientId: clientId,
+
+		Urls:        batchTask.Input,
+		Cookies:     batchTask.CookieInput,
+		Screenshots: batchTask.ScreenshotInput,
+		Scripts:     batchTask.ScriptInput,
+
 		ChunkSize:         p.OptionChunkSize,
 		CpuLoad:           p.OptionCpuLoad,
 		MemFree:           p.OptionMemFree,
-		Timeout:           int32(p.OptionTimeout),
-		Browser:           &webchelaTaskBrowser,
-		ScreenshotTimeout: int32(p.OptionScreenshotTimeout),
+		PageSize:          p.OptionPageSize,
+		PageTimeout:       p.OptionPageTimeout,
+		RetryCodes:        p.OptionRetryCodes,
+		RetryCodesTries:   p.OptionRetryCodesTries,
+		ScreenshotTimeout: p.OptionScreenshotTimeout,
+		ScriptTimeout:     p.OptionScriptTimeout,
+		TabOpenRandomize:  p.OptionTabOpenRandomize,
+		Timeout:           p.OptionTimeout,
+
+		Browser: &webchelaTaskBrowser,
+		Debug:   &webchelaTaskDebug,
 	}
 
 	client := pb.NewServerClient(conn)
@@ -392,38 +412,45 @@ type Plugin struct {
 	OptionBrowserGeometry      string
 	OptionBrowserInstance      int
 	OptionBrowserInstanceTab   int
-	OptionBrowserPageSize      int64
-	OptionBrowserPageTimeout   int
 	OptionBrowserProxy         string
-	OptionBrowserScriptTimeout int
 	OptionBrowserType          string
 	OptionChunkSize            int64
 	OptionClientId             string
 	OptionCookieInput          []string
-	OptionCookieInputSize      int
 	OptionCookieInputFile      bool
 	OptionCookieInputFileMode  string
+	OptionCookieInputSize      int
 	OptionCpuLoad              int32
+	OptionDebugPreCloseDelay   int
+	OptionDebugPreOpenDelay    int
+	OptionDebugPreProcessDelay int
+	OptionDebugPreWaitDelay    int
 	OptionInclude              bool
 	OptionInput                []string
 	OptionInputSize            int
 	OptionMemFree              int64
 	OptionOutput               []string
 	OptionOutputSize           int
-	OptionRequestTimeout       int
+	OptionPageSize             int64
+	OptionPageTimeout          int32
+	OptionRequestTimeout       int32
 	OptionRequire              []int
+	OptionRetryCodes           []int32
+	OptionRetryCodesTries      int32
 	OptionScreenshotInput      [][]string
 	OptionScreenshotInputSize  int
 	OptionScreenshotOutput     []string
 	OptionScreenshotOutputSize int
-	OptionScreenshotTimeout    int
+	OptionScreenshotTimeout    int32
 	OptionScriptInput          [][]string
 	OptionScriptInputSize      int
 	OptionScriptOutput         []string
 	OptionScriptOutputSize     int
+	OptionScriptTimeout        int32
 	OptionServer               []string
 	OptionServerTimeout        int
-	OptionTimeout              int
+	OptionTabOpenRandomize     string
+	OptionTimeout              int32
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -491,7 +518,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			var urlCookie string
 
 			if p.OptionCookieInputSize > 0 {
-				ri, ierr := core.ReflectDatumField(datumValue, p.OptionCookieInput[datumIndex])
+				ri, ierr := core.ReflectDatumField(datumValue, p.OptionCookieInput[inputIndex])
 
 				// input is datatum field:
 				if ierr == nil {
@@ -525,7 +552,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 				// input is just a string:
 				if ierr != nil {
-					c, err := readAndCheckJsonCookie(p, p.OptionCookieInput[datumIndex], true)
+					c, err := readAndCheckJsonCookie(p, p.OptionCookieInput[inputIndex], true)
 					if err == nil {
 						urlCookie = c
 					} else {
@@ -612,7 +639,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 	batchRetryStat := make(map[int]int, len(batches))
 	serverFailStat := make(map[string]int, len(p.OptionServer))
 
-	timeoutCounter := 0
+	timeoutCounter := int32(0)
 
 	for {
 		if timeoutCounter > p.OptionTimeout {
@@ -778,36 +805,43 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require":  -1,
 		"template": -1,
 
-		"batch_retry":            -1,
-		"batch_size":             -1,
-		"browser_type":           -1,
-		"browser_argument":       -1,
-		"browser_extension":      -1,
-		"browser_geometry":       -1,
-		"browser_instance":       -1,
-		"browser_instance_tab":   -1,
-		"browser_page_size":      -1,
-		"browser_page_timeout":   -1,
-		"browser_proxy":          -1,
-		"browser_script_timeout": -1,
-		"chunk_size":             -1,
-		"client_id":              -1,
-		"cookie_input":           -1,
-		"cookie_input_file":      -1,
-		"cookie_input_file_mode": -1,
-		"cpu_load":               -1,
-		"input":                  1,
-		"mem_free":               -1,
-		"output":                 -1,
-		"request_timeout":        -1,
-		"screenshot_input":       -1,
-		"screenshot_output":      -1,
-		"screenshot_timeout":     -1,
-		"script_input":           -1,
-		"script_output":          -1,
-		"server":                 1,
-		"server_timeout":         -1,
-		"timeout":                -1,
+		"batch_retry":             -1,
+		"batch_size":              -1,
+		"browser_argument":        -1,
+		"browser_extension":       -1,
+		"browser_geometry":        -1,
+		"browser_instance":        -1,
+		"browser_instance_tab":    -1,
+		"browser_page_size":       -1,
+		"browser_page_timeout":    -1,
+		"browser_proxy":           -1,
+		"browser_type":            -1,
+		"chunk_size":              -1,
+		"client_id":               -1,
+		"cookie_input":            -1,
+		"cookie_input_file":       -1,
+		"cookie_input_file_mode":  -1,
+		"cpu_load":                -1,
+		"debug_pre_close_delay":   -1,
+		"debug_pre_open_delay":    -1,
+		"debug_pre_process_delay": -1,
+		"debug_pre_wait_delay":    -1,
+		"input":                   1,
+		"mem_free":                -1,
+		"output":                  -1,
+		"retry_codes":             -1,
+		"retry_codes_tries":       -1,
+		"request_timeout":         -1,
+		"screenshot_input":        -1,
+		"screenshot_output":       -1,
+		"screenshot_timeout":      -1,
+		"script_input":            -1,
+		"script_output":           -1,
+		"script_timeout":          -1,
+		"server":                  1,
+		"server_timeout":          -1,
+		"tab_open_randomize":      -1,
+		"timeout":                 -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -911,30 +945,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserInstanceTab((*pluginConfig.PluginParams)["browser_instance_tab"])
 	core.ShowPluginParam(plugin.LogFields, "browser_instance_tab", plugin.OptionBrowserInstanceTab)
 
-	// browser_page_size.
-	setBrowserPageSize := func(p interface{}) {
-		if v, b := core.IsSize(p); b {
-			availableParams["browser_page_size"] = 0
-			plugin.OptionBrowserPageSize = v
-		}
-	}
-	setBrowserPageSize(DEFAULT_BROWSER_PAGE_SIZE)
-	setBrowserPageSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_page_size", template)))
-	setBrowserPageSize((*pluginConfig.PluginParams)["browser_page_size"])
-	core.ShowPluginParam(plugin.LogFields, "browser_page_size", plugin.OptionBrowserPageSize)
-
-	// browser_page_timeout.
-	setBrowserPageTimeout := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["browser_page_timeout"] = 0
-			plugin.OptionBrowserPageTimeout = v
-		}
-	}
-	setBrowserPageTimeout(DEFAULT_BROWSER_PAGE_TIMEOUT)
-	setBrowserPageTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_page_timeout", template)))
-	setBrowserPageTimeout((*pluginConfig.PluginParams)["browser_page_timeout"])
-	core.ShowPluginParam(plugin.LogFields, "browser_page_timeout", plugin.OptionBrowserPageTimeout)
-
 	// browser_proxy.
 	setBrowserProxy := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -946,18 +956,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserProxy(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.browser_proxy", template)))
 	setBrowserProxy((*pluginConfig.PluginParams)["browser_proxy"])
 	core.ShowPluginParam(plugin.LogFields, "browser_proxy", plugin.OptionBrowserProxy)
-
-	// browser_script_timeout.
-	setBrowserScriptTimeout := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["browser_script_timeout"] = 0
-			plugin.OptionBrowserScriptTimeout = v
-		}
-	}
-	setBrowserScriptTimeout(DEFAULT_BROWSER_SCRIPT_TIMEOUT)
-	setBrowserScriptTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.browser_script_timeout", template)))
-	setBrowserScriptTimeout((*pluginConfig.PluginParams)["browser_script_timeout"])
-	core.ShowPluginParam(plugin.LogFields, "browser_script_timeout", plugin.OptionBrowserScriptTimeout)
 
 	// chunk_size.
 	setChunkSize := func(p interface{}) {
@@ -1030,6 +1028,54 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserCpuLoad((*pluginConfig.PluginParams)["cpu_load"])
 	core.ShowPluginParam(plugin.LogFields, "cpu_load", plugin.OptionCpuLoad)
 
+	// debug_pre_close_delay.
+	setDebugPreCloseDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_close_delay"] = 0
+			plugin.OptionDebugPreCloseDelay = v
+		}
+	}
+	setDebugPreCloseDelay(DEFAULT_DEBUG_PRE_CLOSE_DELAY)
+	setDebugPreCloseDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_close_delay", template)))
+	setDebugPreCloseDelay((*pluginConfig.PluginParams)["debug_pre_close_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_close_delay", plugin.OptionDebugPreCloseDelay)
+
+	// debug_pre_open_delay.
+	setDebugPreOpenDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_open_delay"] = 0
+			plugin.OptionDebugPreOpenDelay = v
+		}
+	}
+	setDebugPreOpenDelay(DEFAULT_DEBUG_PRE_OPEN_DELAY)
+	setDebugPreOpenDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_open_delay", template)))
+	setDebugPreOpenDelay((*pluginConfig.PluginParams)["debug_pre_open_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_open_delay", plugin.OptionDebugPreOpenDelay)
+
+	// debug_pre_process_delay.
+	setDebugPreProcessDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_process_delay"] = 0
+			plugin.OptionDebugPreProcessDelay = v
+		}
+	}
+	setDebugPreProcessDelay(DEFAULT_DEBUG_PRE_PROCESS_DELAY)
+	setDebugPreProcessDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_wait_delay", template)))
+	setDebugPreProcessDelay((*pluginConfig.PluginParams)["debug_pre_wait_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_wait_delay", plugin.OptionDebugPreWaitDelay)
+
+	// debug_pre_wait_delay.
+	setDebugPreWaitDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_wait_delay"] = 0
+			plugin.OptionDebugPreWaitDelay = v
+		}
+	}
+	setDebugPreWaitDelay(DEFAULT_DEBUG_PRE_WAIT_DELAY)
+	setDebugPreWaitDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_wait_delay", template)))
+	setDebugPreWaitDelay((*pluginConfig.PluginParams)["debug_pre_wait_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_wait_delay", plugin.OptionDebugPreWaitDelay)
+
 	// include.
 	setInclude := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -1066,6 +1112,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setBrowserMemFree((*pluginConfig.PluginParams)["mem_free"])
 	core.ShowPluginParam(plugin.LogFields, "mem_free", plugin.OptionMemFree)
 
+	// page_size.
+	setPageSize := func(p interface{}) {
+		if v, b := core.IsSize(p); b {
+			availableParams["page_size"] = 0
+			plugin.OptionPageSize = v
+		}
+	}
+	setPageSize(DEFAULT_PAGE_SIZE)
+	setPageSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.page_size", template)))
+	setPageSize((*pluginConfig.PluginParams)["page_size"])
+	core.ShowPluginParam(plugin.LogFields, "page_size", plugin.OptionPageSize)
+
+	// page_timeout.
+	setPageTimeout := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["page_timeout"] = 0
+			plugin.OptionPageTimeout = int32(v)
+		}
+	}
+	setPageTimeout(DEFAULT_PAGE_TIMEOUT)
+	setPageTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.page_timeout", template)))
+	setPageTimeout((*pluginConfig.PluginParams)["page_timeout"])
+	core.ShowPluginParam(plugin.LogFields, "page_timeout", plugin.OptionPageTimeout)
+
 	// output.
 	setOutput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -1078,11 +1148,36 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setOutput((*pluginConfig.PluginParams)["output"])
 	core.ShowPluginParam(plugin.LogFields, "output", plugin.OptionOutput)
 
+	// retry_codes.
+	setRetryCodes := func(p interface{}) {
+		if v, b := core.IsSliceOfInt(p); b {
+			availableParams["retry_codes"] = 0
+			for _, i := range v {
+				plugin.OptionRetryCodes = append(plugin.OptionRetryCodes, int32(i))
+			}
+		}
+	}
+	setRetryCodes(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.retry_codes", template)))
+	setRetryCodes((*pluginConfig.PluginParams)["retry_codes"])
+	core.ShowPluginParam(plugin.LogFields, "retry_codes", plugin.OptionRetryCodes)
+
+	// retry_codes_tries.
+	setRetryCodesTries := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["retry_codes_tries"] = 0
+			plugin.OptionRetryCodesTries = int32(v)
+		}
+	}
+	setRetryCodesTries(DEFAULT_RETRY_CODES_TRIES)
+	setRetryCodesTries(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.retry_codes_tries", template)))
+	setRetryCodesTries((*pluginConfig.PluginParams)["retry_codes_tries"])
+	core.ShowPluginParam(plugin.LogFields, "retry_codes_tries", plugin.OptionRetryCodesTries)
+
 	// request_timeout.
 	setRequestTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["request_timeout"] = 0
-			plugin.OptionRequestTimeout = v
+			plugin.OptionRequestTimeout = int32(v)
 		}
 	}
 	setRequestTimeout(DEFAULT_SERVER_REQUEST_TIMEOUT)
@@ -1130,7 +1225,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setScreenshotTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["screenshot_timeout"] = 0
-			plugin.OptionScreenshotTimeout = v
+			plugin.OptionScreenshotTimeout = int32(v)
 		}
 	}
 	setScreenshotTimeout(DEFAULT_SCREENSHOT_TIMEOUT)
@@ -1162,6 +1257,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setScriptOutput((*pluginConfig.PluginParams)["script_output"])
 	core.ShowPluginParam(plugin.LogFields, "script_output", plugin.OptionScriptOutput)
 
+	// script_timeout.
+	setScriptTimeout := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["script_timeout"] = 0
+			plugin.OptionScriptTimeout = int32(v)
+		}
+	}
+	setScriptTimeout(DEFAULT_SCRIPT_TIMEOUT)
+	setScriptTimeout(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.script_timeout", template)))
+	setScriptTimeout((*pluginConfig.PluginParams)["script_timeout"])
+	core.ShowPluginParam(plugin.LogFields, "script_timeout", plugin.OptionScriptTimeout)
+
 	// server.
 	setServer := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -1185,11 +1292,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setServerTimeout((*pluginConfig.PluginParams)["server_timeout"])
 	core.ShowPluginParam(plugin.LogFields, "server_timeout", plugin.OptionServerTimeout)
 
+	// tab_open_randomize.
+	setTabOpenRandomize := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["tab_open_randomize"] = 0
+			plugin.OptionTabOpenRandomize = v
+		}
+	}
+	setTabOpenRandomize(DEFAULT_TAB_OPEN_RANDOMIZE)
+	setTabOpenRandomize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.tab_open_randomize", template)))
+	setTabOpenRandomize((*pluginConfig.PluginParams)["tab_open_randomize"])
+	core.ShowPluginParam(plugin.LogFields, "tab_open_randomize", plugin.OptionTabOpenRandomize)
+
 	// timeout.
 	setTimeout := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
 			availableParams["timeout"] = 0
-			plugin.OptionTimeout = v
+			plugin.OptionTimeout = int32(v)
 		}
 	}
 	setTimeout(DEFAULT_TIMEOUT)
