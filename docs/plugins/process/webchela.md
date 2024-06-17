@@ -8,7 +8,7 @@
 |:--------|:--------:|:-----:|:-------:|:-------:|
 | include |    -     | bool  |  false  |  true   |
 | require |    -     | array |   []    | [1, 2]  |
-| timeout |    -     |  int  |   300   |   300   |
+| timeout |    -     |  int  |   300   |   600   |
 
 ### Plugin parameters:
 
@@ -31,14 +31,14 @@
 | cookie_input            |    -     | array  |    +     |     []      | ['{"name": "foo", "value": "bar"}'], ["data.text0"], ["data.array0"], ["/tmp/cookie.json"] | JSON string or path to JSON file ([selenium cookie format](https://www.selenium.dev/documentation/webdriver/interactions/cookies/)). |
 | cookie_input_file       |    -     |  bool  |    +     |    false    |                                            true                                            | Process cookies as files.                                                                                                            |
 | cookie_input_file_mode  |    -     | string |    +     |    text     |                                           lines                                            | Read input file as text or line by line into array.                                                                                  |
-| cpu_load                |    -     |  int   |    +     |     50      |                                             50                                             | Maximum CPU load on a server.                                                                                                        |
+| cpu_load                |    -     |  int   |    +     |     30      |                                             50                                             | Maximum CPU load on a server.                                                                                                        |
 | debug_pre_close_delay   |    -     |  int   |    +     |      0      |                                             10                                             | Time in seconds to delay before close unwanted/unexpected tabs.                                                                      |
 | debug_pre_open_delay    |    -     |  int   |    +     |      0      |                                             10                                             | Time in seconds to delay before starting to open tabs.                                                                               |
 | debug_pre_process_delay |    -     |  int   |    +     |      0      |                                             10                                             | Time in seconds to delay before starting to wait tabs loading.                                                                       |
 | debug_pre_wait_delay    |    -     |  int   |    +     |      0      |                                             10                                             | Time in seconds to delay before starting to process tabs.                                                                            |
 | mem_free                |    -     | string |    +     |    "1g"     |                                            "3g"                                            | Minimum free MEM size on a server.                                                                                                   |
 | page_size               |    -     | string |    +     |    "10m"    |                                            "3m"                                            | Maximum page size.                                                                                                                   |
-| page_timeout            |    -     |  int   |    +     |     30      |                                             30                                             | Maximum time in seconds for page loading.                                                                                            |
+| page_timeout            |    -     |  int   |    +     |     60      |                                             30                                             | Maximum time in seconds for page loading.                                                                                            |
 | retry_codes             |    -     | array  |    -     |     []      |                                         [403, 500]                                         | List of HTTP codes for repeated page loading.                                                                                        |
 | retry_codes_tries       |    -     |  int   |    +     |      1      |                                             5                                              | Amount of page reloading tries.                                                                                                      |
 | request_timeout         |    -     |  int   |    +     |     10      |                                             30                                             | Server GRPC request timeout.                                                                                                         |

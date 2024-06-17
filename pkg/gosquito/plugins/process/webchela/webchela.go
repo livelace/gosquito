@@ -30,7 +30,7 @@ const (
 	DEFAULT_CHUNK_SIZE               = "3M"
 	DEFAULT_COOKIE_INPUT_FILE        = false
 	DEFAULT_COOKIE_INPUT_FILE_MODE   = "text"
-	DEFAULT_CPU_LOAD                 = 50
+	DEFAULT_CPU_LOAD                 = 30
 	DEFAULT_DEBUG_PRE_CLOSE_DELAY    = 0
 	DEFAULT_DEBUG_PRE_OPEN_DELAY     = 0
 	DEFAULT_DEBUG_PRE_PROCESS_DELAY  = 0
@@ -38,7 +38,7 @@ const (
 	DEFAULT_MEM_FREE                 = "1G"
 	DEFAULT_PAGE_BODY_FILENAME       = "body.html"
 	DEFAULT_PAGE_SIZE                = "10M"
-	DEFAULT_PAGE_TIMEOUT             = 30
+	DEFAULT_PAGE_TIMEOUT             = 60
 	DEFAULT_PAGE_TITLE_FILENAME      = "title.txt"
 	DEFAULT_PAGE_URL_FILENAME        = "url.txt"
 	DEFAULT_RETRY_CODES_TRIES        = 1
@@ -48,7 +48,7 @@ const (
 	DEFAULT_SERVER_CONNECT_TIMEOUT   = 10
 	DEFAULT_SERVER_REQUEST_TIMEOUT   = 10
 	DEFAULT_TAB_OPEN_RANDOMIZE       = "0:0"
-	DEFAULT_TIMEOUT                  = 300
+	DEFAULT_TIMEOUT                  = 600
 )
 
 var (
