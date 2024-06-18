@@ -22,9 +22,9 @@ libraries {
         options = "-ldflags=\"-X 'github.com/livelace/gosquito/pkg/gosquito/core.APP_VERSION=${APP_VERSION}'\" " +
             "-tags dynamic github.com/livelace/gosquito/cmd/gosquito"
     }
-    //harbor_replicate {
-    //    policy = "${APP_NAME}"
-    //}
+    harbor_replicate {
+        policy = "${APP_NAME}"
+    }
     k8s_build {
         image = "registry.livelace.ru/dev/gosquito:${IMAGE_TAG}"
         force_pull = true
