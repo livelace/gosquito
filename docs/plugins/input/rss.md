@@ -46,7 +46,7 @@ type Rss struct {
 | match_ttl       |    -     | string |    +     |       "1d"        |             "24h"              | TTL (Time To Live) for matched signatures. |
 | proxy           |    -     | string |    +     |        ""         |   "socks5://127.0.0.1:9050"    | Proxy settings.                            |
 | ssl_verify      |    -     |  bool  |    +     |       true        |             false              | Verify server certificate.                 |
-| user_agent      |    -     | string |    +     | "gosquito v4.4.1" |         "webchela 1.0"         | Custom User-Agent for feed access.         |
+| user_agent      |    -     | string |    +     | "gosquito v4.5.0" |         "webchela 1.0"         | Custom User-Agent for feed access.         |
 
 ### Flow sample:
 

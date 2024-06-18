@@ -19,7 +19,7 @@
 | depth      | -        | int    | 10                | 5                | Maximum depth of HTTP redirects.                    |
 | **input**  | +        | array  | []                | ["twitter.urls"] | List of [Datum](../../concept.md) fields with URLs. |
 | **output** | +        | array  | []                | ["data.array0"]  | List of target [Datum](../../concept.md) fields.    |
-| user_agent | -        | string | "gosquito v4.4.1" | "webchela 1.0"   | Custom User-Agent for HTTP requests.                |
+| user_agent | -        | string | "gosquito v4.5.0" | "webchela 1.0"   | Custom User-Agent for HTTP requests.                |
 
 ### Flow sample:
 

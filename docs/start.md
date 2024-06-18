@@ -7,12 +7,12 @@ gosquito is delivered as [AppImage](https://appimage.org/) package and [Docker i
 1. Download application:
 ```shell
 # AppImage:
-user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v4.4.1/gosquito-v4.4.1-7d825b.appimage" \
+user@localhost ~ $ curl -sL "https://github.com/livelace/gosquito/releases/download/v4.5.0/gosquito-v4.5.0-385342.appimage" \
   -o "/tmp/gosquito.appimage" && chmod +x "/tmp/gosquito.appimage"
 user@localhost ~ $ /tmp/gosquito.appimage 
-INFO[30.10.2021 00:27:22.636] gosquito v4.4.1-7d825b 
-INFO[30.10.2021 00:27:22.636] config apply       path="/home/user/.gosquito"
-ERRO[30.10.2021 00:27:22.639] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
+INFO[18.06.2024 00:27:22.636] gosquito v4.5.0-385342
+INFO[18.06.2024 00:27:22.636] config apply       path="/home/user/.gosquito"
+ERRO[18.06.2024 00:27:22.639] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
 ```
 
 2. Save flow example (~/.gosquito/conf/test.yaml):
@@ -40,10 +40,9 @@ flow:
 
 ```shell
 user@localhost ~ $ /tmp/gosquito.appimage 
-INFO[30.10.2021 00:31:16.468] gosquito v4.4.1-7d825b 
-INFO[30.10.2021 00:31:16.468] config apply       path="/home/user/.gosquito"
-INFO[30.10.2021 00:31:16.471] flow valid         hash="hi7oim" flow="test" file="test.yaml"
-INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
+INFO[18.06.2024 00:27:22.636] gosquito v4.5.0-385342
+INFO[18.06.2024 00:27:22.636] config apply       path="/home/user/.gosquito"
+ERRO[18.06.2024 00:27:22.639] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
 ...
 ```
 
@@ -51,10 +50,10 @@ INFO[30.10.2021 00:31:16.471] --- flow start     hash="hi7oim" flow="test"
 
 ```shell
 # Docker:
-user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v4.4.1
+user@localhost ~ $ docker run -ti --rm ghcr.io/livelace/gosquito:v4.5.0
 user@04a308454349 ~ $ gosquito
-INFO[29.10.2021 21:34:35.915] gosquito v4.4.1-7d825b 
-INFO[29.10.2021 21:34:35.916] config apply       path="/home/user/.gosquito"
-ERRO[29.10.2021 21:34:35.918] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
+INFO[18.06.2024 00:27:22.636] gosquito v4.5.0-385342
+INFO[18.06.2024 00:27:22.636] config apply       path="/home/user/.gosquito"
+ERRO[18.06.2024 00:27:22.639] flow read          path="/home/user/.gosquito/conf" error="no valid flow"
 user@04a308454349 ~ $
-
+```
