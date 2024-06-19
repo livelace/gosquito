@@ -12,7 +12,6 @@ graph TD;
     I3(resty)-->P1;
     I4(rss)-->P1;
     I5(telegram)-->P1;
-    I6(twitter)-->P1;
     P1-->O1(kafka);
     P1-->O2(mattermost);
     P1-->O3(resty);
@@ -45,7 +44,6 @@ graph TD;
 | [resty](docs/plugins/input/resty.md)       | [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) endpoint as data source. |
 | [rss](docs/plugins/input/rss.md)           | [RSS/Atom](https://en.wikipedia.org/wiki/RSS) feed as data source.                             |
 | [telegram](docs/plugins/input/telegram.md) | [Telegram](https://telegram.org/) chat as data source.                                         |
-| [twitter](docs/plugins/input/twitter.md)   | [Twitter](https://twitter.com/) channel as data source.                                        |
 
 ### Process plugins:
 

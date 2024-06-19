@@ -5,7 +5,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	rssIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/rss"
-	twitterIn "github.com/livelace/gosquito/pkg/gosquito/plugins/input/twitter"
 	ioMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/io"
 	kafkaMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/kafka"
 	restyMulti "github.com/livelace/gosquito/pkg/gosquito/plugins/multi/resty"
@@ -326,8 +325,8 @@ func getFlow(appConfig *viper.Viper) []*core.Flow {
 			inputPlugin, err = rssIn.Init(&inputPluginConfig)
 		case "telegram":
 			inputPlugin, err = telegramMulti.Init(&inputPluginConfig)
-		case "twitter":
-			inputPlugin, err = twitterIn.Init(&inputPluginConfig)
+		//case "twitter":
+		//	inputPlugin, err = twitterIn.Init(&inputPluginConfig)
 		default:
 			err = core.ERROR_PLUGIN_UNKNOWN
 		}
