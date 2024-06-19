@@ -19,7 +19,7 @@ require (
 	github.com/hbollon/go-edlib v1.6.0
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
-	github.com/livelace/go-tdlib v0.6.1-0.20220509220015-92a5c6e1f36e
+	github.com/zelenin/go-tdlib v0.7.2
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost/server/public v0.1.5-0.20240614164130-958a40353713
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible

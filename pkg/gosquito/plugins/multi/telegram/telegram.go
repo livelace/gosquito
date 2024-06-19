@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/livelace/go-tdlib/client"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/zelenin/go-tdlib/client"
 	tmpl "text/template"
 )
 
@@ -27,7 +27,7 @@ const (
 	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_ALBUM_SIZE       = 10
-	DEFAULT_CHANNEL_SIZE     = 10000
+	DEFAULT_CHANNEL_SIZE     = 1000
 	DEFAULT_CHAT_DB          = "chats.sqlite"
 	DEFAULT_CHAT_SAVE        = false
 	DEFAULT_DATABASE_DIR     = "database"
@@ -223,8 +223,8 @@ func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	}
 }
 
-func checkFileSize(p *Plugin, datum *core.Datum, fileName string, fileSize int32) bool {
-	if int64(fileSize) > p.OptionFetchMaxSize {
+func checkFileSize(p *Plugin, datum *core.Datum, fileName string, fileSize int64) bool {
+	if fileSize > p.OptionFetchMaxSize {
 		warning := fmt.Sprintf(ERROR_FILE_SIZE_EXCEEDED.Error(),
 			fileName, core.BytesToSize(int64(fileSize)), core.BytesToSize(p.OptionFetchMaxSize))
 
@@ -234,7 +234,7 @@ func checkFileSize(p *Plugin, datum *core.Datum, fileName string, fileSize int32
 		return false
 	}
 
-	if int64(fileSize) < p.OptionFetchMaxSize {
+	if fileSize < p.OptionFetchMaxSize {
 		return true
 	}
 
@@ -255,7 +255,7 @@ func checkMimeType(p *Plugin, datum *core.Datum, fileName string, mimeType strin
 }
 
 type clientAuthorizer struct {
-	TdlibParameters chan *client.TdlibParameters
+	TdlibParameters chan *client.SetTdlibParametersRequest
 	PhoneNumber     chan string
 	Code            chan string
 	State           chan client.AuthorizationState
@@ -632,82 +632,84 @@ func initUsersDb(p *Plugin) (*sql.DB, error) {
 func inputAds(p *Plugin) {
 	for {
 		for chatId, chatData := range p.ChatByIdDataCache {
-			sponsoredMessage, err :=
-				p.TdlibClient.GetChatSponsoredMessage(&client.GetChatSponsoredMessageRequest{ChatId: chatId})
+			sponsoredMessages, err :=
+				p.TdlibClient.GetChatSponsoredMessages(&client.GetChatSponsoredMessagesRequest{ChatId: chatId})
 
 			if err == nil {
-				switch sponsoredMessage.Content.(type) {
-				case *client.MessageText:
-					var u, _ = uuid.NewRandom()
+				for _, sponsoredMessage := range sponsoredMessages.Messages {
+					switch sponsoredMessage.Content.(type) {
+					case *client.MessageText:
+						var u, _ = uuid.NewRandom()
 
-					messageText := sponsoredMessage.Content.(*client.MessageText)
-					messageTextURLs := make([]string, 0)
-					messageTime := time.Now().UTC()
+						messageText := sponsoredMessage.Content.(*client.MessageText)
+						messageTextURLs := make([]string, 0)
+						messageTime := time.Now().UTC()
 
-					for _, entity := range messageText.Text.Entities {
-						switch entity.Type.(type) {
-						case *client.TextEntityTypeTextUrl:
-							messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+						for _, entity := range messageText.Text.Entities {
+							switch entity.Type.(type) {
+							case *client.TextEntityTypeTextUrl:
+								messageTextURLs = append(messageTextURLs, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+							}
 						}
-					}
 
-					// Send data to channel.
-					p.InputDatumChannel <- &core.Datum{
-						FLOW:        p.Flow.FlowName,
-						PLUGIN:      p.PluginName,
-						SOURCE:      chatData.CHATSOURCE,
-						TIME:        messageTime,
-						TIMEFORMAT:  messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
-						TIMEFORMATA: messageTime.In(p.OptionTimeZoneA).Format(p.OptionTimeFormatA),
-						TIMEFORMATB: messageTime.In(p.OptionTimeZoneB).Format(p.OptionTimeFormatB),
-						TIMEFORMATC: messageTime.In(p.OptionTimeZoneC).Format(p.OptionTimeFormatC),
-						UUID:        u,
+						// Send data to channel.
+						p.InputDatumChannel <- &core.Datum{
+							FLOW:        p.Flow.FlowName,
+							PLUGIN:      p.PluginName,
+							SOURCE:      chatData.CHATSOURCE,
+							TIME:        messageTime,
+							TIMEFORMAT:  messageTime.In(p.OptionTimeZone).Format(p.OptionTimeFormat),
+							TIMEFORMATA: messageTime.In(p.OptionTimeZoneA).Format(p.OptionTimeFormatA),
+							TIMEFORMATB: messageTime.In(p.OptionTimeZoneB).Format(p.OptionTimeFormatB),
+							TIMEFORMATC: messageTime.In(p.OptionTimeZoneC).Format(p.OptionTimeFormatC),
+							UUID:        u,
 
-						TELEGRAM: core.Telegram{
-							CHATID:               chatData.CHATID,
-							CHATSOURCE:           chatData.CHATSOURCE,
-							CHATTYPE:             chatData.CHATTYPE,
-							CHATTITLE:            chatData.CHATTITLE,
-							CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
-							CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
-							CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
-							CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
-							CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
-							CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
-							CHATFIRSTSEEN:        chatData.CHATFIRSTSEEN,
-							CHATLASTSEEN:         chatData.CHATLASTSEEN,
+							TELEGRAM: core.Telegram{
+								CHATID:               chatData.CHATID,
+								CHATSOURCE:           chatData.CHATSOURCE,
+								CHATTYPE:             chatData.CHATTYPE,
+								CHATTITLE:            chatData.CHATTITLE,
+								CHATCLIENTDATA:       chatData.CHATCLIENTDATA,
+								CHATPROTECTEDCONTENT: chatData.CHATPROTECTEDCONTENT,
+								CHATLASTINBOXID:      chatData.CHATLASTINBOXID,
+								CHATLASTOUTBOXID:     chatData.CHATLASTOUTBOXID,
+								CHATMESSAGETTL:       chatData.CHATMESSAGETTL,
+								CHATUNREADCOUNT:      chatData.CHATUNREADCOUNT,
+								CHATFIRSTSEEN:        chatData.CHATFIRSTSEEN,
+								CHATLASTSEEN:         chatData.CHATLASTSEEN,
 
-							MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
-							MESSAGEMEDIA:     make([]string, 0),
-							MESSAGESENDERID:  "",
-							MESSAGETYPE:      messageText.GetType(),
-							MESSAGETEXT:      messageText.Text.Text,
-							MESSAGETEXTURL:   messageTextURLs,
-							MESSAGETIMESTAMP: "",
-							MESSAGEURL:       "",
+								MESSAGEID:        fmt.Sprintf("%v", sponsoredMessage.MessageId),
+								MESSAGEMEDIA:     make([]string, 0),
+								MESSAGESENDERID:  "",
+								MESSAGETYPE:      messageText.GetType(),
+								MESSAGETEXT:      messageText.Text.Text,
+								MESSAGETEXTURL:   messageTextURLs,
+								MESSAGETIMESTAMP: "",
+								MESSAGEURL:       "",
 
-							USERID:            "",
-							USERVERSION:       "",
-							USERNAME:          DEFAULT_ADS_ID,
-							USERTYPE:          "",
-							USERLANG:          "",
-							USERFIRSTNAME:     "",
-							USERLASTNAME:      "",
-							USERPHONE:         "",
-							USERSTATUS:        "",
-							USERACCESSIBLE:    "",
-							USERCONTACT:       "",
-							USERFAKE:          "",
-							USERMUTUALCONTACT: "",
-							USERSCAM:          "",
-							USERSUPPORT:       "",
-							USERVERIFIED:      "",
-							USERRESTRICTION:   "",
-							USERFIRSTSEEN:     "",
-							USERLASTSEEN:      "",
-						},
+								USERID:            "",
+								USERVERSION:       "",
+								USERNAME:          DEFAULT_ADS_ID,
+								USERTYPE:          "",
+								USERLANG:          "",
+								USERFIRSTNAME:     "",
+								USERLASTNAME:      "",
+								USERPHONE:         "",
+								USERSTATUS:        "",
+								USERACCESSIBLE:    "",
+								USERCONTACT:       "",
+								USERFAKE:          "",
+								USERMUTUALCONTACT: "",
+								USERSCAM:          "",
+								USERSUPPORT:       "",
+								USERVERIFIED:      "",
+								USERRESTRICTION:   "",
+								USERFIRSTSEEN:     "",
+								USERLASTSEEN:      "",
+							},
 
-						WARNINGS: make([]string, 0),
+							WARNINGS: make([]string, 0),
+						}
 					}
 				}
 			}
@@ -918,6 +920,22 @@ func joinToChat(p *Plugin, chatId int64, chatSource string) error {
 	return nil
 }
 
+func openChat(p *Plugin) {
+	//plugin.ChatByIdDataCache[chatId] = &chatData
+	//plugin.ChatBySourceIdCache[chatSource] = cha
+	for {
+		for chatName, chatId := range p.ChatBySourceIdCache {
+			chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
+
+			if err == nil && chat.UnreadCount > 0 {
+				_, err := p.TdlibClient.OpenChat(&client.OpenChatRequest{ChatId: chatId})
+				core.LogInputPlugin(p.LogFields, "open chat", fmt.Sprintf("%v (%v), %v", chatName, chatId, err))
+			}
+		}
+		time.Sleep(1000 * time.Millisecond)
+	}
+}
+
 func outputMessage(p *Plugin) {
 	for {
 		if len(p.OutputMessageListener.Updates) > 0 {
@@ -927,8 +945,8 @@ func outputMessage(p *Plugin) {
 			case *client.UpdateMessageSendFailed:
 				p.OutputMessageChannel <- &core.TelegramSendingStatus{
 					MessageId:    v.OldMessageId,
-					ErrorCode:    v.ErrorCode,
-					ErrorMessage: v.ErrorMessage,
+					ErrorCode:    v.Error.Code,
+					ErrorMessage: v.Error.Message,
 				}
 			case *client.UpdateMessageSendSucceeded:
 				p.OutputMessageChannel <- &core.TelegramSendingStatus{
@@ -944,7 +962,7 @@ func outputMessage(p *Plugin) {
 }
 
 func saveChat(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+	listener := p.TdlibClient.GetListener()
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -970,7 +988,7 @@ func saveChat(p *Plugin) {
 }
 
 func saveUser(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+	listener := p.TdlibClient.GetListener()
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -980,21 +998,26 @@ func saveUser(p *Plugin) {
 			case *client.UpdateUser:
 				isNew, isChanged, version, err := sqlUpdateUser(p, v.User)
 
+				userName := "<DISABLED>"
+				if v.User.Usernames != nil {
+					userName = v.User.Usernames.ActiveUsernames[0]
+				}
+
 				if err == nil {
 					if isNew {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("new: %v, version: %v, username: %v", 
-                                v.User.Id, version, v.User.Username))
+							fmt.Sprintf("new: %v, version: %v, username: %v",
+								v.User.Id, version, userName))
 					} else {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("old: %v, version: %v, username: %v", 
-                                v.User.Id, version, v.User.Username))
+							fmt.Sprintf("old: %v, version: %v, username: %v",
+								v.User.Id, version, userName))
 					}
 
 					if isChanged {
 						core.LogInputPlugin(p.LogFields, "user",
-							fmt.Sprintf("changed: %v, version: %v, username: %v", 
-                                v.User.Id, version, v.User.Username))
+							fmt.Sprintf("changed: %v, version: %v, username: %v",
+								v.User.Id, version, userName))
 					}
 				} else {
 					core.LogInputPlugin(p.LogFields, "user",
@@ -1046,33 +1069,32 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 		for _, file := range files {
 			switch fileType {
 			case "audio":
-                if !sendMessage(p, chatId, getAudioMessage(p, &fileCaption, file)) {
-                    sendStatus = false
-                }
+				if !sendMessage(p, chatId, getAudioMessage(p, &fileCaption, file)) {
+					sendStatus = false
+				}
 			case "document":
-                if !sendMessage(p, chatId, getDocumentMessage(p, &fileCaption, file)) {
-                    sendStatus = false
-                }
+				if !sendMessage(p, chatId, getDocumentMessage(p, &fileCaption, file)) {
+					sendStatus = false
+				}
 			case "photo":
-                if !sendMessage(p, chatId, getPhotoMessage(p, &fileCaption, file)) {
-                    sendStatus = false
-                }
+				if !sendMessage(p, chatId, getPhotoMessage(p, &fileCaption, file)) {
+					sendStatus = false
+				}
 			case "video":
-                if !sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file)) {
-                    sendStatus = false
-                }
+				if !sendMessage(p, chatId, getVideoMessage(p, &fileCaption, file)) {
+					sendStatus = false
+				}
 			}
 			time.Sleep(p.OptionSendDelay)
 		}
 	}
-    return sendStatus
+	return sendStatus
 }
 
 func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) bool {
 	message, err := p.TdlibClient.SendMessage(&client.SendMessageRequest{
-		ChatId:           chatId,
-		MessageThreadId:  0,
-		ReplyToMessageId: 0,
+		ChatId:          chatId,
+		MessageThreadId: 0,
 		Options: &client.MessageSendOptions{
 			DisableNotification: false,
 			FromBackground:      true,
@@ -1093,22 +1115,22 @@ func sendMessage(p *Plugin, chatId int64, content client.InputMessageContent) bo
 				}
 
 				if status.MessageId == message.Id && status.ErrorCode != 0 {
-					core.LogOutputPlugin(p.LogFields, "send", 
-                        fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), 
-                            status.MessageId, status.ErrorMessage))
+					core.LogOutputPlugin(p.LogFields, "send",
+						fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(),
+							status.MessageId, status.ErrorMessage))
 					return false
 				}
 			}
 			time.Sleep(1 * time.Second)
 		}
 
-		core.LogOutputPlugin(p.LogFields, "send", 
-            fmt.Errorf(ERROR_SEND_MESSAGE_TIMEOUT.Error(), message.Id))
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_MESSAGE_TIMEOUT.Error(), message.Id))
 		return false
 
 	} else {
-		core.LogOutputPlugin(p.LogFields, "send", 
-            fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
+		core.LogOutputPlugin(p.LogFields, "send",
+			fmt.Errorf(ERROR_SEND_MESSAGE_ERROR.Error(), "", err))
 		return false
 	}
 }
@@ -1117,9 +1139,8 @@ func sendMessageAlbum(p *Plugin, chatId int64, content []client.InputMessageCont
 	sendStatus := true
 
 	messages, err := p.TdlibClient.SendMessageAlbum(&client.SendMessageAlbumRequest{
-		ChatId:           chatId,
-		MessageThreadId:  0,
-		ReplyToMessageId: 0,
+		ChatId:          chatId,
+		MessageThreadId: 0,
 		Options: &client.MessageSendOptions{
 			DisableNotification: false,
 			FromBackground:      true,
@@ -1219,10 +1240,10 @@ func showStatus(p *Plugin) {
 
 						info = fmt.Sprintf(strings.Join(m, " "),
 							core.BytesToSize(storage.DatabaseSize), storage.FileCount,
-							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-							s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Location),
+							s.IpAddress, time.Unix(int64(s.LastActiveDate), 0),
 							time.Unix(int64(s.LogInDate), 0),
-							user.Id, user.Username,
+							user.Id, user.Usernames.ActiveUsernames[0],
 							networkReceived, networkSent,
 							len(p.InputDatumListener.Updates),
 							p.OptionProxyEnable,
@@ -1249,10 +1270,10 @@ func showStatus(p *Plugin) {
 
 						info = fmt.Sprintf(strings.Join(m, " "),
 							core.BytesToSize(storage.DatabaseSize), storage.FileCount,
-							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Country),
-							s.Ip, time.Unix(int64(s.LastActiveDate), 0),
+							core.BytesToSize(storage.FilesSize), strings.ToLower(s.Location),
+							s.IpAddress, time.Unix(int64(s.LastActiveDate), 0),
 							time.Unix(int64(s.LogInDate), 0),
-							user.Id, user.Username,
+							user.Id, user.Usernames.ActiveUsernames[0],
 							networkReceived, networkSent,
 							p.OptionProxyEnable,
 							countChats(p), countUsers(p),
@@ -1304,12 +1325,12 @@ func sqlUpdateChat(p *Plugin, chatId int64, chatSource string) error {
 		chatSource, chat.Type.ChatTypeType(),
 		chat.Title, chat.ClientData, chat.HasProtectedContent,
 		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
-		chat.MessageTtl, chat.UnreadCount, currentTime, currentTime,
+		0, chat.UnreadCount, currentTime, currentTime,
 
 		chat.Type.ChatTypeType(),
 		chat.Title, chat.ClientData, chat.HasProtectedContent,
 		chat.LastReadInboxMessageId, chat.LastReadOutboxMessageId,
-		chat.MessageTtl, chat.UnreadCount, currentTime,
+		0, chat.UnreadCount, currentTime,
 	)
 
 	if err != nil {
@@ -1331,12 +1352,17 @@ func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 
 	oldUser := getUser(p, user.Id)
 
+	userName := "<DISABLED>"
+	if user.Usernames != nil {
+		userName = user.Usernames.ActiveUsernames[0]
+	}
+
 	if oldUser.USERID == "" {
 		isNew = true
 	} else {
 		firstSeen = oldUser.USERFIRSTSEEN
 
-		if user.Username != oldUser.USERNAME || user.Type.UserTypeType() != oldUser.USERTYPE ||
+		if userName != oldUser.USERNAME || user.Type.UserTypeType() != oldUser.USERTYPE ||
 			user.LanguageCode != oldUser.USERLANG || user.FirstName != oldUser.USERFIRSTNAME ||
 			user.LastName != oldUser.USERLASTNAME || user.PhoneNumber != oldUser.USERPHONE {
 			isChanged = true
@@ -1378,16 +1404,16 @@ func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	if isNew || isChanged {
 		tx, err := p.UserDbClient.Begin()
 		if err != nil {
-			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), user.Username, err)
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_BEGIN_TRANSACTION.Error(), userName, err)
 		}
 
 		stmt, err := p.UserDbClient.Prepare(SQL_UPDATE_USER)
 		if err != nil {
-			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), user.Username, err)
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_PREPARE_ERROR.Error(), userName, err)
 		}
 		defer stmt.Close()
 
-		_, err = stmt.Exec(user.Id, userVersion, user.Username,
+		_, err = stmt.Exec(user.Id, userVersion, userName,
 			user.Type.UserTypeType(), user.LanguageCode,
 			user.FirstName, user.LastName, user.PhoneNumber,
 			user.Status.UserStatusType(), user.HaveAccess,
@@ -1397,7 +1423,7 @@ func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 		)
 
 		if err != nil {
-			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), user.Username, err)
+			return isNew, isChanged, userVersion, fmt.Errorf(ERROR_SQL_EXEC_ERROR.Error(), userName, err)
 		}
 
 		return isNew, isChanged, userVersion, tx.Commit()
@@ -1444,7 +1470,7 @@ type Plugin struct {
 	UserDbClient *sql.DB
 
 	TdlibClient *client.Client
-	TdlibParams *client.TdlibParameters
+	TdlibParams *client.SetTdlibParametersRequest
 
 	ChatByIdDataCache   map[int64]*core.Telegram
 	ChatBySourceIdCache map[string]int64
@@ -1687,19 +1713,19 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 	// Check every source for expiration.
 	sourcesExpired := false
 
-    // Check if any source is expired.
-    for _, source := range p.OptionInput {
-        sourceTime := flowStates[source]
-		
-        if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval / 1000 {
+	// Check if any source is expired.
+	for _, source := range p.OptionInput {
+		sourceTime := flowStates[source]
+
+		if (currentTime.Unix() - sourceTime.Unix()) > p.OptionExpireInterval/1000 {
 			sourcesExpired = true
-            
-            core.LogInputPlugin(p.LogFields, source, 
-                fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
+
+			core.LogInputPlugin(p.LogFields, source,
+				fmt.Sprintf("source expired: %v", currentTime.Sub(sourceTime)))
 
 			// Execute command if expire delay exceeded.
 			// ExpireLast keeps last execution timestamp.
-			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay / 1000 {
+			if (currentTime.Unix() - p.OptionExpireLast) > p.OptionExpireActionDelay/1000 {
 				p.OptionExpireLast = currentTime.Unix()
 
 				// Execute command with args.
@@ -1717,7 +1743,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				}
 			}
 		}
-    }
+	}
 
 	// Inform about expiration.
 	if sourcesExpired {
@@ -1749,15 +1775,15 @@ func (p *Plugin) Send(data []*core.Datum) error {
 					Text: c,
 				}
 			} else if err != nil {
-                
+
 			}
 
 			// Construct text message.
 			if m, err := core.ExtractTemplateIntoString(item, p.OptionMessageTemplate); err == nil && len(m) > 0 {
 				content := &client.InputMessageText{
-					ClearDraft:            false,
-					DisableWebPagePreview: p.OptionMessageDisablePreview,
-					Text:                  &client.FormattedText{Text: m},
+					ClearDraft:         false,
+					LinkPreviewOptions: &client.LinkPreviewOptions{IsDisabled: p.OptionMessagePreview},
+					Text:               &client.FormattedText{Text: m},
 				}
 				if !sendMessage(p, chatId, content) {
 					sendStatus = false
@@ -1768,26 +1794,26 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			// Send audio files.
 			audio := core.ExtractDatumFieldIntoArray(item, p.OptionFileAudio)
 			if !sendFiles(p, chatId, "audio", fileCaption, audio) {
-                sendStatus = false
-            }
+				sendStatus = false
+			}
 
 			// Send document files.
 			document := core.ExtractDatumFieldIntoArray(item, p.OptionFileDocument)
 			if !sendFiles(p, chatId, "document", fileCaption, document) {
-                sendStatus = false
-            }
+				sendStatus = false
+			}
 
 			// Send photo files.
 			photo := core.ExtractDatumFieldIntoArray(item, p.OptionFilePhoto)
 			if !sendFiles(p, chatId, "photo", fileCaption, photo) {
-                sendStatus = false
-            }
+				sendStatus = false
+			}
 
 			// Send video files.
 			video := core.ExtractDatumFieldIntoArray(item, p.OptionFileVideo)
 			if !sendFiles(p, chatId, "video", fileCaption, video) {
-                sendStatus = false
-            }
+				sendStatus = false
+			}
 		}
 	}
 
@@ -2757,22 +2783,22 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Telegram.
 
-	plugin.TdlibParams = &client.TdlibParameters{
-		ApiHash:                plugin.OptionApiHash,
-		ApiId:                  plugin.OptionApiId,
-		ApplicationVersion:     plugin.OptionAppVersion,
-		DatabaseDirectory:      filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
-		DeviceModel:            plugin.OptionDeviceModel,
-		EnableStorageOptimizer: plugin.OptionStorageOptimize,
-		FilesDirectory:         plugin.OptionFetchDir,
-		IgnoreFileNames:        plugin.OptionIgnoreFileName,
-		SystemLanguageCode:     "en",
-		SystemVersion:          plugin.Flow.FlowName,
-		UseChatInfoDatabase:    true,
-		UseFileDatabase:        true,
-		UseMessageDatabase:     true,
-		UseSecretChats:         true,
-		UseTestDc:              false,
+	plugin.TdlibParams = &client.SetTdlibParametersRequest{
+		ApiHash:            plugin.OptionApiHash,
+		ApiId:              plugin.OptionApiId,
+		ApplicationVersion: plugin.OptionAppVersion,
+		DatabaseDirectory:  filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
+		DeviceModel:        plugin.OptionDeviceModel,
+		//EnableStorageOptimizer: plugin.OptionStorageOptimize,
+		FilesDirectory: plugin.OptionFetchDir,
+		//IgnoreFileNames:        plugin.OptionIgnoreFileName,
+		SystemLanguageCode:  "en",
+		SystemVersion:       plugin.Flow.FlowName,
+		UseChatInfoDatabase: true,
+		UseFileDatabase:     true,
+		UseMessageDatabase:  true,
+		UseSecretChats:      true,
+		UseTestDc:           false,
 	}
 
 	// Create client.
@@ -2861,11 +2887,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.PluginType == "input" {
 		plugin.InputFileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
-		plugin.InputFileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		plugin.InputFileListener = plugin.TdlibClient.GetListener()
 		go inputFile(&plugin)
 
 		plugin.InputDatumChannel = make(chan *core.Datum, DEFAULT_CHANNEL_SIZE)
-		plugin.InputDatumListener = plugin.TdlibClient.GetListener(int64(plugin.OptionPoolSize))
+		plugin.InputDatumListener = plugin.TdlibClient.GetListener()
 		go inputDatum(&plugin)
 
 		if plugin.OptionAdsEnable {
@@ -2878,12 +2904,14 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.PluginType == "output" {
 		plugin.OutputMessageChannel = make(chan *core.TelegramSendingStatus, DEFAULT_CHANNEL_SIZE)
-		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		plugin.OutputMessageListener = plugin.TdlibClient.GetListener()
 		go outputMessage(&plugin)
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Input/output mode:
+
+	go openChat(&plugin)
 
 	if plugin.OptionChatSave {
 		go saveChat(&plugin)
