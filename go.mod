@@ -24,7 +24,7 @@ require (
 	github.com/mattermost/mattermost/server/public v0.1.5-0.20240614164130-958a40353713
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/minio/minio-go/v7 v7.0.24
-	github.com/mmcdole/gofeed v1.2.1
+	github.com/mmcdole/gofeed v1.3.0
 	github.com/prometheus/client_golang v1.12.1
 	github.com/riferrei/srclient v0.0.0-20201104212601-60b6ece41d4c
 	github.com/slack-go/slack v0.9.5
@@ -115,7 +115,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect
-	github.com/mmcdole/goxpp v1.1.0 // indirect
+	github.com/mmcdole/goxpp v1.1.1-0.20240225020742-a0c311522b23 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect

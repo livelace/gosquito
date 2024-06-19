@@ -3,16 +3,17 @@ package rssIn
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
-	"net/http"
-	"net/url"
-	"sync"
-	"time"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
+	"golang.org/x/net/html/charset"
+	"net/http"
+	"net/url"
+	"sync"
+	"time"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 )
 
 var (
-    ERROR_PROXY_INVALID = errors.New("proxy invalid: %s")
+	ERROR_PROXY_INVALID = errors.New("proxy invalid: %s")
 )
 
 func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
@@ -44,6 +45,7 @@ func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("User-Agent", p.OptionUserAgent)
 
 	// background.
@@ -70,7 +72,12 @@ func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 			return
 		}
 
-		temp, err = gofeed.NewParser().Parse(res.Body)
+		bodyReader, err := charset.NewReader(res.Body, res.Header.Get("Content-Type"))
+		if err != nil {
+			c <- err
+		}
+
+		temp, err = gofeed.NewParser().Parse(bodyReader)
 		if err != nil {
 			c <- err
 			return
@@ -689,13 +696,13 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-    if plugin.OptionProxy != "" {
-        if proxyUrl, err := url.Parse(plugin.OptionProxy); err == nil {
-            plugin.OptionProxyURL = proxyUrl
-        } else {
-		    return &Plugin{}, fmt.Errorf(ERROR_PROXY_INVALID.Error(), plugin.OptionProxy)
-        }
-    }
+	if plugin.OptionProxy != "" {
+		if proxyUrl, err := url.Parse(plugin.OptionProxy); err == nil {
+			plugin.OptionProxyURL = proxyUrl
+		} else {
+			return &Plugin{}, fmt.Errorf(ERROR_PROXY_INVALID.Error(), plugin.OptionProxy)
+		}
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 
