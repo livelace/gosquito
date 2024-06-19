@@ -45,13 +45,15 @@ const (
 	DEFAULT_MATCH_TTL        = "1d"
 	DEFAULT_MESSAGE_EDITED   = false
 	DEFAULT_MESSAGE_PREVIEW  = true
+	DEFAULT_OPEN_CHAT_ENABLE = true
+	DEFAULT_OPEN_CHAT_PERIOD = "1s"
 	DEFAULT_POOL_SIZE        = 100000
 	DEFAULT_PROXY_ENABLE     = false
 	DEFAULT_PROXY_PORT       = 9050
 	DEFAULT_PROXY_SERVER     = "127.0.0.1"
 	DEFAULT_PROXY_TYPE       = "socks"
 	DEFAULT_SEND_ALBUM       = true
-	DEFAULT_SEND_DELAY       = "1s"
+	DEFAULT_SEND_DELAY       = "10s"
 	DEFAULT_SEND_TIMEOUT     = "1h"
 	DEFAULT_SESSION_TTL      = 366
 	DEFAULT_STATUS_ENABLE    = true
@@ -176,6 +178,14 @@ var (
 	INFO_SEND_MESSAGE_SUCCESS       = "send message: %v"
 )
 
+type clientAuthorizer struct {
+	TdlibParameters chan *client.SetTdlibParametersRequest
+	PhoneNumber     chan string
+	Code            chan string
+	State           chan client.AuthorizationState
+	Password        chan string
+}
+
 func authorizePlugin(p *Plugin, clientAuthorizer *clientAuthorizer) {
 	showMessage := func(m string) {
 		log.WithFields(log.Fields{
@@ -252,14 +262,6 @@ func checkMimeType(p *Plugin, datum *core.Datum, fileName string, mimeType strin
 		return false
 	}
 	return true
-}
-
-type clientAuthorizer struct {
-	TdlibParameters chan *client.SetTdlibParametersRequest
-	PhoneNumber     chan string
-	Code            chan string
-	State           chan client.AuthorizationState
-	Password        chan string
 }
 
 func countChats(p *Plugin) int {
@@ -921,15 +923,21 @@ func joinToChat(p *Plugin, chatId int64, chatSource string) error {
 }
 
 func openChat(p *Plugin) {
-	//plugin.ChatByIdDataCache[chatId] = &chatData
-	//plugin.ChatBySourceIdCache[chatSource] = cha
 	for {
 		for chatName, chatId := range p.ChatBySourceIdCache {
 			chat, err := p.TdlibClient.GetChat(&client.GetChatRequest{ChatId: chatId})
 
 			if err == nil && chat.UnreadCount > 0 {
 				_, err := p.TdlibClient.OpenChat(&client.OpenChatRequest{ChatId: chatId})
-				core.LogInputPlugin(p.LogFields, "open chat", fmt.Sprintf("%v (%v), %v", chatName, chatId, err))
+
+				core.LogInputPlugin(p.LogFields, "open chat",
+					fmt.Sprintf("%v, %v, %v", chatName, chatId, err))
+
+				if err == nil {
+					_, err := p.TdlibClient.CloseChat(&client.CloseChatRequest{ChatId: chatId})
+					core.LogInputPlugin(p.LogFields, "close chat",
+						fmt.Sprintf("%v, %v, %v", chatName, chatId, err))
+				}
 			}
 		}
 		time.Sleep(1000 * time.Millisecond)
@@ -1523,6 +1531,8 @@ type Plugin struct {
 	OptionMessageTemplate       *tmpl.Template
 	OptionMessageTypeFetch      []string
 	OptionMessageTypeProcess    []string
+	OptionOpenChatEnable        bool
+	OptionOpenChatPeriod        time.Duration
 	OptionOutput                []string
 	OptionPoolSize              int
 	OptionProcessAll            bool
@@ -1921,6 +1931,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["message_edited"] = -1
 		availableParams["message_type_fetch"] = -1
 		availableParams["message_type_process"] = -1
+		availableParams["open_chat_enable"] = -1
+		availableParams["open_chat_period"] = -1
 		availableParams["pool_size"] = -1
 	case "output":
 		availableParams["file_audio"] = -1
@@ -2301,6 +2313,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				}
 			}
 		}
+
+		// open_chat_enable.
+		setOpenChatEnable := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["open_chat_enable"] = 0
+				plugin.OptionOpenChatEnable = v
+			}
+		}
+		setOpenChatEnable(DEFAULT_OPEN_CHAT_ENABLE)
+		setOpenChatEnable(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.open_chat_enable", template)))
+		setOpenChatEnable((*pluginConfig.PluginParams)["open_chat_enable"])
+		core.ShowPluginParam(plugin.LogFields, "open_chat_enable", plugin.OptionOpenChatEnable)
+
+		// open_chat_period.
+		setOpenChatPeriod := func(p interface{}) {
+			if v, b := core.IsInterval(p); b {
+				availableParams["status_period"] = 0
+				plugin.OptionStatusPeriod = time.Duration(v) * time.Millisecond
+			}
+		}
+		setOpenChatPeriod(DEFAULT_OPEN_CHAT_PERIOD)
+		setOpenChatPeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.open_chat_period", template)))
+		setOpenChatPeriod((*pluginConfig.PluginParams)["open_chat_period"])
+		core.ShowPluginParam(plugin.LogFields, "open_chat_period", plugin.OptionOpenChatPeriod)
 
 		// pool_size.
 		setPoolSize := func(p interface{}) {
@@ -2897,6 +2933,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		if plugin.OptionAdsEnable {
 			go inputAds(&plugin)
 		}
+
+		if plugin.OptionOpenChatEnable {
+			go openChat(&plugin)
+		}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -2910,8 +2950,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Input/output mode:
-
-	go openChat(&plugin)
 
 	if plugin.OptionChatSave {
 		go saveChat(&plugin)
