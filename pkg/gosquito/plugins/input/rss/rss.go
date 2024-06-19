@@ -9,7 +9,7 @@ import (
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	"github.com/mmcdole/gofeed"
-	"golang.org/x/net/html/charset"
+	"github.com/qiniu/iconv"
 	"net/http"
 	"net/url"
 	"sync"
@@ -19,11 +19,14 @@ import (
 const (
 	PLUGIN_NAME = "rss"
 
-	DEFAULT_MATCH_TTL  = "1d"
-	DEFAULT_SSL_VERIFY = true
+	DEFAULT_INPUT_ENCODING  = "utf-8"
+	DEFAULT_OUTPUT_ENCODING = "utf-8"
+	DEFAULT_MATCH_TTL       = "1d"
+	DEFAULT_SSL_VERIFY      = true
 )
 
 var (
+	ERROR_NO_DATA       = errors.New("no data from source")
 	ERROR_PROXY_INVALID = errors.New("proxy invalid: %s")
 )
 
@@ -72,12 +75,24 @@ func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 			return
 		}
 
-		bodyReader, err := charset.NewReader(res.Body, res.Header.Get("Content-Type"))
-		if err != nil {
-			c <- err
+		if p.OptionInputEncoding == DEFAULT_INPUT_ENCODING {
+			temp, err = gofeed.NewParser().Parse(res.Body)
+		} else {
+			cd, err := iconv.Open(DEFAULT_OUTPUT_ENCODING, p.OptionInputEncoding)
+			if err != nil {
+				c <- err
+				return
+			}
+			defer cd.Close()
+
+			temp, err = gofeed.NewParser().Parse(iconv.NewReader(cd, res.Body, 4096))
 		}
 
-		temp, err = gofeed.NewParser().Parse(bodyReader)
+		if temp == nil {
+			c <- ERROR_NO_DATA
+			return
+		}
+
 		if err != nil {
 			c <- err
 			return
@@ -118,6 +133,7 @@ type Plugin struct {
 	OptionForce               bool
 	OptionForceCount          int
 	OptionInput               []string
+	OptionInputEncoding       string
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
 	OptionProxy               string
@@ -203,7 +219,7 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 
 		// Try to fetch new articles.
 		feeds, err := fetchFeed(p, source)
-		if err != nil {
+		if feeds == nil || err != nil {
 			failedSources = append(failedSources, source)
 			core.LogInputPlugin(p.LogFields, source, err)
 			continue
@@ -423,6 +439,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"timeout":               -1,
 
 		"input":           1,
+		"input_encoding":  -1,
 		"match_signature": -1,
 		"match_ttl":       -1,
 		"proxy":           -1,
@@ -518,6 +535,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setInput(pluginConfig.AppConfig.GetStringSlice(fmt.Sprintf("%s.input", template)))
 	setInput((*pluginConfig.PluginParams)["input"])
 	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
+
+	// input_encoding.
+	setInputEncoding := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["input_encoding"] = 0
+			plugin.OptionInputEncoding = v
+		}
+	}
+	setInputEncoding(DEFAULT_INPUT_ENCODING)
+	setInputEncoding(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.input_encoding", template)))
+	setInputEncoding((*pluginConfig.PluginParams)["input_encoding"])
+	core.ShowPluginParam(plugin.LogFields, "input_encoding", plugin.OptionInputEncoding)
 
 	// match_signature.
 	setMatchSignature := func(p interface{}) {

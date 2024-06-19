@@ -20,7 +20,7 @@ type Rss struct {
 ### Generic parameters:
 
 | Param                 | Required |  Type  | Template |        Default        |
-| :-------------------- | :------: | :----: | :------: | :-------------------: |
+|:----------------------|:--------:|:------:|:--------:|:---------------------:|
 | expire_action         |    -     | array  |    +     |          []           |
 | expire_action_delay   |    -     | string |    +     |         "1d"          |
 | expire_action_timeout |    -     |  int   |    +     |          30           |
@@ -40,8 +40,9 @@ type Rss struct {
 ### Plugin parameters:
 
 | Param           | Required |  Type  | Template |      Default      |            Example             | Description                                |
-| :-------------- | :------: | :----: | :------: | :---------------: | :----------------------------: | :----------------------------------------- |
+|:----------------|:--------:|:------:|:--------:|:-----------------:|:------------------------------:|:-------------------------------------------|
 | **input**       |    +     | array  |    +     |       "[]"        | ["https://tass.ru/rss/v2.xml"] | List of RSS/Atom feeds.                    |
+| input_encoding  |    -     | string |    +     |      "utf-8"      |            "cp1251"            | Feed encoding.                             |
 | match_signature |    -     | array  |    +     |       "[]"        |   ["rss.link", "rss.title"]    | Match new articles by signature.           |
 | match_ttl       |    -     | string |    +     |       "1d"        |             "24h"              | TTL (Time To Live) for matched signatures. |
 | proxy           |    -     | string |    +     |        ""         |   "socks5://127.0.0.1:9050"    | Proxy settings.                            |
