@@ -48,23 +48,38 @@ type Datum struct {
 
 ```go
 type Data struct {
-  ARRAY0 []string
-  ARRAY1 []string
-  ARRAY2 []string
-  ARRAY3 []string
-  ARRAY4 []string
-  ARRAY5 []string
-  ARRAY6 []string
-  ARRAY7 []string
-  ARRAY8 []string
-  ARRAY9 []string
+  ARRAY0  []string
+  ARRAY1  []string
+  ARRAY2  []string
+  ARRAY3  []string
+  ARRAY4  []string
+  ARRAY5  []string
+  ARRAY6  []string
+  ARRAY7  []string
+  ARRAY8  []string
+  ARRAY9  []string
   ARRAY10 []string
   ARRAY11 []string
   ARRAY12 []string
   ARRAY13 []string
   ARRAY14 []string
   ARRAY15 []string
-
+  ARRAY16 []string
+  ARRAY17 []string
+  ARRAY18 []string
+  ARRAY19 []string
+  ARRAY20 []string
+  ARRAY21 []string
+  ARRAY22 []string
+  ARRAY23 []string
+  ARRAY24 []string
+  ARRAY25 []string
+  ARRAY26 []string
+  ARRAY27 []string
+  ARRAY28 []string
+  ARRAY29 []string
+  ARRAY30 []string
+  
   ARRAYA []string
   ARRAYB []string
   ARRAYC []string
@@ -81,7 +96,17 @@ type Data struct {
   ARRAYN []string
   ARRAYO []string
   ARRAYP []string
-
+  ARRAYQ []string
+  ARRAYR []string
+  ARRAYS []string
+  ARRAYT []string
+  ARRAYU []string
+  ARRAYV []string
+  ARRAYW []string
+  ARRAYX []string
+  ARRAYY []string
+  ARRAYZ []string
+  
   TEXT0  string
   TEXT1  string
   TEXT2  string
@@ -108,6 +133,11 @@ type Data struct {
   TEXT23 string
   TEXT24 string
   TEXT25 string
+  TEXT26 string
+  TEXT27 string
+  TEXT28 string
+  TEXT29 string
+  TEXT30 string
   
   TEXTA string
   TEXTB string
