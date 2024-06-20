@@ -289,15 +289,16 @@ type Telegram struct {
 	CHATFIRSTSEEN        string
 	CHATLASTSEEN         string
 
-	MESSAGEID        string
-	MESSAGEMEDIA     []string
-	MESSAGEMIME      string
-	MESSAGESENDERID  string
-	MESSAGETEXT      string
-	MESSAGETEXTURL   []string
-	MESSAGETIMESTAMP string
-	MESSAGETYPE      string
-	MESSAGEURL       string
+	MESSAGEID           string
+	MESSAGEMEDIA        []string
+	MESSAGEMIME         string
+	MESSAGESENDERID     string
+	MESSAGETEXT         string
+	MESSAGETEXTMARKDOWN string
+	MESSAGETEXTURL      []string
+	MESSAGETIMESTAMP    string
+	MESSAGETYPE         string
+	MESSAGEURL          string
 
 	USERID            string
 	USERVERSION       string
