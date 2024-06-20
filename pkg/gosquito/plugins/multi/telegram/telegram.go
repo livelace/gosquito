@@ -544,11 +544,13 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 }
 
 func markdownFormat(offset *int32, text *string, entity *client.TextEntity) {
-	textArray := strings.Split(*text, "")
+	//textArray := strings.Split(*text, "")
+	fmt.Printf("0000000000000000000: %v\n", *text)
+	textArray := []rune(*text)
 
-	entityBeginOffset := entity.Offset + *offset
-	entityEndOffset := entity.Offset + *offset + entity.Length
-	entityValue := strings.Join(textArray[entityBeginOffset:entityEndOffset], "")
+	entityBeginOffset := *offset + entity.Offset
+	entityEndOffset := entityBeginOffset + entity.Length
+	entityValue := string(textArray[entityBeginOffset:entityEndOffset])
 	markdownItem := ""
 
 	switch entity.Type.(type) {
@@ -566,11 +568,14 @@ func markdownFormat(offset *int32, text *string, entity *client.TextEntity) {
 		markdownItem = fmt.Sprintf("<u>%s</u>", entityValue)
 	}
 
-	markdownBeginText := strings.Join(textArray[0:entityBeginOffset], "")
-	markdownEndText := strings.Join(textArray[entityEndOffset:len(textArray)], "")
+	markdownBeginText := string(textArray[0:entityBeginOffset])
+	markdownEndText := string(textArray[entityEndOffset:len(textArray)])
 
 	*offset = *offset + int32(len(markdownItem)) - entity.Length
 	*text = fmt.Sprintf("%s%s%s", markdownBeginText, markdownItem, markdownEndText)
+
+	fmt.Printf("AAAAAAAAAAAAA: %v| %v| %v\n", entityBeginOffset, entityEndOffset, entityValue)
+	fmt.Printf("BBBBBBBBBBBBB: %v\n", *text)
 }
 
 func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -579,23 +584,23 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
 
-		markdownOffset := int32(0)
+		//markdownOffset := int32(0)
 		markdownText := formattedText.Text
 
 		for _, entity := range formattedText.Entities {
 			switch entity.Type.(type) {
-			case *client.TextEntityTypeBlockQuote:
-				markdownFormat(&markdownOffset, &markdownText, entity)
-			case *client.TextEntityTypeBold:
-				markdownFormat(&markdownOffset, &markdownText, entity)
-			case *client.TextEntityTypeItalic:
-				markdownFormat(&markdownOffset, &markdownText, entity)
+			//case *client.TextEntityTypeBlockQuote:
+			//	markdownFormat(&markdownOffset, &markdownText, entity)
+			//case *client.TextEntityTypeBold:
+			//	markdownFormat(&markdownOffset, &markdownText, entity)
+			//case *client.TextEntityTypeItalic:
+			//	markdownFormat(&markdownOffset, &markdownText, entity)
 			case *client.TextEntityTypeTextUrl:
-				markdownFormat(&markdownOffset, &markdownText, entity)
+				//markdownFormat(&markdownOffset, &markdownText, entity)
 				datum.TELEGRAM.MESSAGETEXTURL =
 					append(datum.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-			case *client.TextEntityTypeUnderline:
-				markdownFormat(&markdownOffset, &markdownText, entity)
+				//case *client.TextEntityTypeUnderline:
+				//	markdownFormat(&markdownOffset, &markdownText, entity)
 			}
 		}
 
