@@ -177,6 +177,8 @@ var (
 
 	INFO_SEND_ALBUM_MESSAGE_SUCCESS = "send album message: %v"
 	INFO_SEND_MESSAGE_SUCCESS       = "send message: %v"
+
+	MARKDOWN_ESCAPE_RUNE_MAP = make(map[rune]struct{})
 )
 
 type clientAuthorizer struct {
@@ -494,6 +496,7 @@ func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.Mess
 	if p.OptionProcessAll || p.OptionProcessAudio {
 		audio := messageContent.(*client.MessageAudio).Audio
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageAudio).Caption)
 
 		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
 			return false
@@ -514,6 +517,7 @@ func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.Mess
 		photo := messageContent.(*client.MessagePhoto).Photo
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessagePhoto).Caption)
 
 		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
@@ -529,6 +533,7 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 	if p.OptionProcessAll || p.OptionProcessDocument {
 		document := messageContent.(*client.MessageDocument).Document
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageDocument).Caption)
 
 		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
 			return false
@@ -542,182 +547,6 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 	}
 
 	return false
-}
-
-var markdownEscapeRuneMap = make(map[rune]struct{})
-
-func myMarkdownEscapeRune(r rune) string {
-	if _, ok := markdownEscapeRuneMap[r]; ok {
-		return fmt.Sprintf("\\%c", r)
-	} else {
-		return fmt.Sprintf("%c", r)
-	}
-}
-
-func markdownWipeNewline(text string) string {
-	text = strings.Replace(text, "\n", " ", -1)
-	return text
-}
-
-func markdownWrap(entity *client.TextEntity, entityText string) string {
-	s := ""
-
-	entitySpaceBegin := regexp.MustCompile(`^\s+`).FindString(entityText)
-	entitySpaceEnd := regexp.MustCompile(`\s+$`).FindString(entityText)
-
-	switch entity.Type.(type) {
-	case *client.TextEntityTypeBlockQuote:
-		for _, l := range strings.Split(entityText, "\n") {
-			s += fmt.Sprintf("> %s", l)
-		}
-	case *client.TextEntityTypeCode:
-		s = markdownWipeNewline(fmt.Sprintf("%s`%s`%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
-	case *client.TextEntityTypeBold:
-		s = markdownWipeNewline(fmt.Sprintf("%s**%s**%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
-	case *client.TextEntityTypeItalic:
-		s = markdownWipeNewline(fmt.Sprintf("%s_%s_%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
-	case *client.TextEntityTypePhoneNumber:
-		s = markdownWipeNewline(fmt.Sprintf("tel:%s", strings.TrimSpace(entityText)))
-	case *client.TextEntityTypePreCode:
-		s = fmt.Sprintf("```%s\n%s```", entity.Type.(*client.TextEntityTypePreCode).Language, entityText)
-	case *client.TextEntityTypeStrikethrough:
-		s = markdownWipeNewline(fmt.Sprintf("%s~%s~%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
-	case *client.TextEntityTypeTextUrl:
-		s = markdownWipeNewline(fmt.Sprintf("[%s](%s)", entityText, entity.Type.(*client.TextEntityTypeTextUrl).Url))
-	case *client.TextEntityTypeUnderline:
-		s = markdownWipeNewline(fmt.Sprintf("%s__%s__%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
-	default:
-		return entityText
-	}
-
-	return s
-}
-
-func markdownFormat(formattedText *client.FormattedText) string {
-	result := ""
-
-	entityCharMeta := make(map[int]rune)
-	entityMarkdown := make(map[int]string)
-	entityMaxLength := make(map[int]int)
-	entityStepsOrder := make(map[int][]*client.TextEntity)
-
-	// ---
-	// process entities:
-	// 1. find longest entities (one long entity can contain multiple short).
-	// 2. collect entities as steps, sort later.
-	for _, entity := range formattedText.Entities {
-		entityOffset := int(entity.Offset)
-		entityLength := int(entity.Length)
-
-		if entityMaxLength[entityOffset] < entityLength {
-			entityMaxLength[entityOffset] = entityLength
-		}
-		entityStepsOrder[entityOffset] = append(entityStepsOrder[entityOffset], entity)
-	}
-
-	// ---
-	// process text:
-	text := []rune(formattedText.Text)
-	textLastIndex := len(text) - 1
-	textPart := ""
-	textPartCounter := 0
-	//textPartIntersectionAdded := false
-
-	textParts := make([]string, 0)
-	textPartsIntersection := make([]int, 0)
-
-	utf16pos := 0
-
-	for ci, c := range text {
-		// if we found entity then set counter to entity length:
-		entityMaxLengthValue := entityMaxLength[utf16pos]
-		if entityMaxLengthValue != 0 {
-			textPartCounter = entityMaxLengthValue
-
-			// 1. save collected text part.
-			// 2. add void/stub item to intersection slice.
-			if len(textPart) > 0 {
-				textParts = append(textParts, textPart)
-				textPartsIntersection = append(textPartsIntersection, -1)
-				textPart = ""
-			}
-		}
-
-		// 1. if counter is zero - we are inside of text:
-		// 2. if counter is not zero - we are inside of entity:
-		if textPartCounter == 0 {
-			textPart += string(c)
-
-			// text ended, add last part:
-			if ci == textLastIndex {
-				textParts = append(textParts, textPart)
-				textPartsIntersection = append(textPartsIntersection, -1)
-			}
-
-		} else {
-			// detect entity beginning, add:
-			// 1. void item to text parts (a place where entity was/should be).
-			// 2. entity position/offset to intersection slice (where markdown will be pulled in).
-			if textPartCounter == entityMaxLengthValue {
-				textParts = append(textParts, "")
-				textPartsIntersection = append(textPartsIntersection, utf16pos)
-			}
-
-			// put offset/rune into entity char map.
-			// we need it, because entities content is not assembled yet.
-			// why ? because we don't process the whole text and
-			// don't calc proper utf16pos variable.
-			entityCharMeta[utf16pos] = c
-
-			// entity will end finally:
-			textPartCounter -= 1
-		}
-
-		utf16pos += len(utf16.Encode([]rune{c}))
-	}
-
-	// ---
-	// wrap entities:
-	for entityOffset, entitySteps := range entityStepsOrder {
-		// sort entity steps for proper nested tags handling.
-		sort.Slice(entitySteps, func(i, j int) bool {
-			return entitySteps[i].Length < entitySteps[j].Length
-		})
-
-		previousEntityStepString := ""
-		previousEntityStepStringFormatted := ""
-
-		for _, es := range entitySteps {
-			entityStepString := ""
-			entityStepStringFormatted := ""
-
-			// construct entity text from entity char map:
-			for ri := int(es.Offset); ri <= int(es.Offset+es.Length-1); ri++ {
-				entityStepString += myMarkdownEscapeRune(entityCharMeta[ri])
-			}
-
-			// handle situation, when for the same text applied multiple
-			// markdown tags (abc -> *abc*, ~abc~ -> ~*abc*~)
-			// delete repeated values from slice:
-			if entityStepString == previousEntityStepString {
-				entityStepStringFormatted = markdownWrap(es, previousEntityStepStringFormatted)
-			} else {
-				entityStepStringFormatted = markdownWrap(es, entityStepString)
-			}
-
-			previousEntityStepString = entityStepString
-			previousEntityStepStringFormatted = entityStepStringFormatted
-			entityMarkdown[entityOffset] = entityStepStringFormatted
-		}
-	}
-
-	// ---
-	// assembly:
-	for i, v := range textPartsIntersection {
-		result += fmt.Sprintf("%s%s", textParts[i], entityMarkdown[v])
-	}
-
-	return result
 }
 
 func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -745,6 +574,7 @@ func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.Mess
 	if p.OptionProcessAll || p.OptionProcessVideo {
 		video := messageContent.(*client.MessageVideo).Video
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageVideo).Caption)
 
 		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return false
@@ -764,6 +594,7 @@ func handleMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.
 	if p.OptionProcessAll || p.OptionProcessVideoNote {
 		note := messageContent.(*client.MessageVideoNote).VideoNote
 		datum.TELEGRAM.MESSAGETEXT = ""
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = ""
 
 		if (p.OptionFetchAll || p.OptionFetchVideoNote) && checkFileSize(p, datum, "video_note", note.Video.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, note.Video.Remote.Id, "")
@@ -779,6 +610,7 @@ func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.
 	if p.OptionProcessAll || p.OptionProcessVoiceNote {
 		note := messageContent.(*client.MessageVoiceNote).VoiceNote
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageVoiceNote).Caption)
 
 		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
@@ -1098,6 +930,180 @@ func joinToChat(p *Plugin, chatId int64, chatSource string) error {
 		return fmt.Errorf(ERROR_CHAT_JOIN_ERROR.Error(), chatId, chatSource, err)
 	}
 	return nil
+}
+
+func myMarkdownEscapeRune(r rune) string {
+	if _, ok := MARKDOWN_ESCAPE_RUNE_MAP[r]; ok {
+		return fmt.Sprintf("\\%c", r)
+	} else {
+		return fmt.Sprintf("%c", r)
+	}
+}
+
+func markdownWipeNewline(text string) string {
+	text = strings.Replace(text, "\n", " ", -1)
+	return text
+}
+
+func markdownWrap(entity *client.TextEntity, entityText string) string {
+	s := ""
+
+	entitySpaceBegin := regexp.MustCompile(`^\s+`).FindString(entityText)
+	entitySpaceEnd := regexp.MustCompile(`\s+$`).FindString(entityText)
+
+	switch entity.Type.(type) {
+	case *client.TextEntityTypeBlockQuote:
+		for _, l := range strings.Split(entityText, "\n") {
+			s += fmt.Sprintf("> %s", l)
+		}
+	case *client.TextEntityTypeCode:
+		s = markdownWipeNewline(fmt.Sprintf("%s`%s`%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	case *client.TextEntityTypeBold:
+		s = markdownWipeNewline(fmt.Sprintf("%s**%s**%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	case *client.TextEntityTypeItalic:
+		s = markdownWipeNewline(fmt.Sprintf("%s_%s_%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	case *client.TextEntityTypePhoneNumber:
+		s = markdownWipeNewline(fmt.Sprintf("tel:%s", strings.TrimSpace(entityText)))
+	case *client.TextEntityTypePreCode:
+		s = fmt.Sprintf("```%s\n%s```", entity.Type.(*client.TextEntityTypePreCode).Language, entityText)
+	case *client.TextEntityTypeStrikethrough:
+		s = markdownWipeNewline(fmt.Sprintf("%s~%s~%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	case *client.TextEntityTypeTextUrl:
+		s = markdownWipeNewline(fmt.Sprintf("[%s](%s)", entityText, entity.Type.(*client.TextEntityTypeTextUrl).Url))
+	case *client.TextEntityTypeUnderline:
+		s = markdownWipeNewline(fmt.Sprintf("%s__%s__%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	default:
+		return entityText
+	}
+
+	return s
+}
+
+func markdownFormat(formattedText *client.FormattedText) string {
+	result := ""
+
+	entityCharMeta := make(map[int]rune)
+	entityMarkdown := make(map[int]string)
+	entityMaxLength := make(map[int]int)
+	entityStepsOrder := make(map[int][]*client.TextEntity)
+
+	// ---
+	// process entities:
+	// 1. find longest entities (one long entity can contain multiple short).
+	// 2. collect entities as steps, sort later.
+	for _, entity := range formattedText.Entities {
+		entityOffset := int(entity.Offset)
+		entityLength := int(entity.Length)
+
+		if entityMaxLength[entityOffset] < entityLength {
+			entityMaxLength[entityOffset] = entityLength
+		}
+		entityStepsOrder[entityOffset] = append(entityStepsOrder[entityOffset], entity)
+	}
+
+	// ---
+	// process text:
+	text := []rune(formattedText.Text)
+	textLastIndex := len(text) - 1
+	textPart := ""
+	textPartCounter := 0
+	//textPartIntersectionAdded := false
+
+	textParts := make([]string, 0)
+	textPartsIntersection := make([]int, 0)
+
+	utf16pos := 0
+
+	for ci, c := range text {
+		// if we found entity then set counter to entity length:
+		entityMaxLengthValue := entityMaxLength[utf16pos]
+		if entityMaxLengthValue != 0 {
+			textPartCounter = entityMaxLengthValue
+
+			// 1. save collected text part.
+			// 2. add void/stub item to intersection slice.
+			if len(textPart) > 0 {
+				textParts = append(textParts, textPart)
+				textPartsIntersection = append(textPartsIntersection, -1)
+				textPart = ""
+			}
+		}
+
+		// 1. if counter is zero - we are inside of text:
+		// 2. if counter is not zero - we are inside of entity:
+		if textPartCounter == 0 {
+			textPart += string(c)
+
+			// text ended, add last part:
+			if ci == textLastIndex {
+				textParts = append(textParts, textPart)
+				textPartsIntersection = append(textPartsIntersection, -1)
+			}
+
+		} else {
+			// detect entity beginning, add:
+			// 1. void item to text parts (a place where entity was/should be).
+			// 2. entity position/offset to intersection slice (where markdown will be pulled in).
+			if textPartCounter == entityMaxLengthValue {
+				textParts = append(textParts, "")
+				textPartsIntersection = append(textPartsIntersection, utf16pos)
+			}
+
+			// put offset/rune into entity char map.
+			// we need it, because entities content is not assembled yet.
+			// why ? because we don't process the whole text and
+			// don't calc proper utf16pos variable.
+			entityCharMeta[utf16pos] = c
+
+			// entity will end finally:
+			textPartCounter -= 1
+		}
+
+		utf16pos += len(utf16.Encode([]rune{c}))
+	}
+
+	// ---
+	// wrap entities:
+	for entityOffset, entitySteps := range entityStepsOrder {
+		// sort entity steps for proper nested tags handling.
+		sort.Slice(entitySteps, func(i, j int) bool {
+			return entitySteps[i].Length < entitySteps[j].Length
+		})
+
+		previousEntityStepString := ""
+		previousEntityStepStringFormatted := ""
+
+		for _, es := range entitySteps {
+			entityStepString := ""
+			entityStepStringFormatted := ""
+
+			// construct entity text from entity char map:
+			for ri := int(es.Offset); ri <= int(es.Offset+es.Length-1); ri++ {
+				entityStepString += myMarkdownEscapeRune(entityCharMeta[ri])
+			}
+
+			// handle situation, when for the same text applied multiple
+			// markdown tags (abc -> *abc*, ~abc~ -> ~*abc*~)
+			// delete repeated values from slice:
+			if entityStepString == previousEntityStepString {
+				entityStepStringFormatted = markdownWrap(es, previousEntityStepStringFormatted)
+			} else {
+				entityStepStringFormatted = markdownWrap(es, entityStepString)
+			}
+
+			previousEntityStepString = entityStepString
+			previousEntityStepStringFormatted = entityStepStringFormatted
+			entityMarkdown[entityOffset] = entityStepStringFormatted
+		}
+	}
+
+	// ---
+	// assembly:
+	for i, v := range textPartsIntersection {
+		result += fmt.Sprintf("%s%s", textParts[i], entityMarkdown[v])
+	}
+
+	return result
 }
 
 func openChat(p *Plugin) {
@@ -3148,7 +3154,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 
 	for _, r := range []rune{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'} {
-		markdownEscapeRuneMap[r] = struct{}{}
+		MARKDOWN_ESCAPE_RUNE_MAP[r] = struct{}{}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
