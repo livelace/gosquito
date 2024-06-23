@@ -5,19 +5,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/google/uuid"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/zelenin/go-tdlib/client"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
 	tmpl "text/template"
+	"time"
+	"unicode/utf16"
 )
 
 const (
@@ -543,39 +544,180 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 	return false
 }
 
-func markdownFormat(offset *int32, text *string, entity *client.TextEntity) {
-	//textArray := strings.Split(*text, "")
-	fmt.Printf("0000000000000000000: %v\n", *text)
-	textArray := []rune(*text)
+var markdownEscapeRuneMap = make(map[rune]struct{})
 
-	entityBeginOffset := *offset + entity.Offset
-	entityEndOffset := entityBeginOffset + entity.Length
-	entityValue := string(textArray[entityBeginOffset:entityEndOffset])
-	markdownItem := ""
+func myMarkdownEscapeRune(r rune) string {
+	if _, ok := markdownEscapeRuneMap[r]; ok {
+		return fmt.Sprintf("\\%c", r)
+	} else {
+		return fmt.Sprintf("%c", r)
+	}
+}
+
+func markdownWipeNewline(text string) string {
+	text = strings.Replace(text, "\n", " ", -1)
+	return text
+}
+
+func markdownWrap(entity *client.TextEntity, entityText string) string {
+	s := ""
+
+	entitySpaceBegin := regexp.MustCompile(`^\s+`).FindString(entityText)
+	entitySpaceEnd := regexp.MustCompile(`\s+$`).FindString(entityText)
 
 	switch entity.Type.(type) {
 	case *client.TextEntityTypeBlockQuote:
-		markdownItem = fmt.Sprintf("> %s \n", entityValue)
+		for _, l := range strings.Split(entityText, "\n") {
+			s += fmt.Sprintf("> %s", l)
+		}
+	case *client.TextEntityTypeCode:
+		s = markdownWipeNewline(fmt.Sprintf("%s`%s`%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
 	case *client.TextEntityTypeBold:
-		markdownItem = fmt.Sprintf("**%s**", entityValue)
+		s = markdownWipeNewline(fmt.Sprintf("%s**%s**%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
 	case *client.TextEntityTypeItalic:
-		markdownItem = fmt.Sprintf("*%s*", entityValue)
+		s = markdownWipeNewline(fmt.Sprintf("%s_%s_%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	case *client.TextEntityTypePhoneNumber:
+		s = markdownWipeNewline(fmt.Sprintf("tel:%s", strings.TrimSpace(entityText)))
+	case *client.TextEntityTypePreCode:
+		s = fmt.Sprintf("```%s\n%s```", entity.Type.(*client.TextEntityTypePreCode).Language, entityText)
 	case *client.TextEntityTypeStrikethrough:
-		markdownItem = fmt.Sprintf("~~%s~~", entityValue)
+		s = markdownWipeNewline(fmt.Sprintf("%s~%s~%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
 	case *client.TextEntityTypeTextUrl:
-		markdownItem = fmt.Sprintf("[%s](%s)", entityValue, entity.Type.(*client.TextEntityTypeTextUrl).Url)
+		s = markdownWipeNewline(fmt.Sprintf("[%s](%s)", entityText, entity.Type.(*client.TextEntityTypeTextUrl).Url))
 	case *client.TextEntityTypeUnderline:
-		markdownItem = fmt.Sprintf("<u>%s</u>", entityValue)
+		s = markdownWipeNewline(fmt.Sprintf("%s__%s__%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+	default:
+		return entityText
 	}
 
-	markdownBeginText := string(textArray[0:entityBeginOffset])
-	markdownEndText := string(textArray[entityEndOffset:len(textArray)])
+	return s
+}
 
-	*offset = *offset + int32(len(markdownItem)) - entity.Length
-	*text = fmt.Sprintf("%s%s%s", markdownBeginText, markdownItem, markdownEndText)
+func markdownFormat(formattedText *client.FormattedText) string {
+	result := ""
 
-	fmt.Printf("AAAAAAAAAAAAA: %v| %v| %v\n", entityBeginOffset, entityEndOffset, entityValue)
-	fmt.Printf("BBBBBBBBBBBBB: %v\n", *text)
+	entityCharMeta := make(map[int]rune)
+	entityMarkdown := make(map[int]string)
+	entityMaxLength := make(map[int]int)
+	entityStepsOrder := make(map[int][]*client.TextEntity)
+
+	// ---
+	// process entities:
+	// 1. find longest entities (one long entity can contain multiple short).
+	// 2. collect entities as steps, sort later.
+	for _, entity := range formattedText.Entities {
+		entityOffset := int(entity.Offset)
+		entityLength := int(entity.Length)
+
+		if entityMaxLength[entityOffset] < entityLength {
+			entityMaxLength[entityOffset] = entityLength
+		}
+		entityStepsOrder[entityOffset] = append(entityStepsOrder[entityOffset], entity)
+	}
+
+	// ---
+	// process text:
+	text := []rune(formattedText.Text)
+	textLastIndex := len(text) - 1
+	textPart := ""
+	textPartCounter := 0
+	//textPartIntersectionAdded := false
+
+	textParts := make([]string, 0)
+	textPartsIntersection := make([]int, 0)
+
+	utf16pos := 0
+
+	for ci, c := range text {
+		// if we found entity then set counter to entity length:
+		entityMaxLengthValue := entityMaxLength[utf16pos]
+		if entityMaxLengthValue != 0 {
+			textPartCounter = entityMaxLengthValue
+
+			// 1. save collected text part.
+			// 2. add void/stub item to intersection slice.
+			if len(textPart) > 0 {
+				textParts = append(textParts, textPart)
+				textPartsIntersection = append(textPartsIntersection, -1)
+				textPart = ""
+			}
+		}
+
+		// 1. if counter is zero - we are inside of text:
+		// 2. if counter is not zero - we are inside of entity:
+		if textPartCounter == 0 {
+			textPart += string(c)
+
+			// text ended, add last part:
+			if ci == textLastIndex {
+				textParts = append(textParts, textPart)
+				textPartsIntersection = append(textPartsIntersection, -1)
+			}
+
+		} else {
+			// detect entity beginning, add:
+			// 1. void item to text parts (a place where entity was/should be).
+			// 2. entity position/offset to intersection slice (where markdown will be pulled in).
+			if textPartCounter == entityMaxLengthValue {
+				textParts = append(textParts, "")
+				textPartsIntersection = append(textPartsIntersection, utf16pos)
+			}
+
+			// put offset/rune into entity char map.
+			// we need it, because entities content is not assembled yet.
+			// why ? because we don't process the whole text and
+			// don't calc proper utf16pos variable.
+			entityCharMeta[utf16pos] = c
+
+			// entity will end finally:
+			textPartCounter -= 1
+		}
+
+		utf16pos += len(utf16.Encode([]rune{c}))
+	}
+
+	// ---
+	// wrap entities:
+	for entityOffset, entitySteps := range entityStepsOrder {
+		// sort entity steps for proper nested tags handling.
+		sort.Slice(entitySteps, func(i, j int) bool {
+			return entitySteps[i].Length < entitySteps[j].Length
+		})
+
+		previousEntityStepString := ""
+		previousEntityStepStringFormatted := ""
+
+		for _, es := range entitySteps {
+			entityStepString := ""
+			entityStepStringFormatted := ""
+
+			// construct entity text from entity char map:
+			for ri := int(es.Offset); ri <= int(es.Offset+es.Length-1); ri++ {
+				entityStepString += myMarkdownEscapeRune(entityCharMeta[ri])
+			}
+
+			// handle situation, when for the same text applied multiple
+			// markdown tags (abc -> *abc*, ~abc~ -> ~*abc*~)
+			// delete repeated values from slice:
+			if entityStepString == previousEntityStepString {
+				entityStepStringFormatted = markdownWrap(es, previousEntityStepStringFormatted)
+			} else {
+				entityStepStringFormatted = markdownWrap(es, entityStepString)
+			}
+
+			previousEntityStepString = entityStepString
+			previousEntityStepStringFormatted = entityStepStringFormatted
+			entityMarkdown[entityOffset] = entityStepStringFormatted
+		}
+	}
+
+	// ---
+	// assembly:
+	for i, v := range textPartsIntersection {
+		result += fmt.Sprintf("%s%s", textParts[i], entityMarkdown[v])
+	}
+
+	return result
 }
 
 func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
@@ -583,28 +725,15 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 		formattedText := messageContent.(*client.MessageText).Text
 		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-
-		//markdownOffset := int32(0)
-		markdownText := formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(formattedText)
 
 		for _, entity := range formattedText.Entities {
 			switch entity.Type.(type) {
-			//case *client.TextEntityTypeBlockQuote:
-			//	markdownFormat(&markdownOffset, &markdownText, entity)
-			//case *client.TextEntityTypeBold:
-			//	markdownFormat(&markdownOffset, &markdownText, entity)
-			//case *client.TextEntityTypeItalic:
-			//	markdownFormat(&markdownOffset, &markdownText, entity)
 			case *client.TextEntityTypeTextUrl:
-				//markdownFormat(&markdownOffset, &markdownText, entity)
 				datum.TELEGRAM.MESSAGETEXTURL =
 					append(datum.TELEGRAM.MESSAGETEXTURL, entity.Type.(*client.TextEntityTypeTextUrl).Url)
-				//case *client.TextEntityTypeUnderline:
-				//	markdownFormat(&markdownOffset, &markdownText, entity)
 			}
 		}
-
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownText
 
 		return true
 	}
@@ -3014,6 +3143,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.OptionUserSave {
 		go saveUser(&plugin)
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+
+	for _, r := range []rune{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'} {
+		markdownEscapeRuneMap[r] = struct{}{}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
