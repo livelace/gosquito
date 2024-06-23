@@ -45,7 +45,9 @@ const (
 	DEFAULT_LOG_LEVEL        = 0
 	DEFAULT_MATCH_TTL        = "1d"
 	DEFAULT_MESSAGE_EDITED   = false
+	DEFAULT_MESSAGE_MARKDOWN = true
 	DEFAULT_MESSAGE_PREVIEW  = true
+	DEFAULT_MESSAGE_VIEW     = true
 	DEFAULT_OPEN_CHAT_ENABLE = true
 	DEFAULT_OPEN_CHAT_PERIOD = "10s"
 	DEFAULT_POOL_SIZE        = 100000
@@ -496,7 +498,7 @@ func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.Mess
 	if p.OptionProcessAll || p.OptionProcessAudio {
 		audio := messageContent.(*client.MessageAudio).Audio
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageAudio).Caption)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageAudio).Caption)
 
 		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
 			return false
@@ -517,7 +519,7 @@ func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.Mess
 		photo := messageContent.(*client.MessagePhoto).Photo
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessagePhoto).Caption)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessagePhoto).Caption)
 
 		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
@@ -533,7 +535,7 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 	if p.OptionProcessAll || p.OptionProcessDocument {
 		document := messageContent.(*client.MessageDocument).Document
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageDocument).Caption)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageDocument).Caption)
 
 		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
 			return false
@@ -554,7 +556,7 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 		formattedText := messageContent.(*client.MessageText).Text
 		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		for _, entity := range formattedText.Entities {
 			switch entity.Type.(type) {
@@ -574,7 +576,7 @@ func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.Mess
 	if p.OptionProcessAll || p.OptionProcessVideo {
 		video := messageContent.(*client.MessageVideo).Video
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageVideo).Caption)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageVideo).Caption)
 
 		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return false
@@ -610,7 +612,7 @@ func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.
 	if p.OptionProcessAll || p.OptionProcessVoiceNote {
 		note := messageContent.(*client.MessageVoiceNote).VoiceNote
 		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(messageContent.(*client.MessageVoiceNote).Caption)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageVoiceNote).Caption)
 
 		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
@@ -911,6 +913,15 @@ func inputDatum(p *Plugin) {
 
 					if validMessage {
 						p.InputDatumChannel <- &datum
+
+						if p.OptionMessageView {
+							_, _ = p.TdlibClient.ViewMessages(&client.ViewMessagesRequest{
+								ChatId:     messageChat.Id,
+								ForceRead:  true,
+								MessageIds: []int64{messageId},
+								Source:     &client.MessageSourceNotification{},
+							})
+						}
 					}
 
 				} else {
@@ -979,8 +990,12 @@ func markdownWrap(entity *client.TextEntity, entityText string) string {
 	return s
 }
 
-func markdownFormat(formattedText *client.FormattedText) string {
+func markdownFormat(p *Plugin, formattedText *client.FormattedText) string {
 	result := ""
+
+	if !p.OptionMessageMarkdown {
+		return result
+	}
 
 	entityCharMeta := make(map[int]rune)
 	entityMarkdown := make(map[int]string)
@@ -1118,13 +1133,16 @@ func openChat(p *Plugin) {
 					fmt.Sprintf("%v, %v, %v", chatName, chatId, err))
 
 				if err == nil {
+					time.Sleep(p.OptionOpenChatPeriod)
+
 					_, err := p.TdlibClient.CloseChat(&client.CloseChatRequest{ChatId: chatId})
 					core.LogInputPlugin(p.LogFields, "close chat",
 						fmt.Sprintf("%v, %v, %v", chatName, chatId, err))
 				}
 			}
 		}
-		time.Sleep(1000 * time.Millisecond)
+
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -1709,12 +1727,14 @@ type Plugin struct {
 	OptionMatchSignature        []string
 	OptionMatchTTL              time.Duration
 	OptionMessage               string
+	OptionMessageDisablePreview bool
 	OptionMessageEdited         bool
 	OptionMessagePreview        bool
-	OptionMessageDisablePreview bool
+	OptionMessageMarkdown       bool
 	OptionMessageTemplate       *tmpl.Template
 	OptionMessageTypeFetch      []string
 	OptionMessageTypeProcess    []string
+	OptionMessageView           bool
 	OptionOpenChatEnable        bool
 	OptionOpenChatPeriod        time.Duration
 	OptionOutput                []string
@@ -2113,8 +2133,10 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["match_signature"] = -1
 		availableParams["match_ttl"] = -1
 		availableParams["message_edited"] = -1
+		availableParams["message_markdown"] = -1
 		availableParams["message_type_fetch"] = -1
 		availableParams["message_type_process"] = -1
+		availableParams["message_view"] = -1
 		availableParams["open_chat_enable"] = -1
 		availableParams["open_chat_period"] = -1
 		availableParams["pool_size"] = -1
@@ -2432,6 +2454,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMessageEdited((*pluginConfig.PluginParams)["message_edited"])
 		core.ShowPluginParam(plugin.LogFields, "message_edited", plugin.OptionMessageEdited)
 
+		// message_markdown.
+		setMessageMarkdown := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["message_markdown"] = 0
+				plugin.OptionMessageMarkdown = v
+			}
+		}
+		setMessageMarkdown(DEFAULT_MESSAGE_MARKDOWN)
+		setMessageMarkdown(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_markdown", template)))
+		setMessageMarkdown((*pluginConfig.PluginParams)["message_markdown"])
+		core.ShowPluginParam(plugin.LogFields, "message_markdown", plugin.OptionMessageMarkdown)
+
 		// message_type_fetch.
 		setMessageTypeFetch := func(p interface{}) {
 			if v, b := core.IsSliceOfString(p); b {
@@ -2497,6 +2531,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				}
 			}
 		}
+
+		// message_view.
+		setMessageView := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["message_view"] = 0
+				plugin.OptionMessageView = v
+			}
+		}
+		setMessageView(DEFAULT_MESSAGE_VIEW)
+		setMessageView(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_view", template)))
+		setMessageView((*pluginConfig.PluginParams)["message_view"])
+		core.ShowPluginParam(plugin.LogFields, "message_view", plugin.OptionMessageView)
 
 		// open_chat_enable.
 		setOpenChatEnable := func(p interface{}) {
