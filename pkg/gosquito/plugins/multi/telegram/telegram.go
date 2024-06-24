@@ -911,8 +911,14 @@ func inputDatum(p *Plugin) {
 						validMessage = handleMessageVoiceNote(p, &datum, messageContent)
 					}
 
+					core.LogInputPlugin(p.LogFields, "message",
+						fmt.Sprintf("received: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+
 					if validMessage {
 						p.InputDatumChannel <- &datum
+
+						core.LogInputPlugin(p.LogFields, "message",
+							fmt.Sprintf("valid: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 
 						if p.OptionMessageView {
 							_, _ = p.TdlibClient.ViewMessages(&client.ViewMessagesRequest{
