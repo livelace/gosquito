@@ -497,8 +497,10 @@ func getUser(p *Plugin, userId int64) core.Telegram {
 func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessAudio {
 		audio := messageContent.(*client.MessageAudio).Audio
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageAudio).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageAudio).Caption)
+		formattedText := translateText(p, messageContent.(*client.MessageAudio).Caption)
+
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
 			return false
@@ -516,10 +518,12 @@ func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.Mess
 
 func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessPhoto {
+		formattedText := translateText(p, messageContent.(*client.MessagePhoto).Caption)
 		photo := messageContent.(*client.MessagePhoto).Photo
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessagePhoto).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessagePhoto).Caption)
+
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
@@ -533,9 +537,11 @@ func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.Mess
 
 func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessDocument {
+		formattedText := translateText(p, messageContent.(*client.MessageDocument).Caption)
 		document := messageContent.(*client.MessageDocument).Document
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageDocument).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageDocument).Caption)
+
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
 			return false
@@ -553,7 +559,8 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 
 func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessText {
-		formattedText := messageContent.(*client.MessageText).Text
+		formattedText := translateText(p, messageContent.(*client.MessageText).Text)
+
 		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
 		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
@@ -574,9 +581,11 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 
 func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessVideo {
+		formattedText := translateText(p, messageContent.(*client.MessageVideo).Caption)
 		video := messageContent.(*client.MessageVideo).Video
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVideo).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageVideo).Caption)
+
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return false
@@ -611,8 +620,10 @@ func handleMessageVideoNote(p *Plugin, datum *core.Datum, messageContent client.
 func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.MessageContent) bool {
 	if p.OptionProcessAll || p.OptionProcessVoiceNote {
 		note := messageContent.(*client.MessageVoiceNote).VoiceNote
-		datum.TELEGRAM.MESSAGETEXT = messageContent.(*client.MessageVoiceNote).Caption.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, messageContent.(*client.MessageVoiceNote).Caption)
+		formattedText := translateText(p, messageContent.(*client.MessageVoiceNote).Caption)
+
+		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
 
 		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
@@ -1669,6 +1680,18 @@ func sqlUpdateUser(p *Plugin, user *client.User) (bool, bool, int, error) {
 	return isNew, isChanged, userVersion, nil
 }
 
+func translateText(p *Plugin, formattedText *client.FormattedText) *client.FormattedText {
+	if p.OptionMessageTranslateEnable {
+		t, err := p.TdlibClient.TranslateText(
+			&client.TranslateTextRequest{Text: formattedText, ToLanguageCode: p.OptionMessageTranslateCode})
+		if err == nil {
+			return t
+		}
+	}
+
+	return formattedText
+}
+
 func writeMetadata(p *Plugin, localFile string, data *core.Telegram) error {
 	metaFile := fmt.Sprintf("%s.meta.json", localFile)
 	data.MESSAGEMEDIA = append(data.MESSAGEMEDIA, localFile, metaFile)
@@ -1712,94 +1735,96 @@ type Plugin struct {
 	ChatByIdDataCache   map[int64]*core.Telegram
 	ChatBySourceIdCache map[string]int64
 
-	OptionAdsEnable             bool
-	OptionAdsPeriod             time.Duration
-	OptionApiHash               string
-	OptionApiId                 int32
-	OptionAppVersion            string
-	OptionChatDatabase          string
-	OptionChatSave              bool
-	OptionDeviceModel           string
-	OptionExpireAction          []string
-	OptionExpireActionDelay     int64
-	OptionExpireActionTimeout   int
-	OptionExpireInterval        int64
-	OptionExpireLast            int64
-	OptionFetchAll              bool
-	OptionFetchAudio            bool
-	OptionFetchDir              string
-	OptionFetchDocument         bool
-	OptionFetchMaxSize          int64
-	OptionFetchMetadata         bool
-	OptionFetchMime             []string
-	OptionFetchMimeMap          map[string]bool
-	OptionFetchMimeNot          bool
-	OptionFetchOrigName         bool
-	OptionFetchPhoto            bool
-	OptionFetchTimeout          int
-	OptionFetchVideo            bool
-	OptionFetchVideoNote        bool
-	OptionFetchVoiceNote        bool
-	OptionFileAudio             []string
-	OptionFileCaption           string
-	OptionFileCaptionTemplate   *tmpl.Template
-	OptionFileDocument          []string
-	OptionFilePhoto             []string
-	OptionFileVideo             []string
-	OptionForce                 bool
-	OptionForceCount            int
-	OptionIgnoreFileName        bool
-	OptionInput                 []string
-	OptionLogLevel              int
-	OptionMatchSignature        []string
-	OptionMatchTTL              time.Duration
-	OptionMessage               string
-	OptionMessageDisablePreview bool
-	OptionMessageEdited         bool
-	OptionMessagePreview        bool
-	OptionMessageMarkdown       bool
-	OptionMessageTemplate       *tmpl.Template
-	OptionMessageTypeFetch      []string
-	OptionMessageTypeProcess    []string
-	OptionMessageView           bool
-	OptionOpenChatEnable        bool
-	OptionOpenChatPeriod        time.Duration
-	OptionOutput                []string
-	OptionPoolSize              int
-	OptionProcessAll            bool
-	OptionProcessAudio          bool
-	OptionProcessDocument       bool
-	OptionProcessPhoto          bool
-	OptionProcessText           bool
-	OptionProcessVideo          bool
-	OptionProcessVideoNote      bool
-	OptionProcessVoiceNote      bool
-	OptionProxyEnable           bool
-	OptionProxyPassword         string
-	OptionProxyPort             int
-	OptionProxyServer           string
-	OptionProxyType             string
-	OptionProxyUsername         string
-	OptionSendAlbum             bool
-	OptionSendDelay             time.Duration
-	OptionSendTimeout           int
-	OptionSessionTTL            int
-	OptionSourceChat            []string
-	OptionStatusEnable          bool
-	OptionStatusPeriod          time.Duration
-	OptionStorageOptimize       bool
-	OptionStoragePeriod         time.Duration
-	OptionTimeFormat            string
-	OptionTimeFormatA           string
-	OptionTimeFormatB           string
-	OptionTimeFormatC           string
-	OptionTimeZone              *time.Location
-	OptionTimeZoneA             *time.Location
-	OptionTimeZoneB             *time.Location
-	OptionTimeZoneC             *time.Location
-	OptionTimeout               int
-	OptionUserDatabase          string
-	OptionUserSave              bool
+	OptionAdsEnable              bool
+	OptionAdsPeriod              time.Duration
+	OptionApiHash                string
+	OptionApiId                  int32
+	OptionAppVersion             string
+	OptionChatDatabase           string
+	OptionChatSave               bool
+	OptionDeviceModel            string
+	OptionExpireAction           []string
+	OptionExpireActionDelay      int64
+	OptionExpireActionTimeout    int
+	OptionExpireInterval         int64
+	OptionExpireLast             int64
+	OptionFetchAll               bool
+	OptionFetchAudio             bool
+	OptionFetchDir               string
+	OptionFetchDocument          bool
+	OptionFetchMaxSize           int64
+	OptionFetchMetadata          bool
+	OptionFetchMime              []string
+	OptionFetchMimeMap           map[string]bool
+	OptionFetchMimeNot           bool
+	OptionFetchOrigName          bool
+	OptionFetchPhoto             bool
+	OptionFetchTimeout           int
+	OptionFetchVideo             bool
+	OptionFetchVideoNote         bool
+	OptionFetchVoiceNote         bool
+	OptionFileAudio              []string
+	OptionFileCaption            string
+	OptionFileCaptionTemplate    *tmpl.Template
+	OptionFileDocument           []string
+	OptionFilePhoto              []string
+	OptionFileVideo              []string
+	OptionForce                  bool
+	OptionForceCount             int
+	OptionIgnoreFileName         bool
+	OptionInput                  []string
+	OptionLogLevel               int
+	OptionMatchSignature         []string
+	OptionMatchTTL               time.Duration
+	OptionMessage                string
+	OptionMessageDisablePreview  bool
+	OptionMessageEdited          bool
+	OptionMessagePreview         bool
+	OptionMessageMarkdown        bool
+	OptionMessageTemplate        *tmpl.Template
+	OptionMessageTypeFetch       []string
+	OptionMessageTranslateEnable bool
+	OptionMessageTranslateCode   string
+	OptionMessageTypeProcess     []string
+	OptionMessageView            bool
+	OptionOpenChatEnable         bool
+	OptionOpenChatPeriod         time.Duration
+	OptionOutput                 []string
+	OptionPoolSize               int
+	OptionProcessAll             bool
+	OptionProcessAudio           bool
+	OptionProcessDocument        bool
+	OptionProcessPhoto           bool
+	OptionProcessText            bool
+	OptionProcessVideo           bool
+	OptionProcessVideoNote       bool
+	OptionProcessVoiceNote       bool
+	OptionProxyEnable            bool
+	OptionProxyPassword          string
+	OptionProxyPort              int
+	OptionProxyServer            string
+	OptionProxyType              string
+	OptionProxyUsername          string
+	OptionSendAlbum              bool
+	OptionSendDelay              time.Duration
+	OptionSendTimeout            int
+	OptionSessionTTL             int
+	OptionSourceChat             []string
+	OptionStatusEnable           bool
+	OptionStatusPeriod           time.Duration
+	OptionStorageOptimize        bool
+	OptionStoragePeriod          time.Duration
+	OptionTimeFormat             string
+	OptionTimeFormatA            string
+	OptionTimeFormatB            string
+	OptionTimeFormatC            string
+	OptionTimeZone               *time.Location
+	OptionTimeZoneA              *time.Location
+	OptionTimeZoneB              *time.Location
+	OptionTimeZoneC              *time.Location
+	OptionTimeout                int
+	OptionUserDatabase           string
+	OptionUserSave               bool
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -2119,24 +2144,25 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"time_zone_b":   -1,
 		"time_zone_c":   -1,
 
-		"api_hash":         1,
-		"api_id":           1,
-		"app_version":      -1,
-		"chat_database":    -1,
-		"chat_save":        -1,
-		"device_model":     -1,
-		"log_level":        -1,
-		"proxy_enable":     -1,
-		"proxy_port":       -1,
-		"proxy_server":     -1,
-		"proxy_type":       -1,
-		"session_ttl":      -1,
-		"status_enable":    -1,
-		"status_period":    -1,
-		"storage_optimize": -1,
-		"storage_period":   -1,
-		"user_database":    -1,
-		"user_save":        -1,
+		"api_hash":          1,
+		"api_id":            1,
+		"app_version":       -1,
+		"chat_database":     -1,
+		"chat_save":         -1,
+		"device_model":      -1,
+		"log_level":         -1,
+		"message_translate": -1,
+		"proxy_enable":      -1,
+		"proxy_port":        -1,
+		"proxy_server":      -1,
+		"proxy_type":        -1,
+		"session_ttl":       -1,
+		"status_enable":     -1,
+		"status_period":     -1,
+		"storage_optimize":  -1,
+		"storage_period":    -1,
+		"user_database":     -1,
+		"user_save":         -1,
 	}
 
 	switch pluginConfig.PluginType {
@@ -2811,6 +2837,23 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setLogLevel(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.log_level", template)))
 	setLogLevel((*pluginConfig.PluginParams)["log_level"])
 	core.ShowPluginParam(plugin.LogFields, "log_level", plugin.OptionLogLevel)
+
+	// message_translate.
+	setMessageTranslate := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["message_translate"] = 0
+			plugin.OptionMessageTranslateCode = v
+		}
+	}
+	setMessageTranslate(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_translate", template)))
+	setMessageTranslate((*pluginConfig.PluginParams)["message_translate"])
+	core.ShowPluginParam(plugin.LogFields, "message_translate", plugin.OptionMessageTranslateCode)
+
+	if len(plugin.OptionMessageTranslateCode) > 0 {
+		plugin.OptionMessageTranslateEnable = true
+	} else {
+		plugin.OptionMessageTranslateEnable = false
+	}
 
 	// proxy_enable.
 	setProxyEnable := func(p interface{}) {

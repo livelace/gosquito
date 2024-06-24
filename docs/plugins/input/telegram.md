@@ -1,54 +1,57 @@
 ### Description:
 
-**telegram** input plugin is intended for data gathering from [Telegram](https://telegram.org/) chats.    
-  
-This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (not [Telegram Bot API](https://core.telegram.org/bots/api)). Public and private chats are supported. Supported message types: audio, document, text, photo, video, video and voice notes. Registration as a client happens during first start (type phone number and code). 
+**telegram** input plugin is intended for data gathering from [Telegram](https://telegram.org/) chats.
+
+This plugin uses [TDLib client API](https://core.telegram.org/tdlib) (
+not [Telegram Bot API](https://core.telegram.org/bots/api)). Public and private chats are supported. Supported message
+types: audio, document, text, photo, video, video and voice notes. Registration as a client happens during first start (
+type phone number and code).
 
 ### Data structure:
 
 ```go
 type Telegram struct {
-	CHATID               string
-	CHATSOURCE           string
-	CHATTYPE             string
-	CHATTITLE            string
-	CHATCLIENTDATA       string
-	CHATLASTINBOXID      string
-	CHATLASTOUTBOXID     string
-	CHATMEMBERONLINE     string
-	CHATMESSAGETTL       string
-	CHATPROTECTEDCONTENT string
-	CHATUNREADCOUNT      string
-	CHATTIMESTAMP        string
+CHATID               string
+CHATSOURCE           string
+CHATTYPE             string
+CHATTITLE            string
+CHATCLIENTDATA       string
+CHATLASTINBOXID      string
+CHATLASTOUTBOXID     string
+CHATMEMBERONLINE     string
+CHATMESSAGETTL       string
+CHATPROTECTEDCONTENT string
+CHATUNREADCOUNT      string
+CHATTIMESTAMP        string
 
-	MESSAGEID            string
-	MESSAGEMEDIA         []string
-	MESSAGESENDERID*     string
-	MESSAGETEXT*         string
-    MESSAGETEXTMARKDOWN  string
-	MESSAGETEXTURL       []string
-	MESSAGETYPE          string
-	MESSAGETIMESTAMP     string
-	MESSAGEURL*          string
+MESSAGEID            string
+MESSAGEMEDIA         []string
+MESSAGESENDERID*     string
+MESSAGETEXT*         string
+MESSAGETEXTMARKDOWN  string
+MESSAGETEXTURL       []string
+MESSAGETYPE          string
+MESSAGETIMESTAMP     string
+MESSAGEURL*          string
 
-	USERID               string
-	USERVERSION          string
-	USERNAME             string
-	USERTYPE             string
-	USERLANG             string
-	USERFIRSTNAME        string
-	USERLASTNAME         string
-	USERPHONE            string
-	USERSTATUS           string
-	USERACCESSIBLE       string
-	USERCONTACT          string
-	USERFAKE             string
-	USERMUTUALCONTACT    string
-	USERSCAM             string
-	USERSUPPORT          string
-	USERVERIFIED         string
-	USERRESTRICTION      string
-	USERTIMESTAMP        string
+USERID               string
+USERVERSION          string
+USERNAME             string
+USERTYPE             string
+USERLANG             string
+USERFIRSTNAME        string
+USERLASTNAME         string
+USERPHONE            string
+USERSTATUS           string
+USERACCESSIBLE       string
+USERCONTACT          string
+USERFAKE             string
+USERMUTUALCONTACT    string
+USERSCAM             string
+USERSUPPORT          string
+USERVERIFIED         string
+USERRESTRICTION      string
+USERTIMESTAMP        string
 }
 ```
 
@@ -56,24 +59,23 @@ type Telegram struct {
 
 ### Generic parameters:
 
-| Param                 | Required | Type   | Template |        Default        |
+| Param                 | Required |  Type  | Template |        Default        |
 |:----------------------|:--------:|:------:|:--------:|:---------------------:|
-| expire_action         | -        | array  | +        | []                    |
-| expire_action_delay   | -        | string | +        | "1d"                  |
-| expire_action_timeout | -        | int    | +        | 30                    |
-| expire_interval       | -        | string | +        | "7d"                  |
-| force                 | -        | bool   | +        | false                 |
-| force_count           | -        | int    | +        | 100                   |
-| time_format           | -        | string | +        | "15:04:05 02.01.2006" |
-| time_format_a         | -        | string | +        | "15:04:05 02.01.2006" |
-| time_format_b         | -        | string | +        | "15:04:05 02.01.2006" |
-| time_format_c         | -        | string | +        | "15:04:05 02.01.2006" |
-| time_zone             | -        | string | +        | "UTC"                 |
-| time_zone_a           | -        | string | +        | "UTC"                 |
-| time_zone_b           | -        | string | +        | "UTC"                 |
-| time_zone_c           | -        | string | +        | "UTC"                 |
-| timeout               | -        | int    | +        | 60                    |
-
+| expire_action         |    -     | array  |    +     |          []           |
+| expire_action_delay   |    -     | string |    +     |         "1d"          |
+| expire_action_timeout |    -     |  int   |    +     |          30           |
+| expire_interval       |    -     | string |    +     |         "7d"          |
+| force                 |    -     |  bool  |    +     |         false         |
+| force_count           |    -     |  int   |    +     |          100          |
+| time_format           |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_format_a         |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_format_b         |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_format_c         |    -     | string |    +     | "15:04:05 02.01.2006" |
+| time_zone             |    -     | string |    +     |         "UTC"         |
+| time_zone_a           |    -     | string |    +     |         "UTC"         |
+| time_zone_b           |    -     | string |    +     |         "UTC"         |
+| time_zone_c           |    -     | string |    +     |         "UTC"         |
+| timeout               |    -     |  int   |    +     |          60           |
 
 ### Plugin parameters:
 
@@ -103,6 +105,7 @@ type Telegram struct {
 | message_view         |    -     |  bool  |  -   |    +     |           true            |                      false                      | Mark received messages as read.                                                                            |
 | message_type_fetch   |    -     | array  |  -   |    +     |           "[]"            |              ["audio", "document"]              | Fetch files only for specific message types (audio, document, photo, video, video_note, voice_note).       |
 | message_type_process |    -     | array  |  -   |    +     |           "[]"            |              ["audio", "document"]              | Process only specific message types (audio, document, photo, text, video, video_note, voice_note).         |
+| message_translate    |    -     | string |  -   |    +     |            ""             |                      "en"                       | Language code to translate message text.                                                                   |
 | open_chat_enable     |    -     |  bool  |  -   |    +     |           true            |                      false                      | Enable/disable open/close chats for generating move updates events.                                        |
 | open_chat_period     |    -     | string |  -   |    +     |           "10s"           |                      "1h"                       | Interval for opening/closing chats.                                                                        |
 | pool_size            |    -     |  int   |  -   |    +     |          100000           |                      10000                      | Spool arriving updates.                                                                                    |
@@ -120,7 +123,6 @@ type Telegram struct {
 | user_database        |    -     | string |  -   |    +     | <PLUGIN_DIR>/users.sqlite |               "/path/to/users.db"               | Path to internal users database.                                                                           |
 | user_save            |    -     |  bool  |  -   |    +     |           false           |                      true                       | Enable/disable passive user logging.                                                                       |
 
-
 ### Flow sample:
 
 ```yaml
@@ -132,7 +134,7 @@ flow:
     params:
       cred: "creds.telegram.default"
       template: "templates.telegram.default"
-      input: ["breakingmash", "interfax_ru", "izvestia"]
+      input: [ "breakingmash", "interfax_ru", "izvestia" ]
       fetch_timeout: "3h"
       file_path: "/tmp"
       status_period: "5m"
@@ -144,47 +146,46 @@ flow:
       plugin: "regexpmatch"
       params:
         include: true
-        input:  ["telegram.username"]
-        regexp: ["sponsoredMessage"]
+        input: [ "telegram.username" ]
+        regexp: [ "sponsoredMessage" ]
         match_not: true
 
     - id: 1
       alias: "extract filename"
       plugin: "regexpfind"
       params:
-        require: [0]
-        input:  ["telegram.messagemedia"]
-        output: ["data.array0"]
-        regexp: ["^(.+)\\/([^\\/]+)$"]
-        group:  [[2]]
+        require: [ 0 ]
+        input: [ "telegram.messagemedia" ]
+        output: [ "data.array0" ]
+        regexp: [ "^(.+)\\/([^\\/]+)$" ]
+        group: [ [ 2 ] ]
 
     - id: 2
       plugin: "echo"
       alias: "show text"
       params:
-        require: [0]
+        require: [ 0 ]
         input: [
-          "telegram.chattitle", 
-          "telegram.chattype", 
-          "telegram.messageid", 
-          "telegram.messagemedia", 
-          "telegram.messagesenderid", 
+          "telegram.chattitle",
+          "telegram.chattype",
+          "telegram.messageid",
+          "telegram.messagemedia",
+          "telegram.messagesenderid",
           "telegram.messagetext",
           "telegram.messagetextmarkdown",
-          "telegram.messagetexturl", 
-          "telegram.messagetype", 
-          "telegram.messageurl", 
-          "telegram.userid", 
-          "telegram.username", 
-          "telegram.usertype", 
-          "telegram.userfirstname", 
-          "telegram.userlastname", 
-          "telegram.userphone", 
+          "telegram.messagetexturl",
+          "telegram.messagetype",
+          "telegram.messageurl",
+          "telegram.userid",
+          "telegram.username",
+          "telegram.usertype",
+          "telegram.userfirstname",
+          "telegram.userlastname",
+          "telegram.userphone",
           "data.array0",
-          "---", 
+          "---",
         ]
 ```
-
 
 ### Config sample:
 
