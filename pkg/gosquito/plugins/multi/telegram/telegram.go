@@ -828,7 +828,9 @@ func inputDatum(p *Plugin) {
 				// Process only target chats.
 				if chatData, ok := p.ChatByIdDataCache[messageChat.Id]; ok {
 					core.LogInputPlugin(p.LogFields, "message",
-						fmt.Sprintf("received: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+						fmt.Sprintf("received: %v, %v, (%v, %v, %v)",
+							messageId, messageType,
+							messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 
 					var u, _ = uuid.NewRandom()
 
@@ -914,17 +916,21 @@ func inputDatum(p *Plugin) {
 						validMessage = handleMessageVoiceNote(p, &datum, messageContent)
 					default:
 						core.LogInputPlugin(p.LogFields, "message",
-							fmt.Sprintf("not supported: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+							fmt.Sprintf("not supported: %v, %v, (%v, %v, %v)",
+								messageId, messageType,
+								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 					}
 
 					if validMessage {
 						p.InputDatumChannel <- &datum
 
 						core.LogInputPlugin(p.LogFields, "message",
-							fmt.Sprintf("valid: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+							fmt.Sprintf("valid: %v, %v, (%v, %v, %v)",
+								messageId, messageType,
+								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 					}
 
-					// mark all seen messages for selected chats:
+					// mark all seen messages for filtered chats:
 					if p.OptionMessageView {
 						_, _ = p.TdlibClient.ViewMessages(&client.ViewMessagesRequest{
 							ChatId:     messageChat.Id,
@@ -934,12 +940,15 @@ func inputDatum(p *Plugin) {
 						})
 
 						core.LogInputPlugin(p.LogFields, "message",
-							fmt.Sprintf("view: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+							fmt.Sprintf("view: %v, %v, (%v, %v, %v)",
+								messageId, messageType,
+								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 					}
 
 				} else {
 					core.LogInputPlugin(p.LogFields, "chat",
-						fmt.Sprintf("filtered: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+						fmt.Sprintf("filtered: %v, %v, %v",
+							messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 				}
 			}
 		} else {
