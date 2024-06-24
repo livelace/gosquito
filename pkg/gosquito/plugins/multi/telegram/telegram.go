@@ -827,6 +827,9 @@ func inputDatum(p *Plugin) {
 
 				// Process only target chats.
 				if chatData, ok := p.ChatByIdDataCache[messageChat.Id]; ok {
+					core.LogInputPlugin(p.LogFields, "message",
+						fmt.Sprintf("received: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+
 					var u, _ = uuid.NewRandom()
 
 					datum = core.Datum{
@@ -909,25 +912,29 @@ func inputDatum(p *Plugin) {
 
 					case *client.MessageVoiceNote:
 						validMessage = handleMessageVoiceNote(p, &datum, messageContent)
+					default:
+						core.LogInputPlugin(p.LogFields, "message",
+							fmt.Sprintf("not supported: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
 					}
-
-					core.LogInputPlugin(p.LogFields, "message",
-						fmt.Sprintf("received: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 
 					if validMessage {
 						p.InputDatumChannel <- &datum
 
 						core.LogInputPlugin(p.LogFields, "message",
-							fmt.Sprintf("valid: %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+							fmt.Sprintf("valid: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
+					}
 
-						if p.OptionMessageView {
-							_, _ = p.TdlibClient.ViewMessages(&client.ViewMessagesRequest{
-								ChatId:     messageChat.Id,
-								ForceRead:  true,
-								MessageIds: []int64{messageId},
-								Source:     &client.MessageSourceNotification{},
-							})
-						}
+					// mark all seen messages for selected chats:
+					if p.OptionMessageView {
+						_, _ = p.TdlibClient.ViewMessages(&client.ViewMessagesRequest{
+							ChatId:     messageChat.Id,
+							ForceRead:  true,
+							MessageIds: []int64{messageId},
+							Source:     &client.MessageSourceNotification{},
+						})
+
+						core.LogInputPlugin(p.LogFields, "message",
+							fmt.Sprintf("view: %v, %v, %v, %v", messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title, messageType))
 					}
 
 				} else {
