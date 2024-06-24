@@ -2559,8 +2559,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		// open_chat_period.
 		setOpenChatPeriod := func(p interface{}) {
 			if v, b := core.IsInterval(p); b {
-				availableParams["status_period"] = 0
-				plugin.OptionStatusPeriod = time.Duration(v) * time.Millisecond
+				availableParams["open_chat_period"] = 0
+				plugin.OptionOpenChatPeriod = time.Duration(v) * time.Millisecond
 			}
 		}
 		setOpenChatPeriod(DEFAULT_OPEN_CHAT_PERIOD)
