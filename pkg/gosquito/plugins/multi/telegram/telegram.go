@@ -928,6 +928,11 @@ func inputDatum(p *Plugin) {
 							fmt.Sprintf("valid: %v, %v, (%v, %v, %v)",
 								messageId, messageType,
 								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+					} else {
+						core.LogInputPlugin(p.LogFields, "message",
+							fmt.Sprintf("not valid: %v, %v, (%v, %v, %v)",
+								messageId, messageType,
+								messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
 					}
 
 					// mark all seen messages for filtered chats:
