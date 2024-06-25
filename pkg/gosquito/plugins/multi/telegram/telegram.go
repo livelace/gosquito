@@ -376,6 +376,19 @@ func getDocumentMessage(p *Plugin, caption *client.FormattedText, file string) *
 	}
 }
 
+func getMarkdown(p *Plugin, formattedText *client.FormattedText) string {
+	if p.OptionMessageMarkdown {
+		f, err := client.GetMarkdownText(&client.GetMarkdownTextRequest{Text: formattedText})
+		if err == nil {
+			return f.Text
+		} else {
+			return err.Error()
+		}
+	}
+
+	return ""
+}
+
 func getPhotoMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessagePhoto {
 	return &client.InputMessagePhoto{
 		Caption: caption,
@@ -500,7 +513,7 @@ func handleMessageAudio(p *Plugin, datum *core.Datum, messageContent client.Mess
 		formattedText := translateText(p, messageContent.(*client.MessageAudio).Caption)
 
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		if !checkMimeType(p, datum, audio.FileName, audio.MimeType) {
 			return false
@@ -523,7 +536,7 @@ func handleMessagePhoto(p *Plugin, datum *core.Datum, messageContent client.Mess
 		photoFile := photo.Sizes[len(photo.Sizes)-1]
 
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		if (p.OptionFetchAll || p.OptionFetchPhoto) && checkFileSize(p, datum, "photo", photoFile.Photo.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, photoFile.Photo.Remote.Id, "")
@@ -541,7 +554,7 @@ func handleMessageDocument(p *Plugin, datum *core.Datum, messageContent client.M
 		document := messageContent.(*client.MessageDocument).Document
 
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		if !checkMimeType(p, datum, document.FileName, document.MimeType) {
 			return false
@@ -563,7 +576,7 @@ func handleMessageText(p *Plugin, datum *core.Datum, messageContent client.Messa
 
 		datum.TELEGRAM.MESSAGEMIME = "text/plain"
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		for _, entity := range formattedText.Entities {
 			switch entity.Type.(type) {
@@ -585,7 +598,7 @@ func handleMessageVideo(p *Plugin, datum *core.Datum, messageContent client.Mess
 		video := messageContent.(*client.MessageVideo).Video
 
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		if !checkMimeType(p, datum, video.FileName, video.MimeType) {
 			return false
@@ -623,7 +636,7 @@ func handleMessageVoiceNote(p *Plugin, datum *core.Datum, messageContent client.
 		formattedText := translateText(p, messageContent.(*client.MessageVoiceNote).Caption)
 
 		datum.TELEGRAM.MESSAGETEXT = formattedText.Text
-		datum.TELEGRAM.MESSAGETEXTMARKDOWN = markdownFormat(p, formattedText)
+		datum.TELEGRAM.MESSAGETEXTMARKDOWN = getMarkdown(p, formattedText)
 
 		if (p.OptionFetchAll || p.OptionFetchVoiceNote) && checkFileSize(p, datum, "voice_note", note.Voice.Size) {
 			return downloadFileDetectMimeWriteMeta(p, datum, note.Voice.Remote.Id, "")
@@ -3120,14 +3133,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Telegram.
 
 	plugin.TdlibParams = &client.SetTdlibParametersRequest{
-		ApiHash:            plugin.OptionApiHash,
-		ApiId:              plugin.OptionApiId,
-		ApplicationVersion: plugin.OptionAppVersion,
-		DatabaseDirectory:  filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
-		DeviceModel:        plugin.OptionDeviceModel,
-		//EnableStorageOptimizer: plugin.OptionStorageOptimize,
-		FilesDirectory: plugin.OptionFetchDir,
-		//IgnoreFileNames:        plugin.OptionIgnoreFileName,
+		ApiHash:             plugin.OptionApiHash,
+		ApiId:               plugin.OptionApiId,
+		ApplicationVersion:  plugin.OptionAppVersion,
+		DatabaseDirectory:   filepath.Join(plugin.PluginDataDir, DEFAULT_DATABASE_DIR),
+		DeviceModel:         plugin.OptionDeviceModel,
+		FilesDirectory:      plugin.OptionFetchDir,
 		SystemLanguageCode:  "en",
 		SystemVersion:       plugin.Flow.FlowName,
 		UseChatInfoDatabase: true,
@@ -3145,10 +3156,35 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		plugin.TdlibClient = tdlibClient
 	}
 
+	// Set client options.
+	_, err = tdlibClient.SetOption(
+		&client.SetOptionRequest{
+			Name:  "ignore_file_names",
+			Value: &client.OptionValueBoolean{Value: plugin.OptionIgnoreFileName},
+		})
+
+	if err != nil {
+		return &Plugin{}, err
+	}
+
+	_, err = tdlibClient.SetOption(
+		&client.SetOptionRequest{
+			Name:  "use_storage_optimizer",
+			Value: &client.OptionValueBoolean{Value: plugin.OptionStorageOptimize},
+		})
+
+	if err != nil {
+		return &Plugin{}, err
+	}
+
 	// Set session TTL.
-	plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{
+	_, err = plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{
 		InactiveSessionTtlDays: int32(plugin.OptionSessionTTL),
 	})
+
+	if err != nil {
+		return &Plugin{}, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Init chat/user databases.
