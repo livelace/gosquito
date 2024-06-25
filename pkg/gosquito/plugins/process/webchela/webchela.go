@@ -19,36 +19,39 @@ import (
 const (
 	PLUGIN_NAME = "webchela"
 
-	DEFAULT_BATCH_RETRY              = 0 // no retries.
-	DEFAULT_BATCH_SIZE               = 10
-	DEFAULT_BROWSER_GEOMETRY         = "1920x1080"
-	DEFAULT_BROWSER_INSTANCE         = 1
-	DEFAULT_BROWSER_INSTANCE_TAB     = 10
-	DEFAULT_BROWSER_PROXY            = ""
-	DEFAULT_BROWSER_TYPE             = "chrome"
-	DEFAULT_BUFFER_LENGHT            = 1000
-	DEFAULT_CHUNK_SIZE               = "3M"
-	DEFAULT_COOKIE_INPUT_FILE        = false
-	DEFAULT_COOKIE_INPUT_FILE_MODE   = "text"
-	DEFAULT_CPU_LOAD                 = 30
-	DEFAULT_DEBUG_PRE_CLOSE_DELAY    = 0
-	DEFAULT_DEBUG_PRE_OPEN_DELAY     = 0
-	DEFAULT_DEBUG_PRE_PROCESS_DELAY  = 0
-	DEFAULT_DEBUG_PRE_WAIT_DELAY     = 0
-	DEFAULT_MEM_FREE                 = "1G"
-	DEFAULT_PAGE_BODY_FILENAME       = "body.html"
-	DEFAULT_PAGE_SIZE                = "10M"
-	DEFAULT_PAGE_TIMEOUT             = 60
-	DEFAULT_PAGE_TITLE_FILENAME      = "title.txt"
-	DEFAULT_PAGE_URL_FILENAME        = "url.txt"
-	DEFAULT_RETRY_CODES_TRIES        = 1
-	DEFAULT_SCREENSHOT_PREFIX_REGEXP = "^class:|^css:|^id:|^name:|^tag:|^xpath:"
-	DEFAULT_SCREENSHOT_TIMEOUT       = 30
-	DEFAULT_SCRIPT_TIMEOUT           = 30
-	DEFAULT_SERVER_CONNECT_TIMEOUT   = 10
-	DEFAULT_SERVER_REQUEST_TIMEOUT   = 10
-	DEFAULT_TAB_OPEN_RANDOMIZE       = "0:0"
-	DEFAULT_TIMEOUT                  = 600
+	DEFAULT_BATCH_RETRY                = 0 // no retries.
+	DEFAULT_BATCH_SIZE                 = 10
+	DEFAULT_BROWSER_GEOMETRY           = "1920x1080"
+	DEFAULT_BROWSER_INSTANCE           = 1
+	DEFAULT_BROWSER_INSTANCE_TAB       = 10
+	DEFAULT_BROWSER_PROXY              = ""
+	DEFAULT_BROWSER_TYPE               = "chrome"
+	DEFAULT_BUFFER_LENGHT              = 1000
+	DEFAULT_CHUNK_SIZE                 = "3M"
+	DEFAULT_COOKIE_INPUT_FILE          = false
+	DEFAULT_COOKIE_INPUT_FILE_MODE     = "text"
+	DEFAULT_CPU_LOAD                   = 30
+	DEFAULT_DEBUG_PRE_CLOSE_DELAY      = 0
+	DEFAULT_DEBUG_PRE_COOKIE_DELAY     = 0
+	DEFAULT_DEBUG_PRE_OPEN_DELAY       = 0
+	DEFAULT_DEBUG_PRE_PROCESS_DELAY    = 0
+	DEFAULT_DEBUG_PRE_SCREENSHOT_DELAY = 0
+	DEFAULT_DEBUG_PRE_SCRIPT_DELAY     = 0
+	DEFAULT_DEBUG_PRE_WAIT_DELAY       = 0
+	DEFAULT_MEM_FREE                   = "1G"
+	DEFAULT_PAGE_BODY_FILENAME         = "body.html"
+	DEFAULT_PAGE_SIZE                  = "10M"
+	DEFAULT_PAGE_TIMEOUT               = 60
+	DEFAULT_PAGE_TITLE_FILENAME        = "title.txt"
+	DEFAULT_PAGE_URL_FILENAME          = "url.txt"
+	DEFAULT_RETRY_CODES_TRIES          = 1
+	DEFAULT_SCREENSHOT_PREFIX_REGEXP   = "^class:|^css:|^id:|^name:|^tag:|^xpath:"
+	DEFAULT_SCREENSHOT_TIMEOUT         = 30
+	DEFAULT_SCRIPT_TIMEOUT             = 30
+	DEFAULT_SERVER_CONNECT_TIMEOUT     = 10
+	DEFAULT_SERVER_REQUEST_TIMEOUT     = 10
+	DEFAULT_TAB_OPEN_RANDOMIZE         = "0:0"
+	DEFAULT_TIMEOUT                    = 600
 )
 
 var (
@@ -178,10 +181,13 @@ func processBatch(p *Plugin, batchTask *BatchTask) {
 	}
 
 	webchelaTaskDebug := pb.Task_Debug{
-		PreCloseDelay:   int32(p.OptionDebugPreCloseDelay),
-		PreOpenDelay:    int32(p.OptionDebugPreOpenDelay),
-		PreProcessDelay: int32(p.OptionDebugPreProcessDelay),
-		PreWaitDelay:    int32(p.OptionDebugPreWaitDelay),
+		PreCloseDelay:      int32(p.OptionDebugPreCloseDelay),
+		PreCookieDelay:     int32(p.OptionDebugPreCookieDelay),
+		PreOpenDelay:       int32(p.OptionDebugPreOpenDelay),
+		PreProcessDelay:    int32(p.OptionDebugPreProcessDelay),
+		PreScreenshotDelay: int32(p.OptionDebugPreScreenshotDelay),
+		PreScriptDelay:     int32(p.OptionDebugPreScriptDelay),
+		PreWaitDelay:       int32(p.OptionDebugPreWaitDelay),
 	}
 
 	// Set client id for identification.
@@ -404,53 +410,56 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
-	OptionBatchChannel         chan *BatchTask
-	OptionBatchRetry           int
-	OptionBatchSize            int
-	OptionBrowserArgument      []string
-	OptionBrowserExtension     []string
-	OptionBrowserGeometry      string
-	OptionBrowserInstance      int
-	OptionBrowserInstanceTab   int
-	OptionBrowserProxy         string
-	OptionBrowserType          string
-	OptionChunkSize            int64
-	OptionClientId             string
-	OptionCookieInput          []string
-	OptionCookieInputFile      bool
-	OptionCookieInputFileMode  string
-	OptionCookieInputSize      int
-	OptionCpuLoad              int32
-	OptionDebugPreCloseDelay   int
-	OptionDebugPreOpenDelay    int
-	OptionDebugPreProcessDelay int
-	OptionDebugPreWaitDelay    int
-	OptionInclude              bool
-	OptionInput                []string
-	OptionInputSize            int
-	OptionMemFree              int64
-	OptionOutput               []string
-	OptionOutputSize           int
-	OptionPageSize             int64
-	OptionPageTimeout          int32
-	OptionRequestTimeout       int32
-	OptionRequire              []int
-	OptionRetryCodes           []int32
-	OptionRetryCodesTries      int32
-	OptionScreenshotInput      [][]string
-	OptionScreenshotInputSize  int
-	OptionScreenshotOutput     []string
-	OptionScreenshotOutputSize int
-	OptionScreenshotTimeout    int32
-	OptionScriptInput          [][]string
-	OptionScriptInputSize      int
-	OptionScriptOutput         []string
-	OptionScriptOutputSize     int
-	OptionScriptTimeout        int32
-	OptionServer               []string
-	OptionServerTimeout        int
-	OptionTabOpenRandomize     string
-	OptionTimeout              int32
+	OptionBatchChannel            chan *BatchTask
+	OptionBatchRetry              int
+	OptionBatchSize               int
+	OptionBrowserArgument         []string
+	OptionBrowserExtension        []string
+	OptionBrowserGeometry         string
+	OptionBrowserInstance         int
+	OptionBrowserInstanceTab      int
+	OptionBrowserProxy            string
+	OptionBrowserType             string
+	OptionChunkSize               int64
+	OptionClientId                string
+	OptionCookieInput             []string
+	OptionCookieInputFile         bool
+	OptionCookieInputFileMode     string
+	OptionCookieInputSize         int
+	OptionCpuLoad                 int32
+	OptionDebugPreCloseDelay      int
+	OptionDebugPreCookieDelay     int
+	OptionDebugPreOpenDelay       int
+	OptionDebugPreProcessDelay    int
+	OptionDebugPreScreenshotDelay int
+	OptionDebugPreScriptDelay     int
+	OptionDebugPreWaitDelay       int
+	OptionInclude                 bool
+	OptionInput                   []string
+	OptionInputSize               int
+	OptionMemFree                 int64
+	OptionOutput                  []string
+	OptionOutputSize              int
+	OptionPageSize                int64
+	OptionPageTimeout             int32
+	OptionRequestTimeout          int32
+	OptionRequire                 []int
+	OptionRetryCodes              []int32
+	OptionRetryCodesTries         int32
+	OptionScreenshotInput         [][]string
+	OptionScreenshotInputSize     int
+	OptionScreenshotOutput        []string
+	OptionScreenshotOutputSize    int
+	OptionScreenshotTimeout       int32
+	OptionScriptInput             [][]string
+	OptionScriptInputSize         int
+	OptionScriptOutput            []string
+	OptionScriptOutputSize        int
+	OptionScriptTimeout           int32
+	OptionServer                  []string
+	OptionServerTimeout           int
+	OptionTabOpenRandomize        string
+	OptionTimeout                 int32
 }
 
 func (p *Plugin) FlowLog(message interface{}) {
@@ -805,43 +814,46 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"require":  -1,
 		"template": -1,
 
-		"batch_retry":             -1,
-		"batch_size":              -1,
-		"browser_argument":        -1,
-		"browser_extension":       -1,
-		"browser_geometry":        -1,
-		"browser_instance":        -1,
-		"browser_instance_tab":    -1,
-		"browser_page_size":       -1,
-		"browser_page_timeout":    -1,
-		"browser_proxy":           -1,
-		"browser_type":            -1,
-		"chunk_size":              -1,
-		"client_id":               -1,
-		"cookie_input":            -1,
-		"cookie_input_file":       -1,
-		"cookie_input_file_mode":  -1,
-		"cpu_load":                -1,
-		"debug_pre_close_delay":   -1,
-		"debug_pre_open_delay":    -1,
-		"debug_pre_process_delay": -1,
-		"debug_pre_wait_delay":    -1,
-		"input":                   1,
-		"mem_free":                -1,
-		"output":                  -1,
-		"retry_codes":             -1,
-		"retry_codes_tries":       -1,
-		"request_timeout":         -1,
-		"screenshot_input":        -1,
-		"screenshot_output":       -1,
-		"screenshot_timeout":      -1,
-		"script_input":            -1,
-		"script_output":           -1,
-		"script_timeout":          -1,
-		"server":                  1,
-		"server_timeout":          -1,
-		"tab_open_randomize":      -1,
-		"timeout":                 -1,
+		"batch_retry":                -1,
+		"batch_size":                 -1,
+		"browser_argument":           -1,
+		"browser_extension":          -1,
+		"browser_geometry":           -1,
+		"browser_instance":           -1,
+		"browser_instance_tab":       -1,
+		"browser_page_size":          -1,
+		"browser_page_timeout":       -1,
+		"browser_proxy":              -1,
+		"browser_type":               -1,
+		"chunk_size":                 -1,
+		"client_id":                  -1,
+		"cookie_input":               -1,
+		"cookie_input_file":          -1,
+		"cookie_input_file_mode":     -1,
+		"cpu_load":                   -1,
+		"debug_pre_close_delay":      -1,
+		"debug_pre_cookie_delay":     -1,
+		"debug_pre_open_delay":       -1,
+		"debug_pre_process_delay":    -1,
+		"debug_pre_screenshot_delay": -1,
+		"debug_pre_script_delay":     -1,
+		"debug_pre_wait_delay":       -1,
+		"input":                      1,
+		"mem_free":                   -1,
+		"output":                     -1,
+		"retry_codes":                -1,
+		"retry_codes_tries":          -1,
+		"request_timeout":            -1,
+		"screenshot_input":           -1,
+		"screenshot_output":          -1,
+		"screenshot_timeout":         -1,
+		"script_input":               -1,
+		"script_output":              -1,
+		"script_timeout":             -1,
+		"server":                     1,
+		"server_timeout":             -1,
+		"tab_open_randomize":         -1,
+		"timeout":                    -1,
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1040,6 +1052,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setDebugPreCloseDelay((*pluginConfig.PluginParams)["debug_pre_close_delay"])
 	core.ShowPluginParam(plugin.LogFields, "debug_pre_close_delay", plugin.OptionDebugPreCloseDelay)
 
+	// debug_pre_cookie_delay.
+	setDebugPreCookieDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_cookie_delay"] = 0
+			plugin.OptionDebugPreCookieDelay = v
+		}
+	}
+	setDebugPreCookieDelay(DEFAULT_DEBUG_PRE_COOKIE_DELAY)
+	setDebugPreCookieDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_cookie_delay", template)))
+	setDebugPreCookieDelay((*pluginConfig.PluginParams)["debug_pre_cookie_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_cookie_delay", plugin.OptionDebugPreCookieDelay)
+
 	// debug_pre_open_delay.
 	setDebugPreOpenDelay := func(p interface{}) {
 		if v, b := core.IsInt(p); b {
@@ -1063,6 +1087,30 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setDebugPreProcessDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_wait_delay", template)))
 	setDebugPreProcessDelay((*pluginConfig.PluginParams)["debug_pre_wait_delay"])
 	core.ShowPluginParam(plugin.LogFields, "debug_pre_wait_delay", plugin.OptionDebugPreWaitDelay)
+
+	// debug_pre_screenshot_delay.
+	setDebugPreScreenshotDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_screenshot_delay"] = 0
+			plugin.OptionDebugPreScreenshotDelay = v
+		}
+	}
+	setDebugPreScreenshotDelay(DEFAULT_DEBUG_PRE_SCREENSHOT_DELAY)
+	setDebugPreScreenshotDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_screenshot_delay", template)))
+	setDebugPreScreenshotDelay((*pluginConfig.PluginParams)["debug_pre_screenshot_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_screenshot_delay", plugin.OptionDebugPreScreenshotDelay)
+
+	// debug_pre_script_delay.
+	setDebugPreScriptDelay := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["debug_pre_script_delay"] = 0
+			plugin.OptionDebugPreScriptDelay = v
+		}
+	}
+	setDebugPreScriptDelay(DEFAULT_DEBUG_PRE_SCRIPT_DELAY)
+	setDebugPreScriptDelay(pluginConfig.AppConfig.GetInt(fmt.Sprintf("%s.debug_pre_script_delay", template)))
+	setDebugPreScriptDelay((*pluginConfig.PluginParams)["debug_pre_script_delay"])
+	core.ShowPluginParam(plugin.LogFields, "debug_pre_script_delay", plugin.OptionDebugPreScriptDelay)
 
 	// debug_pre_wait_delay.
 	setDebugPreWaitDelay := func(p interface{}) {

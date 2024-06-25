@@ -76,9 +76,12 @@ message Task {
 
   message Debug {
     int32 pre_close_delay = 1;
-    int32 pre_open_delay = 2;
-    int32 pre_process_delay = 3;
-    int32 pre_wait_delay = 4;
+    int32 pre_cookie_delay = 2;
+    int32 pre_open_delay = 3;
+    int32 pre_process_delay = 4;
+    int32 pre_screenshot_delay = 5;
+    int32 pre_script_delay = 6;
+    int32 pre_wait_delay = 7;
   }
 }
 
