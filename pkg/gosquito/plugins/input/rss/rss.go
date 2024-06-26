@@ -89,7 +89,7 @@ func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 		}
 
 		if temp == nil {
-			c <- ERROR_NO_DATA
+			c <- fmt.Errorf("%s, %d", ERROR_NO_DATA, res.StatusCode)
 			return
 		}
 
