@@ -254,6 +254,7 @@ func RunApp() {
 			}
 		} else {
 			if flowRunning == 0 {
+				log.Info("quit!")
 				os.Exit(0)
 			}
 			log.Warnf("waiting for running flows: %d\n", flowRunning)
