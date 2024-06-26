@@ -48,7 +48,7 @@ func fetchFeed(p *Plugin, url string) (*gofeed.Feed, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept-Charset", "utf-8")
+	//req.Header.Set("Accept-Charset", "utf-8")
 	req.Header.Set("User-Agent", p.OptionUserAgent)
 
 	// background.
