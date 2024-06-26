@@ -1,8 +1,6 @@
 module github.com/livelace/gosquito
 
-go 1.21
-
-toolchain go1.22.3
+go 1.22.4
 
 require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
@@ -19,7 +17,7 @@ require (
 	github.com/hbollon/go-edlib v1.6.0
 	github.com/itchyny/gojq v0.12.5
 	github.com/linkedin/goavro/v2 v2.9.8
-	github.com/zelenin/go-tdlib v0.7.2
+	github.com/livelace/go-tdlib v0.0.0-20240626082130-47c215de5abd
 	github.com/livelace/logrus v1.6.1
 	github.com/mattermost/mattermost/server/public v0.1.5-0.20240614164130-958a40353713
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
@@ -39,6 +37,7 @@ require (
 
 require (
 	cloud.google.com/go v0.112.0 // indirect
+	cloud.google.com/go/compute v1.24.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.6 // indirect
 	cloud.google.com/go/storage v1.36.0 // indirect
@@ -129,6 +128,7 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -153,8 +153,8 @@ require (
 	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/api v0.160.0 // indirect
+	google.golang.org/api v0.162.0 // indirect
+	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240205150955-31a09d347014 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect

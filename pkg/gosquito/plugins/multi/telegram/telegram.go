@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/livelace/go-tdlib/client"
 	"github.com/livelace/gosquito/pkg/gosquito/core"
 	log "github.com/livelace/logrus"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/zelenin/go-tdlib/client"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -28,7 +28,7 @@ const (
 	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_ALBUM_SIZE       = 10
-	DEFAULT_CHANNEL_SIZE     = 1000
+	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHAT_DB          = "chats.sqlite"
 	DEFAULT_CHAT_SAVE        = false
 	DEFAULT_DATABASE_DIR     = "database"
@@ -1223,7 +1223,7 @@ func outputMessage(p *Plugin) {
 }
 
 func saveChat(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -1249,7 +1249,7 @@ func saveChat(p *Plugin) {
 }
 
 func saveUser(p *Plugin) {
-	listener := p.TdlibClient.GetListener()
+	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -3259,11 +3259,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.PluginType == "input" {
 		plugin.InputFileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
-		plugin.InputFileListener = plugin.TdlibClient.GetListener()
+		plugin.InputFileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 		go inputFile(&plugin)
 
 		plugin.InputDatumChannel = make(chan *core.Datum, DEFAULT_CHANNEL_SIZE)
-		plugin.InputDatumListener = plugin.TdlibClient.GetListener()
+		plugin.InputDatumListener = plugin.TdlibClient.GetListener(plugin.OptionPoolSize)
 		go inputDatum(&plugin)
 
 		if plugin.OptionAdsEnable {
@@ -3280,7 +3280,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.PluginType == "output" {
 		plugin.OutputMessageChannel = make(chan *core.TelegramSendingStatus, DEFAULT_CHANNEL_SIZE)
-		plugin.OutputMessageListener = plugin.TdlibClient.GetListener()
+		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
 		go outputMessage(&plugin)
 	}
 

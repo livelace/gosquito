@@ -7,6 +7,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -1195,7 +1196,7 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 	txn := db.NewTransaction(true)
 	for signature, timestamp := range *data {
 		e := badger.NewEntry([]byte(signature), []byte(timestamp.Format(time.RFC3339))).WithTTL(ttl)
-		if err := txn.SetEntry(e); err == badger.ErrTxnTooBig {
+		if err := txn.SetEntry(e); errors.Is(err, badger.ErrTxnTooBig) {
 			_ = txn.Commit()
 			txn = db.NewTransaction(true)
 			_ = txn.Set([]byte(signature), []byte(timestamp.Format(time.RFC3339)))
@@ -1207,7 +1208,7 @@ func PluginSaveState(database string, data *map[string]time.Time, ttl time.Durat
 
 	// Garbage collection.
 	err = db.RunValueLogGC(0.5)
-	if err == badger.ErrNoRewrite {
+	if errors.Is(err, badger.ErrNoRewrite) {
 		return nil
 	}
 
