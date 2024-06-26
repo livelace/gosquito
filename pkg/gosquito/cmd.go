@@ -9,8 +9,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"sort"
+	"syscall"
 	"time"
 )
 
@@ -135,6 +137,11 @@ func RunApp() {
 	flowCounter := make(map[uuid.UUID]int64, len(flows))
 	flowTimestamp := make(map[uuid.UUID]time.Time, len(flows))
 
+	mustStop := false
+
+	signalChannel := make(chan os.Signal, 1)
+	signal.Notify(signalChannel, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT, syscall.SIGSEGV)
+
 	for {
 		currentTime := time.Now()
 		flowCandidates := make(map[*core.Flow]int64, 0)
@@ -202,46 +209,63 @@ func RunApp() {
 		// 2. Run flow candidates.
 		// a. No limits.
 		// b. With limits.
-		if flowLimit == 0 {
-			for flow := range flowCandidates {
-				flowTimestamp[flow.FlowUUID] = currentTime
+		if !mustStop {
+			if flowLimit == 0 {
+				for flow := range flowCandidates {
+					flowTimestamp[flow.FlowUUID] = currentTime
 
-				for i := flow.GetInstance(); i < flow.FlowInstance; i++ {
-					go runFlow(flow)
-					time.Sleep(1 * time.Millisecond)
+					for i := flow.GetInstance(); i < flow.FlowInstance; i++ {
+						go runFlow(flow)
+						time.Sleep(1 * time.Millisecond)
+					}
+				}
+
+			} else {
+				// Create and sort slice of candidates.
+				// It needs for searching the most infrequent running flows.
+				// If we don't respect counter so the frequent (1s) flows will prevent running infrequent (1m) flows.
+				// Example (flow_limit = 4):
+				// flow1 1s 10
+				// flow2 1s 10
+				// flow3 1s 10
+				// flow4 1s 10
+				// flow5 1m 0
+				var flowCandidatesSlice []core.FlowCandidate
+				for flow, counter := range flowCandidates {
+					flowCandidatesSlice = append(flowCandidatesSlice, core.FlowCandidate{Flow: flow, Counter: counter})
+				}
+
+				sort.Slice(flowCandidatesSlice, func(i, j int) bool {
+					return flowCandidatesSlice[i].Counter < flowCandidatesSlice[j].Counter
+				})
+
+				for _, candidate := range flowCandidatesSlice {
+					if flowRunning >= flowLimit {
+						break
+					}
+
+					if candidate.Flow.GetInstance() < candidate.Flow.FlowInstance {
+						flowTimestamp[candidate.Flow.FlowUUID] = currentTime
+						flowRunning += 1
+
+						go runFlow(candidate.Flow)
+					}
 				}
 			}
-
 		} else {
-			// Create and sort slice of candidates.
-			// It needs for searching the most infrequent running flows.
-			// If we don't respect counter so the frequent (1s) flows will prevent running infrequent (1m) flows.
-			// Example (flow_limit = 4):
-			// flow1 1s 10
-			// flow2 1s 10
-			// flow3 1s 10
-			// flow4 1s 10
-			// flow5 1m 0
-			var flowCandidatesSlice []core.FlowCandidate
-			for flow, counter := range flowCandidates {
-				flowCandidatesSlice = append(flowCandidatesSlice, core.FlowCandidate{Flow: flow, Counter: counter})
+			if flowRunning == 0 {
+				os.Exit(0)
 			}
+			log.Warnf("waiting for running flows: %d\n", flowRunning)
+		}
 
-			sort.Slice(flowCandidatesSlice, func(i, j int) bool {
-				return flowCandidatesSlice[i].Counter < flowCandidatesSlice[j].Counter
-			})
-
-			for _, candidate := range flowCandidatesSlice {
-				if flowRunning >= flowLimit {
-					break
-				}
-
-				if candidate.Flow.GetInstance() < candidate.Flow.FlowInstance {
-					flowTimestamp[candidate.Flow.FlowUUID] = currentTime
-					flowRunning += 1
-
-					go runFlow(candidate.Flow)
-				}
+		if len(signalChannel) > 0 {
+			s := <-signalChannel
+			switch s {
+			case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
+				mustStop = true
+				log.Warn("stop signal received. quitting ...")
+			default:
 			}
 		}
 
