@@ -45,7 +45,7 @@ const (
 	DEFAULT_LOG_LEVEL        = 0
 	DEFAULT_MATCH_TTL        = "1d"
 	DEFAULT_MESSAGE_EDITED   = false
-	DEFAULT_MESSAGE_MARKDOWN = true
+	DEFAULT_MESSAGE_MARKDOWN = "internal"
 	DEFAULT_MESSAGE_PREVIEW  = true
 	DEFAULT_MESSAGE_VIEW     = true
 	DEFAULT_OPEN_CHAT_ENABLE = true
@@ -376,23 +376,23 @@ func getDocumentMessage(p *Plugin, caption *client.FormattedText, file string) *
 	}
 }
 
+func getPhotoMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessagePhoto {
+	return &client.InputMessagePhoto{
+		Caption: caption,
+		Photo:   &client.InputFileLocal{Path: file},
+	}
+}
+
 func getMarkdown(p *Plugin, formattedText *client.FormattedText) string {
-	if p.OptionMessageMarkdown {
+	if p.OptionMessageMarkdown == "internal" {
+		return internalMarkdownFormat(p, formattedText)
+	} else {
 		f, err := client.GetMarkdownText(&client.GetMarkdownTextRequest{Text: formattedText})
 		if err == nil {
 			return f.Text
 		} else {
 			return err.Error()
 		}
-	}
-
-	return ""
-}
-
-func getPhotoMessage(p *Plugin, caption *client.FormattedText, file string) *client.InputMessagePhoto {
-	return &client.InputMessagePhoto{
-		Caption: caption,
-		Photo:   &client.InputFileLocal{Path: file},
 	}
 }
 
@@ -1041,12 +1041,8 @@ func markdownWrap(entity *client.TextEntity, entityText string) string {
 	return s
 }
 
-func markdownFormat(p *Plugin, formattedText *client.FormattedText) string {
+func internalMarkdownFormat(p *Plugin, formattedText *client.FormattedText) string {
 	result := ""
-
-	if !p.OptionMessageMarkdown {
-		return result
-	}
 
 	entityCharMeta := make(map[int]rune)
 	entityMarkdown := make(map[int]string)
@@ -1793,7 +1789,7 @@ type Plugin struct {
 	OptionMessageDisablePreview  bool
 	OptionMessageEdited          bool
 	OptionMessagePreview         bool
-	OptionMessageMarkdown        bool
+	OptionMessageMarkdown        string
 	OptionMessageTemplate        *tmpl.Template
 	OptionMessageTypeFetch       []string
 	OptionMessageTranslateEnable bool
@@ -2522,7 +2518,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 		// message_markdown.
 		setMessageMarkdown := func(p interface{}) {
-			if v, b := core.IsBool(p); b {
+			if v, b := core.IsString(p); b {
 				availableParams["message_markdown"] = 0
 				plugin.OptionMessageMarkdown = v
 			}
