@@ -1015,7 +1015,7 @@ func markdownWrap(entity *client.TextEntity, entityText string) string {
 	switch entity.Type.(type) {
 	case *client.TextEntityTypeBlockQuote:
 		for _, l := range strings.Split(entityText, "\n") {
-			s += fmt.Sprintf("> %s", l)
+			s += fmt.Sprintf(">%s", l)
 		}
 	case *client.TextEntityTypeCode:
 		s = markdownWipeNewline(fmt.Sprintf("%s`%s`%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
