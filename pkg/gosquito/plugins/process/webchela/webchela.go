@@ -752,9 +752,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				case reflect.String:
 					ro.SetString(outputData[offset])
 				case reflect.Slice:
-					for offset := outputOffset; offset < outputOffset+dataValue; offset++ {
-						ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
-					}
+					ro.Set(reflect.Append(ro, reflect.ValueOf(outputData[offset])))
 				}
 
 				if p.OptionScreenshotOutputSize > 0 {
