@@ -28,7 +28,6 @@ const (
 	DEFAULT_ADS_ID           = "sponsoredMessage"
 	DEFAULT_ADS_PERIOD       = "5m"
 	DEFAULT_ALBUM_SIZE       = 10
-	DEFAULT_CHANNEL_SIZE     = 10000
 	DEFAULT_CHAT_DB          = "chats.sqlite"
 	DEFAULT_CHAT_SAVE        = false
 	DEFAULT_DATABASE_DIR     = "database"
@@ -757,24 +756,6 @@ func inputAds(p *Plugin) {
 	}
 }
 
-func inputFile(p *Plugin) {
-	for {
-		if len(p.InputFileListener.Updates) > 0 {
-			update := <-p.InputFileListener.Updates
-
-			switch update.(type) {
-			case *client.UpdateFile:
-				newFile := update.(*client.UpdateFile).File
-				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
-					p.InputFileChannel <- newFile.Id
-				}
-			}
-		} else {
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
 func inputDatum(p *Plugin) {
 	for {
 		if len(p.InputDatumListener.Updates) > 0 {
@@ -978,6 +959,24 @@ func inputDatum(p *Plugin) {
 					core.LogInputPlugin(p.LogFields, "chat",
 						fmt.Sprintf("filtered: %v, %v, %v",
 							messageChat.Id, messageChat.Type.ChatTypeType(), messageChat.Title))
+				}
+			}
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+func inputFile(p *Plugin) {
+	for {
+		if len(p.InputFileListener.Updates) > 0 {
+			update := <-p.InputFileListener.Updates
+
+			switch update.(type) {
+			case *client.UpdateFile:
+				newFile := update.(*client.UpdateFile).File
+				if newFile.Local.IsDownloadingCompleted || !newFile.Local.CanBeDownloaded {
+					p.InputFileChannel <- newFile.Id
 				}
 			}
 		} else {
@@ -1219,7 +1218,7 @@ func outputMessage(p *Plugin) {
 }
 
 func saveChat(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+	listener := p.TdlibClient.GetListener(p.OptionPoolSize)
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -1245,7 +1244,7 @@ func saveChat(p *Plugin) {
 }
 
 func saveUser(p *Plugin) {
-	listener := p.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+	listener := p.TdlibClient.GetListener(p.OptionPoolSize)
 
 	for {
 		if len(listener.Updates) > 0 {
@@ -3254,11 +3253,11 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Input mode:
 
 	if plugin.PluginType == "input" {
-		plugin.InputFileChannel = make(chan int32, DEFAULT_CHANNEL_SIZE)
-		plugin.InputFileListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		plugin.InputFileChannel = make(chan int32, plugin.OptionPoolSize)
+		plugin.InputFileListener = plugin.TdlibClient.GetListener(plugin.OptionPoolSize)
 		go inputFile(&plugin)
 
-		plugin.InputDatumChannel = make(chan *core.Datum, DEFAULT_CHANNEL_SIZE)
+		plugin.InputDatumChannel = make(chan *core.Datum, plugin.OptionPoolSize)
 		plugin.InputDatumListener = plugin.TdlibClient.GetListener(plugin.OptionPoolSize)
 		go inputDatum(&plugin)
 
@@ -3275,8 +3274,8 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// Output mode:
 
 	if plugin.PluginType == "output" {
-		plugin.OutputMessageChannel = make(chan *core.TelegramSendingStatus, DEFAULT_CHANNEL_SIZE)
-		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(DEFAULT_CHANNEL_SIZE)
+		plugin.OutputMessageChannel = make(chan *core.TelegramSendingStatus, plugin.OptionPoolSize)
+		plugin.OutputMessageListener = plugin.TdlibClient.GetListener(plugin.OptionPoolSize)
 		go outputMessage(&plugin)
 	}
 
