@@ -993,7 +993,7 @@ func joinToChat(p *Plugin, chatId int64, chatSource string) error {
 	return nil
 }
 
-func myMarkdownEscapeRune(r rune) string {
+func markdownEscapeRune(r rune) string {
 	if _, ok := MARKDOWN_ESCAPE_RUNE_MAP[r]; ok {
 		return fmt.Sprintf("\\%c", r)
 	} else {
@@ -1140,7 +1140,7 @@ func internalMarkdownFormat(p *Plugin, formattedText *client.FormattedText) stri
 
 			// construct entity text from entity char map:
 			for ri := int(es.Offset); ri <= int(es.Offset+es.Length-1); ri++ {
-				entityStepString += myMarkdownEscapeRune(entityCharMeta[ri])
+				entityStepString += markdownEscapeRune(entityCharMeta[ri])
 			}
 
 			// handle situation, when for the same text applied multiple
@@ -3300,7 +3300,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	for _, r := range []rune{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '!'} {
+	for _, r := range []rune{'*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '!'} {
 		MARKDOWN_ESCAPE_RUNE_MAP[r] = struct{}{}
 	}
 

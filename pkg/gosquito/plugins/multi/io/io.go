@@ -252,27 +252,27 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 
 			var ioError error
 
-			// Input and output are datum fields:
+			// ---------------------------------------------------------------
+			// 1. Input and output are datum fields:
 			if ierr == nil && oerr == nil {
-
-				// Input and output are string:
+				// 1.1 Input and output are string:
 				if ri.Kind() == reflect.String && ro.Kind() == reflect.String {
-					// 1. Copy files.
+					// 1.1.1 Copy files.
 					if p.OptionFileIn && p.OptionFileOut {
 						ioError = copyFileToFile(p, ri.String(), ro.String())
 					}
 
-					// 2. Copy fields.
+					// 1.1.2 Copy fields.
 					if !p.OptionFileIn && !p.OptionFileOut {
 						ro.Set(ri)
 					}
 
-					// 3. Write files.
+					// 1.1.3. Write files.
 					if !p.OptionFileIn && p.OptionFileOut {
 						ioError = writeTextToFile(p, ri.String(), ro.String())
 					}
 
-					// 4. Read files.
+					// 1.1.4 Read files.
 					if p.OptionFileIn && !p.OptionFileOut {
 						if s, err := readTextFromFile(p, ri.String()); err == nil {
 							ro.SetString(s)
@@ -282,9 +282,9 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// Input and output are slice:
+				// 1.2 Input and output are slice:
 				if ri.Kind() == reflect.Slice && ro.Kind() == reflect.Slice {
-					// 1. Copy files.
+					// 1.2.1 Copy files.
 					// Copy files only if both slices have equal size
 					// We don't know where target file should be copied.
 					if p.OptionFileIn && p.OptionFileOut && ri.Len() == ro.Len() {
@@ -295,12 +295,12 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 2. Copy fields.
+					// 1.2.2 Copy fields.
 					if !p.OptionFileIn && !p.OptionFileOut {
 						ro.Set(ri)
 					}
 
-					// 3. Write files.
+					// 1.2.3 Write files.
 					// Write strings only both slices have equal size.
 					// We don't know where target file should be written.
 					if !p.OptionFileIn && p.OptionFileOut && ri.Len() == ro.Len() {
@@ -311,7 +311,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 4. Read files.
+					// 1.2.4 Read files.
 					// Output slice will be overwritten even if it contains data.
 					if p.OptionFileIn && !p.OptionFileOut {
 						r := make([]string, ri.Len())
@@ -326,10 +326,10 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// Input is string, output is slice:
+				// 1.3 Input is string, output is slice:
 				if ri.Kind() == reflect.String && ro.Kind() == reflect.Slice {
 
-					// 1. Copy files.
+					// 1.3.1 Copy files.
 					// Copy single file to multiple destinations.
 					if p.OptionFileIn && p.OptionFileOut {
 						for i := 0; i < ro.Len(); i++ {
@@ -339,7 +339,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 2. Copy fields.
+					// 1.3.2 Copy fields.
 					// If output slice is not empty: fill entire slice with single string.
 					// If output slice is empty: set output slice with single value.
 					if !p.OptionFileIn && !p.OptionFileOut {
@@ -352,7 +352,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 3. Write files.
+					// 1.3.3 Write files.
 					if !p.OptionFileIn && p.OptionFileOut {
 						for i := 0; i < ro.Len(); i++ {
 							if err := writeTextToFile(p, ri.String(), ro.Index(i).String()); err != nil {
@@ -361,7 +361,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 4. Read files.
+					// 1.3.4 Read files.
 					// If output slice is not empty: fill entire slice with single string.
 					// If output slice is empty: set output slice with single value.
 					if p.OptionFileIn && !p.OptionFileOut {
@@ -379,9 +379,9 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// Input is slice, output is string:
+				// 1.4 Input is slice, output is string:
 				if ri.Kind() == reflect.Slice && ro.Kind() == reflect.String {
-					// 1. Copy files.
+					// 1.4.1 Copy files.
 					// Append multiple files into single file.
 					if p.OptionFileIn && p.OptionFileOut {
 						for i := 0; i < ri.Len(); i++ {
@@ -391,7 +391,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						}
 					}
 
-					// 2. Copy fields.
+					// 1.4.2 Copy fields.
 					// Join slice items into text and set output string.
 					if !p.OptionFileIn && !p.OptionFileOut {
 						s := ""
@@ -401,7 +401,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						ro.SetString(s)
 					}
 
-					// 3. Write files.
+					// 1.4.3 Write files.
 					// Join slice items into text and write to file.
 					if !p.OptionFileIn && p.OptionFileOut {
 						s := ""
@@ -411,7 +411,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 						ioError = writeTextToFile(p, s, ro.String())
 					}
 
-					// 4. Read files.
+					// 1.4.4 Read files.
 					// Read multiple files and set output string.
 					if p.OptionFileIn && !p.OptionFileOut {
 						r := ""
@@ -427,51 +427,51 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				}
 			}
 
-			// Input is datum field string, output is string:
+			// ---------------------------------------------------------------
+			// 2. Input is datum field string, output is string:
 			if ierr == nil && oerr != nil && ri.Kind() == reflect.String {
-
-				// 1. Copy files.
+				// 2.1 Copy files.
 				if p.OptionFileIn && p.OptionFileOut {
 					ioError = copyFileToFile(p, ri.String(), p.OptionOutput[index])
 				}
 
-				// 2. Copy fields.
+				// 2.2 Copy fields.
 				if !p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 
-				// 3. Write files.
+				// 2.3 Write files.
 				if !p.OptionFileIn && p.OptionFileOut {
 					ioError = writeTextToFile(p, ri.String(), p.OptionOutput[index])
 				}
 
-				// 4. Read files.
+				// 2.4 Read files.
 				if p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 			}
 
-			// Input is string, output is datum field string:
+			// ---------------------------------------------------------------
+			// 3. Input is string, output is datum field string:
 			if ierr != nil && oerr == nil && ro.Kind() == reflect.String {
-
-				// 1. Copy files.
+				// 3.1 Copy files.
 				if p.OptionFileIn && p.OptionFileOut {
 					ioError = copyFileToFile(p, p.OptionInput[index], ro.String())
 				}
 
-				// 2. Copy fields.
+				// 3.2 Copy fields.
 				if !p.OptionFileIn && !p.OptionFileOut {
 					ro.SetString(p.OptionInput[index])
 				}
 
-				// 3. Write files.
+				// 3.3 Write files.
 				if !p.OptionFileIn && p.OptionFileOut {
 					ioError = writeTextToFile(p, p.OptionInput[index], ro.String())
 				}
 
-				// 4. Read files.
+				// 3.4 Read files.
 				if p.OptionFileIn && !p.OptionFileOut {
 					if s, err := readTextFromFile(p, p.OptionInput[index]); err == nil {
 						ro.SetString(s)
@@ -481,10 +481,10 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				}
 			}
 
-			// Input is datum field slice, output is string:
+			// ---------------------------------------------------------------
+			// 4. Input is datum field slice, output is string:
 			if ierr == nil && oerr != nil && ri.Kind() == reflect.Slice {
-
-				// 1. Copy files.
+				// 4.1 Copy files.
 				// Append multiple files into single file.
 				if p.OptionFileIn && p.OptionFileOut {
 					for i := 0; i < ri.Len(); i++ {
@@ -494,13 +494,13 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// 2. Copy fields.
+				// 4.2 Copy fields.
 				if !p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 
-				// 3. Write files.
+				// 4.3 Write files.
 				// Join slice items into text and write to file.
 				if !p.OptionFileIn && p.OptionFileOut {
 					s := ""
@@ -510,17 +510,17 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					ioError = writeTextToFile(p, s, p.OptionOutput[index])
 				}
 
-				// 4. Read files.
+				// 4.4 Read files.
 				if p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 			}
 
-			// Input is string, output is datum field slice:
+			// ---------------------------------------------------------------
+			// 5. Input is string, output is datum field slice:
 			if ierr != nil && oerr == nil && ro.Kind() == reflect.Slice {
-
-				// 1. Copy files.
+				// 5.1 Copy files.
 				if p.OptionFileIn && p.OptionFileOut {
 					for i := 0; i < ro.Len(); i++ {
 						if err := copyFileToFile(p, p.OptionInput[index], ro.Index(i).String()); err != nil {
@@ -529,7 +529,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// 2. Copy fields.
+				// 5.2 Copy fields.
 				// If output slice is not empty: fill entire slice with single string.
 				// If output slice is empty: set output slice with single value.
 				if !p.OptionFileIn && !p.OptionFileOut {
@@ -542,7 +542,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// 3. Write files.
+				// 5.3 Write files.
 				if !p.OptionFileIn && p.OptionFileOut {
 					for i := 0; i < ro.Len(); i++ {
 						if err := writeTextToFile(p, p.OptionInput[index], ro.Index(i).String()); err != nil {
@@ -551,7 +551,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 					}
 				}
 
-				// 4. Read files.
+				// 5.4 Read files.
 				// If output slice is not empty: fill entire slice with single string.
 				// If output slice is empty: set output slice with single value.
 				if p.OptionFileIn && !p.OptionFileOut {
@@ -569,31 +569,33 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 				}
 			}
 
-			// Input is string, output is string:
+			// ---------------------------------------------------------------
+			// 6. Input is string, output is string:
 			if ierr != nil && oerr != nil {
-
-				// 1. Copy files.
+				// 6.1 Copy files.
 				if p.OptionFileIn && p.OptionFileOut {
 					ioError = copyFileToFile(p, p.OptionInput[index], p.OptionOutput[index])
 				}
 
-				// 2. Copy fields.
+				// 6.2 Copy fields.
 				if !p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 
-				// 3. Write files.
+				// 6.3 Write files.
 				if !p.OptionFileIn && p.OptionFileOut {
 					ioError = writeTextToFile(p, p.OptionInput[index], p.OptionOutput[index])
 				}
 
-				// 4. Read files.
+				// 6.4 Read files.
 				if p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 			}
+
+			// ---------------------------------------------------------------
 
 			if ioError == nil {
 				temp = append(temp, item)
