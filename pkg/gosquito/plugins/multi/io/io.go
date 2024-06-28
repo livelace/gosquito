@@ -255,6 +255,7 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			// ---------------------------------------------------------------
 			// 1. Input and output are datum fields:
 			if ierr == nil && oerr == nil {
+
 				// 1.1 Input and output are string:
 				if ri.Kind() == reflect.String && ro.Kind() == reflect.String {
 					// 1.1.1 Copy files.

@@ -1816,7 +1816,6 @@ type Plugin struct {
 	OptionSendAlbum              bool
 	OptionSendDelay              time.Duration
 	OptionSendTimeout            int
-	OptionSessionTTL             int
 	OptionSourceChat             []string
 	OptionStatusEnable           bool
 	OptionStatusPeriod           time.Duration
@@ -2911,18 +2910,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setProxyType((*pluginConfig.PluginParams)["proxy_type"])
 	core.ShowPluginParam(plugin.LogFields, "proxy_type", plugin.OptionProxyType)
 
-	// session_ttl.
-	setSessionTTL := func(p interface{}) {
-		if v, b := core.IsInt(p); b {
-			availableParams["session_ttl"] = 0
-			plugin.OptionSessionTTL = v
-		}
-	}
-	setSessionTTL(DEFAULT_SESSION_TTL)
-	setSessionTTL(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.session_ttl", template)))
-	setSessionTTL((*pluginConfig.PluginParams)["session_ttl"])
-	core.ShowPluginParam(plugin.LogFields, "session_ttl", plugin.OptionSessionTTL)
-
 	// status_enable.
 	setStatusEnable := func(p interface{}) {
 		if v, b := core.IsBool(p); b {
@@ -3167,15 +3154,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 			Name:  "use_storage_optimizer",
 			Value: &client.OptionValueBoolean{Value: plugin.OptionStorageOptimize},
 		})
-
-	if err != nil {
-		return &Plugin{}, err
-	}
-
-	// Set session TTL.
-	_, err = plugin.TdlibClient.SetInactiveSessionTtl(&client.SetInactiveSessionTtlRequest{
-		InactiveSessionTtlDays: int32(plugin.OptionSessionTTL),
-	})
 
 	if err != nil {
 		return &Plugin{}, err
