@@ -1093,7 +1093,7 @@ func internalMarkdownFormat(p *Plugin, formattedText *client.FormattedText) stri
 		// 1. if counter is zero - we are inside of text:
 		// 2. if counter is not zero - we are inside of entity:
 		if textPartCounter == 0 {
-			textPart += string(c)
+			textPart += markdownEscapeRune(c)
 
 			// text ended, add last part:
 			if ci == textLastIndex {
@@ -1140,7 +1140,7 @@ func internalMarkdownFormat(p *Plugin, formattedText *client.FormattedText) stri
 
 			// construct entity text from entity char map:
 			for ri := int(es.Offset); ri <= int(es.Offset+es.Length-1); ri++ {
-				entityStepString += markdownEscapeRune(entityCharMeta[ri])
+				entityStepString += string(entityCharMeta[ri])
 			}
 
 			// handle situation, when for the same text applied multiple
@@ -3239,7 +3239,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	// -----------------------------------------------------------------------------------------------------------------
 
-	for _, r := range []rune{'*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '!'} {
+	for _, r := range []rune{'_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'} {
 		MARKDOWN_ESCAPE_RUNE_MAP[r] = struct{}{}
 	}
 
