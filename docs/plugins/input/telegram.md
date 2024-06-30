@@ -119,7 +119,6 @@ USERTIMESTAMP        string
 | status_enable        |    -     |  bool  |  -   |    +     |           true            |                      false                      | Enable/disable session status.                                                                             |
 | status_period        |    -     | string |  -   |    +     |           "1h"            |                      "5m"                       | Interval for showing session status in plugin output.                                                      |
 | storage_optimize     |    -     |  bool  |  -   |    +     |           true            |                      false                      | Enable/disable storage optimization (clean old data).                                                      |
-| storage_period       |    -     | string |  -   |    +     |           "1h"            |                      "24h"                      | Storage optimization interval.                                                                             |
 | user_database        |    -     | string |  -   |    +     | <PLUGIN_DIR>/users.sqlite |               "/path/to/users.db"               | Path to internal users database.                                                                           |
 | user_save            |    -     |  bool  |  -   |    +     |           false           |                      true                       | Enable/disable passive user logging.                                                                       |
 

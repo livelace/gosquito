@@ -154,13 +154,13 @@ var (
 	ERROR_CHAT_COMMON_ERROR        = errors.New("chat error: %v, %v")
 	ERROR_CHAT_GET_ERROR           = errors.New("cannot get chat: %v, %v")
 	ERROR_CHAT_JOIN_ERROR          = errors.New("join chat error: %d, %v, %v")
-	ERROR_CHAT_UPDATE_ERROR        = errors.New("cannnot update chat: %v, %v, %v, %v")
+	ERROR_CHAT_UPDATE_ERROR        = errors.New("cannot update chat: %v, %v, %v, %v")
 	ERROR_FETCH_ERROR              = errors.New("fetch error: %v")
 	ERROR_FETCH_MIME               = errors.New("mime filtered: %v, %v")
 	ERROR_FETCH_TIMEOUT            = errors.New("fetch timeout: %v")
 	ERROR_FILE_SIZE_EXCEEDED       = errors.New("file size exceeded: %v (%v > %v)")
 	ERROR_LOAD_USERS_ERROR         = errors.New("cannot load users: %v")
-	ERROR_NO_CHATS                 = errors.New("no chats!")
+	ERROR_NO_CHATS                 = errors.New("no chats")
 	ERROR_PROXY_TYPE_UNKNOWN       = errors.New("proxy type unknown: %v")
 	ERROR_SAVE_CHATS_ERROR         = errors.New("cannot save chats: %v")
 	ERROR_SEND_ALBUM_ERROR         = errors.New("send album: %v")
@@ -1545,20 +1545,6 @@ func showStatus(p *Plugin) {
 	}
 }
 
-func storageOptimizer(p *Plugin) {
-	for {
-		p.m.Lock()
-		_, err := p.TdlibClient.OptimizeStorage(&client.OptimizeStorageRequest{})
-		p.m.Unlock()
-
-		if err != nil {
-			core.LogInputPlugin(p.LogFields, "storage", fmt.Errorf("error: %v", err))
-		}
-
-		time.Sleep(p.OptionStoragePeriod)
-	}
-}
-
 func sqlUpdateChat(p *Plugin, chatId int64, chatSource string) error {
 	currentTime := time.Now().UTC().Format(time.RFC3339)
 	tx, err := p.ChatDbClient.Begin()
@@ -1820,7 +1806,6 @@ type Plugin struct {
 	OptionStatusEnable           bool
 	OptionStatusPeriod           time.Duration
 	OptionStorageOptimize        bool
-	OptionStoragePeriod          time.Duration
 	OptionTimeFormat             string
 	OptionTimeFormatA            string
 	OptionTimeFormatB            string
@@ -2168,7 +2153,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"status_enable":     -1,
 		"status_period":     -1,
 		"storage_optimize":  -1,
-		"storage_period":    -1,
 		"user_database":     -1,
 		"user_save":         -1,
 	}
@@ -2946,18 +2930,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setStorageOptimize((*pluginConfig.PluginParams)["storage_optimize"])
 	core.ShowPluginParam(plugin.LogFields, "storage_optimize", plugin.OptionStorageOptimize)
 
-	// storage_period.
-	setStoragePeriod := func(p interface{}) {
-		if v, b := core.IsInterval(p); b {
-			availableParams["storage_period"] = 0
-			plugin.OptionStoragePeriod = time.Duration(v) * time.Millisecond
-		}
-	}
-	setStoragePeriod(DEFAULT_STATUS_PERIOD)
-	setStoragePeriod(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.storage_period", template)))
-	setStoragePeriod((*pluginConfig.PluginParams)["storage_period"])
-	core.ShowPluginParam(plugin.LogFields, "storage_period", plugin.OptionStoragePeriod)
-
 	// time_format.
 	setTimeFormat := func(p interface{}) {
 		if v, b := core.IsString(p); b {
@@ -3266,10 +3238,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 
 	if plugin.OptionStatusEnable {
 		go showStatus(&plugin)
-	}
-
-	if plugin.OptionStorageOptimize {
-		go storageOptimizer(&plugin)
 	}
 
 	if plugin.OptionUserSave {
