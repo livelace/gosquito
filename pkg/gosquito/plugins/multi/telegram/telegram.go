@@ -3264,9 +3264,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		go saveChat(&plugin)
 	}
 
-	if plugin.OptionStatusEnable {
-		go showStatus(&plugin)
-	}
+	//if plugin.OptionStatusEnable {
+	//	go showStatus(&plugin)
+	//}
 
 	//if plugin.OptionStorageOptimize {
 	//	go storageOptimizer(&plugin)
