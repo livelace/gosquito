@@ -3149,15 +3149,15 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		return &Plugin{}, err
 	}
 
-	//_, err = tdlibClient.SetOption(
-	//	&client.SetOptionRequest{
-	//		Name:  "use_storage_optimizer",
-	//		Value: &client.OptionValueBoolean{Value: plugin.OptionStorageOptimize},
-	//	})
+	_, err = tdlibClient.SetOption(
+		&client.SetOptionRequest{
+			Name:  "use_storage_optimizer",
+			Value: &client.OptionValueBoolean{Value: plugin.OptionStorageOptimize},
+		})
 
-	//if err != nil {
-	//	return &Plugin{}, err
-	//}
+	if err != nil {
+		return &Plugin{}, err
+	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Init chat/user databases.
@@ -3268,9 +3268,9 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		go showStatus(&plugin)
 	}
 
-	if plugin.OptionStorageOptimize {
-		go storageOptimizer(&plugin)
-	}
+	//if plugin.OptionStorageOptimize {
+	//	go storageOptimizer(&plugin)
+	//}
 
 	if plugin.OptionUserSave {
 		go saveUser(&plugin)
