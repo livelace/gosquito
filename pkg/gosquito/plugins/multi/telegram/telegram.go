@@ -1290,7 +1290,7 @@ func sendFiles(p *Plugin, chatId int64, fileType string, fileCaption client.Form
 	sendStatus := true
 
 	if len(files) > 1 && p.OptionSendAlbum {
-		// Splite files into albums.
+		// Split files into albums.
 		var albums [][]string
 		for i := 0; i < len(files); i += DEFAULT_ALBUM_SIZE {
 			end := i + DEFAULT_ALBUM_SIZE
@@ -2159,6 +2159,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"device_model":      -1,
 		"log_level":         -1,
 		"message_translate": -1,
+		"pool_size":         -1,
 		"proxy_enable":      -1,
 		"proxy_port":        -1,
 		"proxy_server":      -1,
@@ -2199,7 +2200,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["message_view"] = -1
 		availableParams["open_chat_enable"] = -1
 		availableParams["open_chat_period"] = -1
-		availableParams["pool_size"] = -1
 	case "output":
 		availableParams["file_audio"] = -1
 		availableParams["file_caption"] = -1
@@ -2628,18 +2628,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setOpenChatPeriod((*pluginConfig.PluginParams)["open_chat_period"])
 		core.ShowPluginParam(plugin.LogFields, "open_chat_period", plugin.OptionOpenChatPeriod)
 
-		// pool_size.
-		setPoolSize := func(p interface{}) {
-			if v, b := core.IsInt(p); b {
-				availableParams["pool_size"] = 0
-				plugin.OptionPoolSize = v
-			}
-		}
-		setPoolSize(DEFAULT_POOL_SIZE)
-		setPoolSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.pool_size", template)))
-		setPoolSize((*pluginConfig.PluginParams)["pool_size"])
-		core.ShowPluginParam(plugin.LogFields, "pool_size", plugin.OptionPoolSize)
-
 	case "output":
 		// file_audio.
 		setFileAudio := func(p interface{}) {
@@ -2861,6 +2849,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	} else {
 		plugin.OptionMessageTranslateEnable = false
 	}
+
+	// pool_size.
+	setPoolSize := func(p interface{}) {
+		if v, b := core.IsInt(p); b {
+			availableParams["pool_size"] = 0
+			plugin.OptionPoolSize = v
+		}
+	}
+	setPoolSize(DEFAULT_POOL_SIZE)
+	setPoolSize(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.pool_size", template)))
+	setPoolSize((*pluginConfig.PluginParams)["pool_size"])
+	core.ShowPluginParam(plugin.LogFields, "pool_size", plugin.OptionPoolSize)
 
 	// proxy_enable.
 	setProxyEnable := func(p interface{}) {
