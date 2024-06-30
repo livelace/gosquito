@@ -1771,7 +1771,6 @@ type Plugin struct {
 	OptionMatchSignature         []string
 	OptionMatchTTL               time.Duration
 	OptionMessage                string
-	OptionMessageDisablePreview  bool
 	OptionMessageEdited          bool
 	OptionMessagePreview         bool
 	OptionMessageMarkdown        string
@@ -2040,7 +2039,7 @@ func (p *Plugin) Send(data []*core.Datum) error {
 			if m, err := core.ExtractTemplateIntoString(item, p.OptionMessageTemplate); err == nil && len(m) > 0 {
 				content := &client.InputMessageText{
 					ClearDraft:         false,
-					LinkPreviewOptions: &client.LinkPreviewOptions{IsDisabled: p.OptionMessagePreview},
+					LinkPreviewOptions: &client.LinkPreviewOptions{IsDisabled: p.OptionMessagePreview == false},
 					Text:               &client.FormattedText{Text: m},
 				}
 				if !sendMessage(p, chatId, content) {
@@ -2700,12 +2699,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setMessagePreview(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.message_preview", template)))
 		setMessagePreview((*pluginConfig.PluginParams)["message_preview"])
 		core.ShowPluginParam(plugin.LogFields, "message_preview", plugin.OptionMessagePreview)
-
-		if plugin.OptionMessagePreview {
-			plugin.OptionMessageDisablePreview = false
-		} else {
-			plugin.OptionMessageDisablePreview = true
-		}
 
 		// output.
 		setOutput := func(p interface{}) {
