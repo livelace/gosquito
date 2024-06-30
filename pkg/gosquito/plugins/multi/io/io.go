@@ -3,9 +3,9 @@ package ioMulti
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,136 +17,154 @@ import (
 const (
 	PLUGIN_NAME = "io"
 
-	DEFAULT_FILE_IN       = false
-	DEFAULT_FILE_IN_MODE  = "text"
-	DEFAULT_FILE_OUT      = false
-	DEFAULT_FILE_OUT_MODE = "truncate"
-	DEFAULT_FILE_OUT_WRAP = "\n"
-	DEFAULT_TEXT_WRAP     = "\n"
-	DEFAULT_MATCH_TTL     = "1d"
+	DEFAULT_DATA_APPEND     = false
+	DEFAULT_FILE_IN         = false
+	DEFAULT_FILE_IN_MODE    = "text"
+	DEFAULT_FILE_IN_PRE     = ""
+	DEFAULT_FILE_IN_POST    = ""
+	DEFAULT_FILE_IN_SPLIT   = "\n"
+	DEFAULT_FILE_OUT        = false
+	DEFAULT_FILE_OUT_APPEND = false
+	DEFAULT_FILE_OUT_MODE   = "text"
+	DEFAULT_FILE_OUT_PRE    = ""
+	DEFAULT_FILE_OUT_POST   = ""
+	DEFAULT_FILE_OUT_SPLIT  = "\n"
+	DEFAULT_MATCH_TTL       = "1d"
+	DEFAULT_TEXT_MODE       = "text"
+	DEFAULT_TEXT_PRE        = ""
+	DEFAULT_TEXT_POST       = ""
+	DEFAULT_TEXT_SPLIT      = "\n"
 )
 
 var (
 	ERROR_COPY_TO_STRING = errors.New("cannot copy anything to string: %v")
 	ERROR_MODE_UNKNOWN   = errors.New("mode unknown: %v")
 
-	INFO_APPEND_FILE_TO_FILE = "append file to file: %v -> %v, %v"
-	INFO_COPY_FILE_TO_FILE   = "copy file to file: %v -> %v, %v"
-	INFO_READ_TEXT_FROM_FILE = "read text from file: %v -> text, %v"
-	INFO_WRITE_TEXT_TO_FILE  = "write text to file: text -> %v, %v"
+	INFO_READ_FROM_FILE      = "read from file: %v, %v"
+	INFO_WRITE_TO_FILE       = "write to file: %v, %v"
+	INFO_WRITE_LINES_TO_FILE = "write lines to file: lines -> %v, %v"
 )
 
-func appendFileToFile(p *Plugin, src string, dst string) error {
-	if src == "" || dst == "" {
-		core.LogProcessPlugin(p.LogFields, fmt.Sprintf(INFO_APPEND_FILE_TO_FILE, src, dst, "skip"))
-		return nil
+func processText(p *Plugin, input []string) []string {
+	r := make([]string, 0)
+
+	for _, i := range input {
+		if p.OptionTextMode == "split" {
+			for _, l := range strings.Split(i, p.OptionTextSplit) {
+				r = append(r, fmt.Sprintf("%s%s%s", p.OptionTextPre, l, p.OptionTextPost))
+			}
+		}
+
+		if p.OptionTextMode == "text" {
+			r = append(r, i)
+		}
 	}
 
-	if _, err := core.IsFile(src); err != nil {
-		core.LogProcessPlugin(p.LogFields, err)
-		return err
+	return r
+}
+
+func readFile(p *Plugin, input []string) ([]string, error) {
+	r := make([]string, 0)
+
+	for _, i := range input {
+		if i == "" {
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Sprintf(INFO_READ_FROM_FILE, i, "skip"))
+			return r, nil
+		}
+
+		if _, err := core.IsFile(i); err != nil {
+			core.LogProcessPlugin(p.LogFields, err)
+			return r, err
+		}
+
+		ib, err := os.ReadFile(i)
+		if err == nil {
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Sprintf(INFO_READ_FROM_FILE, i, nil))
+
+			text := strings.Trim(string(ib), "\n")
+
+			if p.OptionFileInMode == "split" {
+				for _, l := range strings.Split(text, p.OptionFileInSplit) {
+					r = append(r, wrapFileIn(p, l))
+				}
+			}
+
+			if p.OptionFileInMode == "text" {
+				r = append(r, wrapFileIn(p, text))
+			}
+
+		} else {
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf(INFO_READ_FROM_FILE, i, err))
+			return r, err
+		}
 	}
 
-	source, err := os.ReadFile(src)
-	if err != nil {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Errorf(INFO_APPEND_FILE_TO_FILE, src, dst, err))
-		return err
-	}
+	return r, nil
+}
 
-	destination, _ := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
-	defer destination.Close()
+func writeFile(p *Plugin, input []string, output []string) error {
+	var of *os.File
+	var err error
 
-	if b, err := destination.Write(source); err == nil {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_APPEND_FILE_TO_FILE, src, dst, b))
-	} else {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Errorf(INFO_APPEND_FILE_TO_FILE, src, dst, err))
-		return err
+	for _, o := range output {
+		if o == "" {
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Sprintf(INFO_WRITE_LINES_TO_FILE, o, "skip"))
+			continue
+		}
+
+		if p.OptionFileOutAppend {
+			of, err = os.OpenFile(o, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
+		} else {
+			of, err = os.OpenFile(o, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+		}
+		defer of.Close()
+
+		if err != nil {
+			core.LogProcessPlugin(p.LogFields,
+				fmt.Errorf(INFO_WRITE_TO_FILE, o, err))
+			return err
+		}
+
+		for _, i := range input {
+			if p.OptionFileOutMode == "split" {
+				for _, line := range strings.Split(i, p.OptionFileOutSplit) {
+					if b, err := of.WriteString(wrapFileOut(p, line)); err == nil {
+						core.LogProcessPlugin(p.LogFields,
+							fmt.Sprintf(INFO_WRITE_TO_FILE, o, b))
+					} else {
+						core.LogProcessPlugin(p.LogFields,
+							fmt.Errorf(INFO_WRITE_TO_FILE, o, err))
+						return err
+					}
+				}
+			}
+
+			if p.OptionFileOutMode == "text" {
+				if b, err := of.WriteString(wrapFileOut(p, i)); err == nil {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Sprintf(INFO_WRITE_TO_FILE, o, b))
+				} else {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Errorf(INFO_WRITE_TO_FILE, o, err))
+					return err
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-func copyFileToFile(p *Plugin, src string, dst string) error {
-	if src == "" || dst == "" {
-		core.LogProcessPlugin(p.LogFields, fmt.Sprintf(INFO_COPY_FILE_TO_FILE, src, dst, "skip"))
-		return nil
-	}
-
-	if _, err := core.IsFile(src); err != nil {
-		core.LogProcessPlugin(p.LogFields, err)
-		return err
-	}
-
-	source, _ := os.OpenFile(src, os.O_RDONLY, os.ModePerm)
-	defer source.Close()
-
-	destination, _ := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
-	defer destination.Close()
-
-	if b, err := io.Copy(destination, source); err == nil {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_COPY_FILE_TO_FILE, src, dst, b))
-	} else {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Errorf(INFO_COPY_FILE_TO_FILE, src, dst, err))
-		return err
-	}
-
-	return nil
+func wrapFileIn(p *Plugin, s string) string {
+	return fmt.Sprintf("%s%s%s", p.OptionFileInPre, s, p.OptionFileInPost)
 }
 
-func readTextFromFile(p *Plugin, src string) (string, error) {
-	if src == "" {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_READ_TEXT_FROM_FILE, src, "skip"))
-		return "", nil
-	}
-
-	if _, err := core.IsFile(src); err != nil {
-		core.LogProcessPlugin(p.LogFields, err)
-		return "", err
-	}
-
-	source, err := os.ReadFile(src)
-	if err == nil {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_READ_TEXT_FROM_FILE, src, nil))
-		return string(source), nil
-	} else {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Errorf(INFO_READ_TEXT_FROM_FILE, src, err))
-		return "", err
-	}
-}
-
-func writeTextToFile(p *Plugin, text string, dst string) error {
-	if dst == "" {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_WRITE_TEXT_TO_FILE, dst, "skip"))
-		return nil
-	}
-
-	var destination *os.File
-	if p.OptionFileOutMode == "append" {
-		destination, _ = os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_APPEND, os.ModePerm)
-	} else {
-		destination, _ = os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.ModePerm)
-	}
-	defer destination.Close()
-
-	if b, err := destination.WriteString(fmt.Sprintf("%s%s", text, p.OptionFileOutWrap)); err == nil {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Sprintf(INFO_WRITE_TEXT_TO_FILE, dst, b))
-	} else {
-		core.LogProcessPlugin(p.LogFields,
-			fmt.Errorf(INFO_WRITE_TEXT_TO_FILE, dst, err))
-		return err
-	}
-
-	return nil
+func wrapFileOut(p *Plugin, s string) string {
+	return fmt.Sprintf("%s%s%s", p.OptionFileOutPre, s, p.OptionFileOutPost)
 }
 
 type Plugin struct {
@@ -161,6 +179,7 @@ type Plugin struct {
 	PluginName  string
 	PluginType  string
 
+	OptionDataAppend          bool
 	OptionExpireAction        []string
 	OptionExpireActionDelay   int64
 	OptionExpireActionTimeout int
@@ -168,16 +187,25 @@ type Plugin struct {
 	OptionExpireLast          int64
 	OptionFileIn              bool
 	OptionFileInMode          string
+	OptionFileInPre           string
+	OptionFileInPost          string
+	OptionFileInSplit         string
 	OptionFileOut             bool
+	OptionFileOutAppend       bool
 	OptionFileOutMode         string
-	OptionFileOutWrap         string
+	OptionFileOutPre          string
+	OptionFileOutPost         string
+	OptionFileOutSplit        string
 	OptionInclude             bool
 	OptionInput               []string
 	OptionMatchSignature      []string
 	OptionMatchTTL            time.Duration
 	OptionOutput              []string
 	OptionRequire             []int
-	OptionTextWrap            string
+	OptionTextMode            string
+	OptionTextPre             string
+	OptionTextPost            string
+	OptionTextSplit           string
 	OptionTimeFormat          string
 	OptionTimeFormatA         string
 	OptionTimeFormatB         string
@@ -253,343 +281,392 @@ func (p *Plugin) Process(data []*core.Datum) ([]*core.Datum, error) {
 			var ioError error
 
 			// ---------------------------------------------------------------
-			// 1. Input and output are datum fields:
+			// 1. Input: Datum Field -> Output: Datum Field:
 			if ierr == nil && oerr == nil {
 
-				// 1.1 Input and output are string:
+				// 1.1 Input: Datum String -> Output: Datum String: ++
 				if ri.Kind() == reflect.String && ro.Kind() == reflect.String {
-					// 1.1.1 Copy files.
+
+					// 1.1.1 File -> File ++
 					if p.OptionFileIn && p.OptionFileOut {
-						ioError = copyFileToFile(p, ri.String(), ro.String())
-					}
+						d, err := readFile(p, []string{ri.String()})
+						if err != nil {
+							ioError = err
+						}
 
-					// 1.1.2 Copy fields.
-					if !p.OptionFileIn && !p.OptionFileOut {
-						ro.Set(ri)
-					}
-
-					// 1.1.3. Write files.
-					if !p.OptionFileIn && p.OptionFileOut {
-						ioError = writeTextToFile(p, ri.String(), ro.String())
-					}
-
-					// 1.1.4 Read files.
-					if p.OptionFileIn && !p.OptionFileOut {
-						if s, err := readTextFromFile(p, ri.String()); err == nil {
-							ro.SetString(s)
-						} else {
+						if err := writeFile(p, d, []string{ro.String()}); err != nil {
 							ioError = err
 						}
 					}
-				}
 
-				// 1.2 Input and output are slice:
-				if ri.Kind() == reflect.Slice && ro.Kind() == reflect.Slice {
-					// 1.2.1 Copy files.
-					// Copy files only if both slices have equal size
-					// We don't know where target file should be copied.
-					if p.OptionFileIn && p.OptionFileOut && ri.Len() == ro.Len() {
-						for i := 0; i < ri.Len(); i++ {
-							if err := copyFileToFile(p, ri.Index(i).String(), ro.Index(i).String()); err != nil {
-								ioError = err
-							}
-						}
-					}
-
-					// 1.2.2 Copy fields.
+					// 1.1.2 String -> String ++
 					if !p.OptionFileIn && !p.OptionFileOut {
-						ro.Set(ri)
-					}
-
-					// 1.2.3 Write files.
-					// Write strings only both slices have equal size.
-					// We don't know where target file should be written.
-					if !p.OptionFileIn && p.OptionFileOut && ri.Len() == ro.Len() {
-						for i := 0; i < ri.Len(); i++ {
-							if err := writeTextToFile(p, ri.Index(i).String(), ro.Index(i).String()); err != nil {
-								ioError = err
-							}
+						if p.OptionDataAppend {
+							ro.SetString(ro.String() + ri.String())
+						} else {
+							ro.SetString(ri.String())
 						}
 					}
 
-					// 1.2.4 Read files.
-					// Output slice will be overwritten even if it contains data.
+					// 1.1.3. String -> File ++
+					if !p.OptionFileIn && p.OptionFileOut {
+						if err := writeFile(p, []string{ri.String()}, []string{ro.String()}); err != nil {
+							ioError = err
+						}
+					}
+
+					// 1.1.4 File -> String ++
 					if p.OptionFileIn && !p.OptionFileOut {
-						r := make([]string, ri.Len())
-						for i := 0; i < ri.Len(); i++ {
-							if s, err := readTextFromFile(p, ri.Index(i).String()); err == nil {
-								r = append(r, s)
-							} else {
-								ioError = err
-							}
+						d, err := readFile(p, []string{ri.String()})
+						if err != nil {
+							ioError = err
 						}
-						ro.Set(reflect.ValueOf(r))
+
+						if p.OptionDataAppend {
+							ro.SetString(ro.String() + strings.Join(d, ""))
+						} else {
+							ro.SetString(strings.Join(d, ""))
+						}
 					}
 				}
 
-				// 1.3 Input is string, output is slice:
+				// 1.2 Input: Datum Slice -> Output: Datum Slice: ++
+				if ri.Kind() == reflect.Slice && ro.Kind() == reflect.Slice {
+
+					// 1.2.1 [File1 .. FileN] -> [File1 .. FileN] ++
+					if p.OptionFileIn && p.OptionFileOut {
+						d, err := readFile(p, ri.Interface().([]string))
+						if err != nil {
+							ioError = err
+						}
+
+						if err := writeFile(p, d, ro.Interface().([]string)); err != nil {
+							ioError = err
+						}
+					}
+
+					// 1.2.2 [String1 .. StringN] -> [String1 .. StringN] ++
+					if !p.OptionFileIn && !p.OptionFileOut {
+						if p.OptionDataAppend {
+							ro.Set(reflect.AppendSlice(ro, ri))
+						} else {
+							ro.Set(ri)
+						}
+					}
+
+					// 1.2.3 [String1 .. StringN] -> [File1 .. FileN] ++
+					if !p.OptionFileIn && p.OptionFileOut {
+						if err := writeFile(p, ri.Interface().([]string), ro.Interface().([]string)); err != nil {
+							ioError = err
+						}
+					}
+
+					// 1.2.4 [File1 .. FileN] -> [String1 .. StringN] ++
+					if p.OptionFileIn && !p.OptionFileOut {
+						d, err := readFile(p, ri.Interface().([]string))
+						if err != nil {
+							ioError = err
+						}
+
+						if p.OptionDataAppend {
+							ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(d)))
+						} else {
+							ro.Set(reflect.ValueOf(d))
+						}
+					}
+				}
+
+				// 1.3 Input: Datum String -> Output: Datum Slice: ++
 				if ri.Kind() == reflect.String && ro.Kind() == reflect.Slice {
 
-					// 1.3.1 Copy files.
-					// Copy single file to multiple destinations.
+					// 1.3.1 File -> [File1 .. FileN] ++
 					if p.OptionFileIn && p.OptionFileOut {
-						for i := 0; i < ro.Len(); i++ {
-							if err := copyFileToFile(p, ri.String(), ro.Index(i).String()); err != nil {
-								ioError = err
-							}
+						d, err := readFile(p, []string{ri.String()})
+						if err != nil {
+							ioError = err
+						}
+
+						if err := writeFile(p, d, ro.Interface().([]string)); err != nil {
+							ioError = err
 						}
 					}
 
-					// 1.3.2 Copy fields.
-					// If output slice is not empty: fill entire slice with single string.
-					// If output slice is empty: set output slice with single value.
+					// 1.3.2 String -> [String1 .. StringN] ++
 					if !p.OptionFileIn && !p.OptionFileOut {
-						if ro.Len() > 0 {
-							for i := 0; i < ro.Len(); i++ {
-								ro.Index(i).SetString(ri.String())
-							}
+						if p.OptionDataAppend {
+							ro.Set(reflect.Append(ro, reflect.ValueOf(ri.String())))
 						} else {
 							ro.Set(reflect.ValueOf([]string{ri.String()}))
 						}
 					}
 
-					// 1.3.3 Write files.
+					// 1.3.3 String -> [File1 .. FileN] ++
 					if !p.OptionFileIn && p.OptionFileOut {
-						for i := 0; i < ro.Len(); i++ {
-							if err := writeTextToFile(p, ri.String(), ro.Index(i).String()); err != nil {
-								ioError = err
-							}
+						if err := writeFile(p, []string{ri.String()}, ro.Interface().([]string)); err != nil {
+							ioError = err
 						}
 					}
 
-					// 1.3.4 Read files.
-					// If output slice is not empty: fill entire slice with single string.
-					// If output slice is empty: set output slice with single value.
+					// 1.3.4 File -> [String1 .. StringN] ++
 					if p.OptionFileIn && !p.OptionFileOut {
-						if s, err := readTextFromFile(p, ri.String()); err == nil {
-							if ro.Len() > 0 {
-								for i := 0; i < ro.Len(); i++ {
-									ro.Index(i).SetString(s)
-								}
-							} else {
-								ro.Set(reflect.ValueOf([]string{s}))
-							}
-						} else {
+						d, err := readFile(p, []string{ri.String()})
+						if err != nil {
 							ioError = err
+						}
+
+						if p.OptionDataAppend {
+							ro.Set(reflect.AppendSlice(ro, reflect.ValueOf(d)))
+						} else {
+							ro.Set(reflect.ValueOf(d))
 						}
 					}
 				}
 
-				// 1.4 Input is slice, output is string:
+				// 1.4 Input: Datum Slice -> Output: Datum String:
 				if ri.Kind() == reflect.Slice && ro.Kind() == reflect.String {
-					// 1.4.1 Copy files.
-					// Append multiple files into single file.
+
+					// 1.4.1 [File1 .. FileN] -> File ++
 					if p.OptionFileIn && p.OptionFileOut {
-						for i := 0; i < ri.Len(); i++ {
-							if err := appendFileToFile(p, ri.Index(i).String(), ro.String()); err != nil {
-								ioError = err
-							}
+						d, err := readFile(p, ri.Interface().([]string))
+						if err != nil {
+							ioError = err
+						}
+
+						if err := writeFile(p, d, []string{ro.String()}); err != nil {
+							ioError = err
 						}
 					}
 
-					// 1.4.2 Copy fields.
-					// Join slice items into text and set output string.
+					// 1.4.2 [String1 .. StringN] -> String ++
 					if !p.OptionFileIn && !p.OptionFileOut {
-						s := ""
-						for i := 0; i < ri.Len(); i++ {
-							s += fmt.Sprintf("%s%s", ri.Index(i).String(), p.OptionTextWrap)
-						}
-						ro.SetString(s)
-					}
-
-					// 1.4.3 Write files.
-					// Join slice items into text and write to file.
-					if !p.OptionFileIn && p.OptionFileOut {
-						s := ""
-						for i := 0; i < ri.Len(); i++ {
-							s += fmt.Sprintf("%s%s", ri.Index(i).String(), p.OptionTextWrap)
-						}
-						ioError = writeTextToFile(p, s, ro.String())
-					}
-
-					// 1.4.4 Read files.
-					// Read multiple files and set output string.
-					if p.OptionFileIn && !p.OptionFileOut {
-						r := ""
-						for i := 0; i < ri.Len(); i++ {
-							if s, err := readTextFromFile(p, ri.Index(i).String()); err == nil {
-								r += fmt.Sprintf("%s%s", s, p.OptionTextWrap)
-							} else {
-								ioError = err
-							}
-						}
-						ro.SetString(r)
-					}
-				}
-			}
-
-			// ---------------------------------------------------------------
-			// 2. Input is datum field string, output is string:
-			if ierr == nil && oerr != nil && ri.Kind() == reflect.String {
-				// 2.1 Copy files.
-				if p.OptionFileIn && p.OptionFileOut {
-					ioError = copyFileToFile(p, ri.String(), p.OptionOutput[index])
-				}
-
-				// 2.2 Copy fields.
-				if !p.OptionFileIn && !p.OptionFileOut {
-					core.LogProcessPlugin(p.LogFields,
-						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
-				}
-
-				// 2.3 Write files.
-				if !p.OptionFileIn && p.OptionFileOut {
-					ioError = writeTextToFile(p, ri.String(), p.OptionOutput[index])
-				}
-
-				// 2.4 Read files.
-				if p.OptionFileIn && !p.OptionFileOut {
-					core.LogProcessPlugin(p.LogFields,
-						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
-				}
-			}
-
-			// ---------------------------------------------------------------
-			// 3. Input is string, output is datum field string:
-			if ierr != nil && oerr == nil && ro.Kind() == reflect.String {
-				// 3.1 Copy files.
-				if p.OptionFileIn && p.OptionFileOut {
-					ioError = copyFileToFile(p, p.OptionInput[index], ro.String())
-				}
-
-				// 3.2 Copy fields.
-				if !p.OptionFileIn && !p.OptionFileOut {
-					ro.SetString(p.OptionInput[index])
-				}
-
-				// 3.3 Write files.
-				if !p.OptionFileIn && p.OptionFileOut {
-					ioError = writeTextToFile(p, p.OptionInput[index], ro.String())
-				}
-
-				// 3.4 Read files.
-				if p.OptionFileIn && !p.OptionFileOut {
-					if s, err := readTextFromFile(p, p.OptionInput[index]); err == nil {
-						ro.SetString(s)
-					} else {
-						ioError = err
-					}
-				}
-			}
-
-			// ---------------------------------------------------------------
-			// 4. Input is datum field slice, output is string:
-			if ierr == nil && oerr != nil && ri.Kind() == reflect.Slice {
-				// 4.1 Copy files.
-				// Append multiple files into single file.
-				if p.OptionFileIn && p.OptionFileOut {
-					for i := 0; i < ri.Len(); i++ {
-						if err := appendFileToFile(p, ri.Index(i).String(), p.OptionOutput[index]); err != nil {
-							ioError = err
-						}
-					}
-				}
-
-				// 4.2 Copy fields.
-				if !p.OptionFileIn && !p.OptionFileOut {
-					core.LogProcessPlugin(p.LogFields,
-						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
-				}
-
-				// 4.3 Write files.
-				// Join slice items into text and write to file.
-				if !p.OptionFileIn && p.OptionFileOut {
-					s := ""
-					for i := 0; i < ri.Len(); i++ {
-						s += fmt.Sprintf("%s%s", ri.Index(i).String(), p.OptionTextWrap)
-					}
-					ioError = writeTextToFile(p, s, p.OptionOutput[index])
-				}
-
-				// 4.4 Read files.
-				if p.OptionFileIn && !p.OptionFileOut {
-					core.LogProcessPlugin(p.LogFields,
-						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
-				}
-			}
-
-			// ---------------------------------------------------------------
-			// 5. Input is string, output is datum field slice:
-			if ierr != nil && oerr == nil && ro.Kind() == reflect.Slice {
-				// 5.1 Copy files.
-				if p.OptionFileIn && p.OptionFileOut {
-					for i := 0; i < ro.Len(); i++ {
-						if err := copyFileToFile(p, p.OptionInput[index], ro.Index(i).String()); err != nil {
-							ioError = err
-						}
-					}
-				}
-
-				// 5.2 Copy fields.
-				// If output slice is not empty: fill entire slice with single string.
-				// If output slice is empty: set output slice with single value.
-				if !p.OptionFileIn && !p.OptionFileOut {
-					if ro.Len() > 0 {
-						for i := 0; i < ro.Len(); i++ {
-							ro.Index(i).SetString(p.OptionInput[index])
-						}
-					} else {
-						ro.Set(reflect.ValueOf([]string{p.OptionInput[index]}))
-					}
-				}
-
-				// 5.3 Write files.
-				if !p.OptionFileIn && p.OptionFileOut {
-					for i := 0; i < ro.Len(); i++ {
-						if err := writeTextToFile(p, p.OptionInput[index], ro.Index(i).String()); err != nil {
-							ioError = err
-						}
-					}
-				}
-
-				// 5.4 Read files.
-				// If output slice is not empty: fill entire slice with single string.
-				// If output slice is empty: set output slice with single value.
-				if p.OptionFileIn && !p.OptionFileOut {
-					if s, err := readTextFromFile(p, p.OptionInput[index]); err == nil {
-						if ro.Len() > 0 {
-							for i := 0; i < ro.Len(); i++ {
-								ro.Index(i).SetString(s)
-							}
+						if p.OptionDataAppend {
+							ro.SetString(ro.String() + strings.Join(ri.Interface().([]string), ""))
 						} else {
-							ro.Set(reflect.ValueOf([]string{s}))
+							ro.SetString(strings.Join(ri.Interface().([]string), ""))
 						}
-					} else {
-						ioError = err
+					}
+
+					// 1.4.3 [String1 .. StringN] -> File ++
+					if !p.OptionFileIn && p.OptionFileOut {
+						if err := writeFile(p, ri.Interface().([]string), []string{ro.String()}); err != nil {
+							ioError = err
+						}
+					}
+
+					// 1.4.4 [File1 .. FileN] -> String ++
+					if p.OptionFileIn && !p.OptionFileOut {
+						d, err := readFile(p, ri.Interface().([]string))
+						if err != nil {
+							ioError = err
+						}
+
+						if p.OptionDataAppend {
+							ro.SetString(ro.String() + strings.Join(d, ""))
+						} else {
+							ro.SetString(strings.Join(d, ""))
+						}
 					}
 				}
 			}
 
 			// ---------------------------------------------------------------
-			// 6. Input is string, output is string:
-			if ierr != nil && oerr != nil {
-				// 6.1 Copy files.
+			// 2. Input: Datum String -> Output: String: ++
+			if ierr == nil && oerr != nil && ri.Kind() == reflect.String {
+
+				// 2.1 File -> File ++
 				if p.OptionFileIn && p.OptionFileOut {
-					ioError = copyFileToFile(p, p.OptionInput[index], p.OptionOutput[index])
+					d, err := readFile(p, []string{ri.String()})
+					if err != nil {
+						ioError = err
+					}
+
+					if err := writeFile(p, d, []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
 				}
 
-				// 6.2 Copy fields.
+				// 2.2 String -> String ++
 				if !p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
 				}
 
-				// 6.3 Write files.
+				// 2.3 String -> File ++
 				if !p.OptionFileIn && p.OptionFileOut {
-					ioError = writeTextToFile(p, p.OptionInput[index], p.OptionOutput[index])
+					if err := writeFile(p, []string{ri.String()}, []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
 				}
 
-				// 6.4 Read files.
+				// 2.4 File -> String ++
+				if p.OptionFileIn && !p.OptionFileOut {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
+				}
+			}
+
+			// ---------------------------------------------------------------
+			// 3. Input: String -> Output: Datum String: ++
+			if ierr != nil && oerr == nil && ro.Kind() == reflect.String {
+
+				// 3.1 File -> File ++
+				if p.OptionFileIn && p.OptionFileOut {
+					d, err := readFile(p, []string{p.OptionInput[index]})
+					if err != nil {
+						ioError = err
+					}
+
+					if err := writeFile(p, d, []string{ro.String()}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 3.2 String -> String ++
+				if !p.OptionFileIn && !p.OptionFileOut {
+					if p.OptionDataAppend {
+						ro.SetString(ro.String() + p.OptionInput[index])
+					} else {
+						ro.SetString(p.OptionInput[index])
+					}
+				}
+
+				// 3.3 String -> File ++
+				if !p.OptionFileIn && p.OptionFileOut {
+					if err := writeFile(p, []string{p.OptionInput[index]}, []string{ro.String()}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 3.4 File -> String ++
+				if p.OptionFileIn && !p.OptionFileOut {
+					d, err := readFile(p, []string{p.OptionInput[index]})
+					if err != nil {
+						ioError = err
+					}
+
+					if p.OptionDataAppend {
+						ro.SetString(ro.String() + strings.Join(d, ""))
+					} else {
+						ro.SetString(strings.Join(d, ""))
+					}
+				}
+			}
+
+			// ---------------------------------------------------------------
+			// 4. Input: Datum Slice -> Output: String ++
+			if ierr == nil && oerr != nil && ri.Kind() == reflect.Slice {
+
+				// 4.1 [File1 .. FileN] -> File ++
+				if p.OptionFileIn && p.OptionFileOut {
+					d, err := readFile(p, ri.Interface().([]string))
+					if err != nil {
+						ioError = err
+					}
+
+					if err := writeFile(p, d, []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 4.2 [String1 .. StringN] -> String ++
+				if !p.OptionFileIn && !p.OptionFileOut {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
+				}
+
+				// 4.3 [String1 .. StringN] -> File ++
+				if !p.OptionFileIn && p.OptionFileOut {
+					if err := writeFile(p, ri.Interface().([]string), []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 4.4 [File1 .. FileN] -> String ++
+				if p.OptionFileIn && !p.OptionFileOut {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
+				}
+			}
+
+			// ---------------------------------------------------------------
+			// 5. Input: String -> Output: Datum Slice ++
+			if ierr != nil && oerr == nil && ro.Kind() == reflect.Slice {
+
+				// 5.1 File -> [File1 .. FileN] ++
+				if p.OptionFileIn && p.OptionFileOut {
+					d, err := readFile(p, []string{p.OptionInput[index]})
+					if err != nil {
+						ioError = err
+					}
+
+					if err := writeFile(p, d, ro.Interface().([]string)); err != nil {
+						ioError = err
+					}
+				}
+
+				// 5.2 String -> [String1 .. StringN] ++
+				if !p.OptionFileIn && !p.OptionFileOut {
+					d := reflect.ValueOf(processText(p, []string{p.OptionInput[index]}))
+
+					if p.OptionDataAppend {
+						ro.Set(reflect.Append(ro, d))
+					} else {
+						ro.Set(d)
+					}
+				}
+
+				// 5.3 String -> [File1 ... FileN] ++
+				if !p.OptionFileIn && p.OptionFileOut {
+					if err := writeFile(p, []string{p.OptionInput[index]}, ro.Interface().([]string)); err != nil {
+						ioError = err
+					}
+				}
+
+				// 5.4 File -> [String1 .. StringN] ++
+				if p.OptionFileIn && !p.OptionFileOut {
+					d, err := readFile(p, []string{p.OptionInput[index]})
+					if err != nil {
+						ioError = err
+					}
+
+					if p.OptionDataAppend {
+						ro.Set(reflect.Append(ro, reflect.ValueOf(d)))
+					} else {
+						ro.Set(reflect.ValueOf(d))
+					}
+				}
+			}
+
+			// ---------------------------------------------------------------
+			// 6. Input: String -> Output: String ++
+			if ierr != nil && oerr != nil {
+
+				// 6.1 File -> File ++
+				if p.OptionFileIn && p.OptionFileOut {
+					d, err := readFile(p, []string{p.OptionInput[index]})
+					if err != nil {
+						ioError = err
+					}
+
+					if err := writeFile(p, d, []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 6.2 String -> String ++
+				if !p.OptionFileIn && !p.OptionFileOut {
+					core.LogProcessPlugin(p.LogFields,
+						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
+				}
+
+				// 6.3 String -> File ++
+				if !p.OptionFileIn && p.OptionFileOut {
+					if err := writeFile(p, []string{p.OptionInput[index]}, []string{p.OptionOutput[index]}); err != nil {
+						ioError = err
+					}
+				}
+
+				// 6.4 File -> String ++
 				if p.OptionFileIn && !p.OptionFileOut {
 					core.LogProcessPlugin(p.LogFields,
 						fmt.Errorf(ERROR_COPY_TO_STRING.Error(), p.OptionOutput[index]))
@@ -648,24 +725,21 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				continue
 			}
 
-			switch p.OptionFileInMode {
-			case "lines":
-				if l, err := core.GetLinesFromFile(source); err == nil {
-					itemLines = l
-				} else {
-					failedSources = append(failedSources, source)
-					core.LogProcessPlugin(p.LogFields, err)
-					continue
+			if s, err := core.GetStringFromFile(source); err == nil {
+				switch p.OptionFileInMode {
+				case "split":
+					for _, l := range strings.Split(s, p.OptionFileInSplit) {
+						itemLines = append(itemLines, wrapFileIn(p, l))
+					}
+				case "text":
+					itemText = wrapFileIn(p, s)
 				}
-			case "text":
-				if s, err := core.GetStringFromFile(source); err == nil {
-					itemText = s
-				} else {
-					failedSources = append(failedSources, source)
-					core.LogProcessPlugin(p.LogFields, err)
-					continue
-				}
+			} else {
+				failedSources = append(failedSources, source)
+				core.LogProcessPlugin(p.LogFields, err)
+				continue
 			}
+
 		} else {
 			itemText = source
 		}
@@ -721,8 +795,8 @@ func (p *Plugin) Receive() ([]*core.Datum, error) {
 				UUID:        u,
 
 				IO: core.Io{
-					LINES: itemLines,
 					MTIME: itemMtime,
+					SPLIT: itemLines,
 					TEXT:  itemText,
 				},
 
@@ -829,9 +903,12 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		"template": -1,
 		"timeout":  -1,
 
-		"file_in":      -1,
-		"file_in_mode": -1,
-		"input":        1,
+		"file_in":       -1,
+		"file_in_mode":  -1,
+		"file_in_pre":   -1,
+		"file_in_post":  -1,
+		"file_in_split": -1,
+		"input":         1,
 	}
 
 	switch pluginConfig.PluginType {
@@ -852,12 +929,20 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		availableParams["time_zone_c"] = -1
 
 	case "process":
+		availableParams["data_append"] = -1
 		availableParams["file_out"] = -1
+		availableParams["file_out_append"] = -1
 		availableParams["file_out_mode"] = -1
-		availableParams["file_out_wrap"] = -1
+		availableParams["file_out_pre"] = -1
+		availableParams["file_out_post"] = -1
+		availableParams["file_out_split"] = -1
 		availableParams["include"] = -1
 		availableParams["output"] = 1
 		availableParams["require"] = -1
+		availableParams["text_mode"] = -1
+		availableParams["text_pre"] = -1
+		availableParams["text_post"] = -1
+		availableParams["text_split"] = -1
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -1038,6 +1123,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		core.ShowPluginParam(plugin.LogFields, "time_zone_c", plugin.OptionTimeZoneC)
 
 	case "process":
+		// data_append.
+		setDataAppend := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["data_append"] = 0
+				plugin.OptionDataAppend = v
+			}
+		}
+		setDataAppend(DEFAULT_DATA_APPEND)
+		setDataAppend(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.data_append", template)))
+		setDataAppend((*pluginConfig.PluginParams)["data_append"])
+		core.ShowPluginParam(plugin.LogFields, "data_append", plugin.OptionDataAppend)
+
 		// file_out.
 		setFileOut := func(p interface{}) {
 			if v, b := core.IsBool(p); b {
@@ -1049,6 +1146,18 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setFileOut(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out", template)))
 		setFileOut((*pluginConfig.PluginParams)["file_out"])
 		core.ShowPluginParam(plugin.LogFields, "file_out", plugin.OptionFileOut)
+
+		// file_out_append.
+		setFileOutAppend := func(p interface{}) {
+			if v, b := core.IsBool(p); b {
+				availableParams["file_out_append"] = 0
+				plugin.OptionFileOutAppend = v
+			}
+		}
+		setFileOutAppend(DEFAULT_FILE_OUT_APPEND)
+		setFileOutAppend(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out_append", template)))
+		setFileOutAppend((*pluginConfig.PluginParams)["file_out_append"])
+		core.ShowPluginParam(plugin.LogFields, "file_out_append", plugin.OptionFileOutAppend)
 
 		// file_out_mode.
 		setFileOutMode := func(p interface{}) {
@@ -1062,17 +1171,41 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setFileOutMode((*pluginConfig.PluginParams)["file_out_mode"])
 		core.ShowPluginParam(plugin.LogFields, "file_out_mode", plugin.OptionFileOutMode)
 
-		// file_out_wrap.
-		setFileOutWrap := func(p interface{}) {
+		// file_out_pre.
+		setFileOutPre := func(p interface{}) {
 			if v, b := core.IsString(p); b {
-				availableParams["file_out_wrap"] = 0
-				plugin.OptionFileOutWrap = v
+				availableParams["file_out_pre"] = 0
+				plugin.OptionFileOutPre = v
 			}
 		}
-		setFileOutWrap(DEFAULT_FILE_OUT_WRAP)
-		setFileOutWrap(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out_wrap", template)))
-		setFileOutWrap((*pluginConfig.PluginParams)["file_out_wrap"])
-		core.ShowPluginParam(plugin.LogFields, "file_out_wrap", plugin.OptionFileOutWrap)
+		setFileOutPre(DEFAULT_FILE_OUT_PRE)
+		setFileOutPre(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out_pre", template)))
+		setFileOutPre((*pluginConfig.PluginParams)["file_out_pre"])
+		core.ShowPluginParam(plugin.LogFields, "file_out_pre", plugin.OptionFileOutPre)
+
+		// file_out_post.
+		setFileOutPost := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["file_out_post"] = 0
+				plugin.OptionFileOutPost = v
+			}
+		}
+		setFileOutPost(DEFAULT_FILE_OUT_POST)
+		setFileOutPost(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out_post", template)))
+		setFileOutPost((*pluginConfig.PluginParams)["file_out_post"])
+		core.ShowPluginParam(plugin.LogFields, "file_out_post", plugin.OptionFileOutPost)
+
+		// file_out_split.
+		setFileOutSplit := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["file_out_split"] = 0
+				plugin.OptionFileOutSplit = v
+			}
+		}
+		setFileOutSplit(DEFAULT_FILE_OUT_SPLIT)
+		setFileOutSplit(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_out_split", template)))
+		setFileOutSplit((*pluginConfig.PluginParams)["file_out_split"])
+		core.ShowPluginParam(plugin.LogFields, "file_out_split", plugin.OptionFileOutSplit)
 
 		// include.
 		setInclude := func(p interface{}) {
@@ -1108,6 +1241,54 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 		setRequire(pluginConfig.AppConfig.GetIntSlice(fmt.Sprintf("%s.require", template)))
 		setRequire((*pluginConfig.PluginParams)["require"])
 		core.ShowPluginParam(plugin.LogFields, "require", plugin.OptionRequire)
+
+		// text_mode.
+		setTextMode := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["text_mode"] = 0
+				plugin.OptionTextMode = v
+			}
+		}
+		setTextMode(DEFAULT_TEXT_MODE)
+		setTextMode(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.text_mode", template)))
+		setTextMode((*pluginConfig.PluginParams)["text_mode"])
+		core.ShowPluginParam(plugin.LogFields, "text_mode", plugin.OptionTextMode)
+
+		// text_pre.
+		setTextPre := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["text_pre"] = 0
+				plugin.OptionTextPre = v
+			}
+		}
+		setTextPre(DEFAULT_TEXT_PRE)
+		setTextPre(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.text_pre", template)))
+		setTextPre((*pluginConfig.PluginParams)["text_pre"])
+		core.ShowPluginParam(plugin.LogFields, "text_pre", plugin.OptionTextPre)
+
+		// text_post.
+		setTextPost := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["text_post"] = 0
+				plugin.OptionTextPost = v
+			}
+		}
+		setTextPost(DEFAULT_TEXT_POST)
+		setTextPost(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.text_post", template)))
+		setTextPost((*pluginConfig.PluginParams)["text_post"])
+		core.ShowPluginParam(plugin.LogFields, "text_post", plugin.OptionTextPost)
+
+		// text_split.
+		setTextSplit := func(p interface{}) {
+			if v, b := core.IsString(p); b {
+				availableParams["text_split"] = 0
+				plugin.OptionTextSplit = v
+			}
+		}
+		setTextSplit(DEFAULT_TEXT_SPLIT)
+		setTextSplit(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.text_split", template)))
+		setTextSplit((*pluginConfig.PluginParams)["text_split"])
+		core.ShowPluginParam(plugin.LogFields, "text_split", plugin.OptionTextSplit)
 	}
 
 	// file_in.
@@ -1134,6 +1315,42 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	setFileInMode((*pluginConfig.PluginParams)["file_in_mode"])
 	core.ShowPluginParam(plugin.LogFields, "file_in_mode", plugin.OptionFileInMode)
 
+	// file_in_pre.
+	setFileInPre := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["file_in_pre"] = 0
+			plugin.OptionFileInPre = v
+		}
+	}
+	setFileInPre(DEFAULT_FILE_IN_PRE)
+	setFileInPre(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_in_pre", template)))
+	setFileInPre((*pluginConfig.PluginParams)["file_in_pre"])
+	core.ShowPluginParam(plugin.LogFields, "file_in_pre", plugin.OptionFileInPre)
+
+	// file_in_post.
+	setFileInPost := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["file_in_post"] = 0
+			plugin.OptionFileInPost = v
+		}
+	}
+	setFileInPost(DEFAULT_FILE_IN_POST)
+	setFileInPost(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_in_post", template)))
+	setFileInPost((*pluginConfig.PluginParams)["file_in_post"])
+	core.ShowPluginParam(plugin.LogFields, "file_in_post", plugin.OptionFileInPost)
+
+	// file_in_split.
+	setFileInSplit := func(p interface{}) {
+		if v, b := core.IsString(p); b {
+			availableParams["file_in_split"] = 0
+			plugin.OptionFileInSplit = v
+		}
+	}
+	setFileInSplit(DEFAULT_FILE_IN_SPLIT)
+	setFileInSplit(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.file_in_split", template)))
+	setFileInSplit((*pluginConfig.PluginParams)["file_in_split"])
+	core.ShowPluginParam(plugin.LogFields, "file_in_split", plugin.OptionFileInSplit)
+
 	// input.
 	setInput := func(p interface{}) {
 		if v, b := core.IsSliceOfString(p); b {
@@ -1143,18 +1360,6 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	}
 	setInput((*pluginConfig.PluginParams)["input"])
 	core.ShowPluginParam(plugin.LogFields, "input", plugin.OptionInput)
-
-	// text_wrap.
-	setTextWrap := func(p interface{}) {
-		if v, b := core.IsString(p); b {
-			availableParams["text_wrap"] = 0
-			plugin.OptionTextWrap = v
-		}
-	}
-	setTextWrap(DEFAULT_TEXT_WRAP)
-	setTextWrap(pluginConfig.AppConfig.GetString(fmt.Sprintf("%s.text_wrap", template)))
-	setTextWrap((*pluginConfig.PluginParams)["text_wrap"])
-	core.ShowPluginParam(plugin.LogFields, "text_wrap", plugin.OptionTextWrap)
 
 	// timeout.
 	setTimeout := func(p interface{}) {
@@ -1178,7 +1383,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 	// -----------------------------------------------------------------------------------------------------------------
 	// Additional checks.
 
-	if plugin.OptionFileInMode != "lines" && plugin.OptionFileInMode != "text" {
+	if plugin.OptionFileInMode != "split" && plugin.OptionFileInMode != "text" {
 		return &Plugin{}, fmt.Errorf(ERROR_MODE_UNKNOWN.Error(), plugin.OptionFileInMode)
 	}
 
@@ -1189,7 +1394,7 @@ func Init(pluginConfig *core.PluginConfig) (*Plugin, error) {
 				core.ERROR_SIZE_MISMATCH.Error(), plugin.OptionInput, plugin.OptionOutput)
 		}
 
-		if plugin.OptionFileOutMode != "append" && plugin.OptionFileOutMode != "truncate" {
+		if plugin.OptionFileOutMode != "split" && plugin.OptionFileOutMode != "text" {
 			return &Plugin{}, fmt.Errorf(ERROR_MODE_UNKNOWN.Error(), plugin.OptionFileOutMode)
 		}
 	}

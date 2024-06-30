@@ -34,11 +34,14 @@ TEXT*  string
 
 ### Plugin parameters:
 
-| Param        | Required |  Type  | Cred | Template | Text Template | Default |      Example       | Description                                         |
-|:-------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:------------------:|:----------------------------------------------------|
-| file_in      |    -     |  bool  |  -   |    +     |       -       |  false  |        true        | Process input as files.                             |
-| file_in_mode |    -     | string |  -   |    +     |       -       | "text"  |      "lines"       | Read input file as text or line by line into array. |
-| **input**    |    +     | array  |  -   |    +     |       -       |  "[]"   | ["/path/to/file1"] | Set input as text or file paths.                    |
+| Param         | Required |  Type  | Cred | Template | Text Template | Default |      Example       | Description                                        |
+|:--------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:------------------:|:---------------------------------------------------|
+| file_in       |    -     |  bool  |  -   |    +     |       -       |  false  |        true        | Process input as files.                            |
+| file_in_mode  |    -     | string |  -   |    +     |       -       | "text"  |      "split"       | Read input file as a whole text or split to lines. |
+| file_in_pre   |    -     | string |  -   |    +     |       -       |   ""    |        "_"         | Add characters to the beginning of data.           |
+| file_in_post  |    -     | string |  -   |    +     |       -       |   ""    |        "_"         | Add characters to the end of data.                 |
+| file_in_split |    -     | string |  -   |    +     |       -       |  "\n"   |       "AAA"        | Separation characters in split mode.               |
+| **input**     |    +     | array  |  -   |    +     |       -       |  "[]"   | ["/path/to/file1"] | Set input as text or file paths.                   |
 
 ### Flow samples:
 

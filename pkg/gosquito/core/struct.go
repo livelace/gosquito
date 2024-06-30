@@ -283,8 +283,8 @@ type Iter struct {
 }
 
 type Io struct {
-	LINES []string
 	MTIME string
+	SPLIT []string
 	TEXT  string
 }
 

@@ -11,16 +11,26 @@
 
 ### Plugin parameters:
 
-| Param         | Required |  Type  | Cred | Template | Text Template |  Default   |             Example             | Description                                                        |
-|:--------------|:--------:|:------:|:----:|:--------:|:-------------:|:----------:|:-------------------------------:|:-------------------------------------------------------------------|
-| file_in       |    -     |  bool  |  -   |    +     |       -       |   false    |              true               | Process input as files.                                            |
-| file_in_mode  |    -     | string |  -   |    +     |       -       |   "text"   |             "lines"             | Read input file as text or line by line into array.                |
-| file_out      |    -     |  bool  |  -   |    +     |       -       |   false    |              true               | Process output as files.                                           |
-| file_out_mode |    -     | string |  -   |    +     |       -       | "truncate" |            "append"             | Append data to output files.                                       |
-| file_out_wrap |    -     | string |  -   |    +     |       -       |    "\n"    |              "AAA"              | Wrap appended data to file with these characters.                  |
-| text_wrap     |    -     | string |  -   |    +     |       -       |    "\n"    |              "BBB"              | Wrap processed text with these characters.                         |
-| **input**     |    +     | array  |  -   |    +     |       -       |    "[]"    | ["/path/to/file1", "just text"] | Set input as text, file paths or [Datum](../../concept.md) field.  |
-| **output**    |    +     | array  |  -   |    +     |       -       |    "[]"    |  ["data.array0", "data.text0"]  | Set output as text, file paths or [Datum](../../concept.md) field. |
+| Param           | Required | Type   | Cred | Template | Text Template | Default |             Example             | Description                                                        |
+|:----------------|:--------:|:------:|:----:|:--------:|:-------------:|:-------:|:-------------------------------:|:-------------------------------------------------------------------|
+| data_append     | -        | bool   | -    | +        | -             | false   |              true               | If true data will be appended to datum fields (string, slice).     |
+| file_in         | -        | bool   | -    | +        | -             | false   |              true               | Process input as files.                                            |
+| file_in_mode    | -        | string | -    | +        | -             | "text"  |             "split"             | Read input file as a whole text or split to lines.                 |
+| file_in_pre     | -        | string | -    | +        | -             | ""      |               "_"               | Add characters to the beginning of data.                           |
+| file_in_post    | -        | string | -    | +        | -             | ""      |               "_"               | Add characters to the end of data.                                 |
+| file_in_split   | -        | string | -    | +        | -             | "\n"    |              "AAA"              | Separation characters in split mode.                               |
+| file_out        | -        | bool   | -    | +        | -             | false   |              true               | Process output as files.                                           |
+| file_out_append | -        | bool   | -    | +        | -             | false   |              true               | If true data will be appended to a file.                           |
+| file_out_mode   | -        | string | -    | +        | -             | "text"  |             "split"             | Write text/lines to output file.                                   |
+| file_out_pre    | -        | string | -    | +        | -             | ""      |               "*"               | Add characters to the beginning of data.                           |
+| file_out_post   | -        | string | -    | +        | -             | ""      |               "*"               | Add characters to the end of data.                                 |
+| file_out_split  | -        | string | -    | +        | -             | "\n"    |              "AAA"              | Separation characters in split mode.                               |
+| **input**       | +        | array  | -    | +        | -             | "[]"    | ["/path/to/file1", "just text"] | Set input as text, file paths or [Datum](../../concept.md) field.  |
+| **output**      | +        | array  | -    | +        | -             | "[]"    |  ["data.array0", "data.text0"]  | Set output as text, file paths or [Datum](../../concept.md) field. |
+| text_mode       | -        | string | -    | +        | -             | "text"  |             "split"             | Read input data as a whole text or split to lines.                 |
+| text_pre        | -        | string | -    | +        | -             | ""      |               "^"               | Add characters to the beggining of data.                           |
+| text_post       | -        | string | -    | +        | -             | ""      |               "^"               | Add characters to the end of data.                                 |
+| text_split      | -        | string | -    | +        | -             | "\n"    |              "AAA"              | Separation characters in split mode.                               |
 
 ### Flow sample:
 
