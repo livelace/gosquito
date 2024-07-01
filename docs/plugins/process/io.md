@@ -62,8 +62,8 @@ flow:
         input: [ "rss.categories", "rss.link" ]
         output: [ "/tmp/rss_categories", "/tmp/rss_link" ]
         file_out: true
-        file_out_mode: "append"
-        text_wrap: ";"
+        file_out_mode: "split"
+        file_out_post: ";"
 
     - id: 2
       plugin: "io"
@@ -85,7 +85,6 @@ flow:
         input: [ "/tmp/rss_categories", "/tmp/rss_link" ]
         output: [ "data.text1", "data.text2" ]
         file_in: true
-        file_in_mode: "text"
 
     - id: 5
       plugin: "echo"
