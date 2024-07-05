@@ -1028,7 +1028,7 @@ func markdownWrap(entity *client.TextEntity, entityText string) string {
 	case *client.TextEntityTypePreCode:
 		s = fmt.Sprintf("```%s\n%s```", entity.Type.(*client.TextEntityTypePreCode).Language, entityText)
 	case *client.TextEntityTypeStrikethrough:
-		s = markdownWipeNewline(fmt.Sprintf("%s~%s~%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
+		s = markdownWipeNewline(fmt.Sprintf("%s~~%s~~%s", entitySpaceBegin, strings.TrimSpace(entityText), entitySpaceEnd))
 	case *client.TextEntityTypeTextUrl:
 		s = markdownWipeNewline(fmt.Sprintf("[%s](%s)", entityText, entity.Type.(*client.TextEntityTypeTextUrl).Url))
 	case *client.TextEntityTypeUnderline:
