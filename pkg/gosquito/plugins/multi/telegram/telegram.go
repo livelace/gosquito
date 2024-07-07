@@ -383,7 +383,7 @@ func getPhotoMessage(p *Plugin, caption *client.FormattedText, file string) *cli
 }
 
 func getMarkdown(p *Plugin, formattedText *client.FormattedText) string {
-	if p.OptionMessageMarkdown == "internal" {
+	if p.OptionMessageMarkdown == DEFAULT_MESSAGE_MARKDOWN {
 		return internalMarkdownFormat(p, formattedText)
 	} else {
 		f, err := client.GetMarkdownText(&client.GetMarkdownTextRequest{Text: formattedText})
